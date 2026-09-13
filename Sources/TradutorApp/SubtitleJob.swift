@@ -137,7 +137,8 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
                 .deletingPathExtension()
                 .appendingPathExtension("\(pipeline.targetLanguage.rawValue).srt")
             try SRTWriter.render(
-                translated, colorBySpeaker: pipeline.diarizeSpeakers && pipeline.colorBySpeaker
+                translated, colorBySpeaker: pipeline.diarizeSpeakers && pipeline.colorBySpeaker,
+                charactersPerLine: builder.charactersPerLine
             ).write(to: output, atomically: true, encoding: .utf8)
 
             notice = builder.translationNotice

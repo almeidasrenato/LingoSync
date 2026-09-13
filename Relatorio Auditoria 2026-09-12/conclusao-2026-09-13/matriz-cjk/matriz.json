@@ -1,0 +1,56 @@
+[
+ {
+  "name": "studio-ja-longo-apple-sortformer",
+  "mode": "studio",
+  "video": "ja-longo",
+  "engine": "apple",
+  "diar": "sortformer",
+  "wall": 91.74,
+  "ok": 78,
+  "failures": [],
+  "passed": true,
+  "timeout": false,
+  "cues": "146",
+  "speakers": "Locutor 1, Locutor 2, Locutor 3"
+ },
+ {
+  "name": "job-ja-longo-apple-sortformer",
+  "mode": "job",
+  "video": "ja-longo",
+  "engine": "apple",
+  "diar": "sortformer",
+  "wall": 50.08,
+  "ok": 8,
+  "failures": [],
+  "passed": true,
+  "timeout": false,
+  "cues": "145"
+ },
+ {
+  "name": "studio-en-conversa-apple-sortformer",
+  "mode": "studio",
+  "video": "en-conversa",
+  "engine": "apple",
+  "diar": "sortformer",
+  "wall": 33.53,
+  "ok": 78,
+  "failures": [],
+  "passed": true,
+  "timeout": false,
+  "cues": "54",
+  "speakers": "Locutor 1, Locutor 2, Locutor 3, Locutor 4"
+ },
+ {
+  "name": "job-en-conversa-apple-sortformer",
+  "mode": "job",
+  "video": "en-conversa",
+  "engine": "apple",
+  "diar": "sortformer",
+  "wall": 21.79,
+  "ok": 8,
+  "failures": [],
+  "passed": true,
+  "timeout": false,
+  "cues": "54"
+ }
+]

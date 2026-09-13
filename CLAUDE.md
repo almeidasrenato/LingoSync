@@ -1303,6 +1303,100 @@ O VAD do tempo real **não** é suspeito para fala baixa, e por isso não
 ganhou nada: medido nos 75 s de japonês, ele captura 75,0 s e alcança 37 de
 37 trechos de fala, e varrer os limiares não muda nada.
 
+### O espaço que não existe em japonês
+
+A legenda saía `よかったです。 頑張ろうね。` e `あのれいかさん、何すればいいですか ？`.
+Esse espaço não existe em japonês, e ele segue para o tradutor e para o
+arquivo. Eram **22 no vídeo de 9 minutos**, e vinham de três lugares
+diferentes — cada um precisou da sua regra:
+
+- **o texto do próprio run**, que a Apple devolve com espaço antes da
+  pontuação: `Tokens.tightenDense`, chamado no `close()` do
+  `AppleSpeechTranscriber.phrases` (22 → 12);
+- **a junção dos trechos** em `makeCues`, que usava `joined(separator: " ")`:
+  `Tokens.join` (12 → 5);
+- **`mergeTinyCues`**, que colava duas legendas curtas com `" " + cue.source`
+  (5 → 0).
+
+Nos dois vídeos japoneses o resultado é **zero**.
+
+#### O efeito na tradução, isolado do ruído do reconhecedor
+
+Comparar duas gerações não serve: a Apple não repete o mesmo texto duas vezes
+("homing" numa execução, "humming" na outra). O teste que serve é o mesmo
+texto, com e sem os espaços, pelo `tradutor-verify traduzir`:
+
+```
+linhas com espaço removido                   22 de 104
+traduções que mudaram                        18
+traduções que mudaram SEM ter espaço          0   ← sem contágio de lote
+começam com maiúscula, nas 22 afetadas    com: 0   sem: 14
+```
+
+Um exemplo do que muda:
+
+```
+よかったです。頑張ろうね。
+   com espaço:  "foi bom. vamos fazer isso."
+   sem espaço:  "Ainda bem. Vamos nos esforçar."
+```
+
+O tradutor do sistema devolve minúscula e frase frouxa quando o japonês chega
+malformado. Isto ataca a causa; `capitalizeSentences` continua existindo para
+o que sobra.
+
+**Inglês fica byte a byte igual, por construção**: `tightenDense` só age entre
+dois caracteres de escrita densa e só quando há **um** espaço, e `Tokens.join`
+omite o espaço na mesma condição. `tradutor-verify prefixo` e `frases` cobrem
+os dois lados, inclusive `dois  espacos  ficam` e `今 20歳です` — o `2` não é
+denso, então aquele espaço fica.
+
+### A largura da linha é a do idioma que vai ser lido
+
+`SRTWriter.render` quebrava em 42 caracteres, fixo. 42 é a convenção latina;
+japonês e chinês escrevem caractere de largura cheia e a legenda do meio cabe
+em 16 a 20 por linha. Medido gerando **inglês → japonês** num vídeo de 161 s:
+
+```
+                legendas   linhas   maior linha   linhas acima de 20
+42 (fixo)            48       49         42            18
+20 (por destino)     49       69         20             0
+```
+
+`SubtitleFileBuilder.lineWidth(for:)` decide pelo **destino**, `translate` a
+aplica e `render` a recebe. Japonês → português não muda nada: 136 linhas e
+42 de maior nos dois lados.
+
+Coreano fica de fora, como já fica em `Tokens.isDense`: usa espaço entre
+palavras. Tailandês não usa, mas tem convenção própria e não foi medido.
+
+**O painel ao vivo não entrou nessa conta.** Ele chama `LineBreaker.wrap` com
+o padrão de **58**, não 42, e traduzir ao vivo para japonês tem o mesmo
+problema em dobro. Não foi medido.
+
+### Os números latinos que não precisavam mudar
+
+Quatro constantes foram suspeitas de estarem calibradas para o latim e serem
+estreitas demais para japonês, que é duas vezes mais denso. Medidas no
+material real, **três nunca chegam a atuar**:
+
+```
+SubtitleFileBuilder.maximumCharacters = 150   legenda mais longa: 55 ja, 112 en
+PhraseAccumulator.maximumCharacters   =  75   frase mais longa:   42 ja,  70 en
+SentenceSplitter.minimumCharacters    =  12   frases japonesas afetadas: 0 de 33
+                                              e 0 de 17
+```
+
+O mínimo de 12 caracteres parecia o mais perigoso — a legenda japonesa tem
+mediana de 12 caracteres, então metade delas fica abaixo dele. Só que ele só
+gruda frases **dentro de uma mesma frase fechada**, e depois que `。` passou a
+fechar frase (ver acima) cada uma chega sozinha. Onde ele ainda age é em
+inglês, evitando que `...` vire três blocos — que é para o que foi feito.
+
+A quarta era real, e é a da seção anterior. **Não mexer nas três primeiras sem
+uma medição que mostre elas atuando**: trocar número que não atua é trocar
+comportamento no escuro.
+
 ### Como os três consertos acima foram exercitados ponta a ponta
 
 Matriz de 13/09/2026, 24 execuções dos dois fluxos, guardada em

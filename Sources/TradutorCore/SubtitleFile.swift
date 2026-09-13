@@ -101,7 +101,31 @@ public final class SubtitleFileBuilder {
     /// no tempo, por `enforceLineLimit`. O tradutor vê a oração inteira; a
     /// tela continua recebendo pedaços de duas linhas.
     public var maximumCharacters = 150
+    /// Largura da linha da legenda pronta.
+    ///
+    /// 42 é a convenção latina. `translate` a troca pela do idioma de
+    /// **destino** — ver `lineWidth(for:)` —, porque é lá que o destino é
+    /// conhecido.
     public var charactersPerLine = 42
+
+    /// Quantos caracteres cabem numa linha, pelo idioma de destino.
+    ///
+    /// Japonês e chinês escrevem caractere de largura cheia e sem espaço, e a
+    /// legenda do meio cabe em 16 a 20 por linha. Com os 42 latinos, medido
+    /// gerando inglês → japonês num vídeo de 161 s: **18 das 49 linhas
+    /// passavam de 20 caracteres e a mais longa tinha 42**, que é o dobro do
+    /// que a convenção admite — na tela, uma faixa de texto que não dá tempo
+    /// de ler.
+    ///
+    /// Coreano usa espaço entre palavras e fica de fora, como já fica em
+    /// `Tokens.isDense`. Tailandês também não separa palavra com espaço, mas
+    /// tem convenção própria e não foi medido aqui.
+    public static func lineWidth(for target: Language) -> Int {
+        switch target {
+        case .japanese, .chinese: 20
+        default: 42
+        }
+    }
     public var maximumLines = 2
 
     /// Quanto a legenda entra antes da fala.
@@ -597,6 +621,9 @@ public final class SubtitleFileBuilder {
         var result = cues
         var done = 0
         var lotesFalhos = 0
+        // A linha da legenda tem a largura do idioma que vai ser lido, não a
+        // do que foi falado. É aqui porque é aqui que o destino é conhecido.
+        charactersPerLine = Self.lineWidth(for: target)
         // Quem sabe o tamanho certo é o tradutor, não este código.
         let step = max(1, translator.preferredBatchSize)
 
@@ -1041,8 +1068,14 @@ public enum SRTWriter {
     ///   sintaxe de locutor, mas a tag de cor é entendida pelo VLC, mpv e a
     ///   maioria dos players — e quem não entende mostra a tag na tela, por
     ///   isso isto é opção e não padrão.
+    /// - Parameter charactersPerLine: largura da linha, que é a do idioma de
+    ///   destino — `SubtitleFileBuilder.lineWidth(for:)`. Estava fixa em 42, e
+    ///   com destino japonês a legenda saía com o dobro do que a convenção
+    ///   admite. O padrão é a largura latina, para quem só tem as legendas na
+    ///   mão e não o idioma.
     public static func render(
-        _ cues: [Cue], includeSource: Bool = false, colorBySpeaker: Bool = false
+        _ cues: [Cue], includeSource: Bool = false, colorBySpeaker: Bool = false,
+        charactersPerLine: Int = 42
     ) -> String {
         var output = ""
         var number = 1
@@ -1060,8 +1093,10 @@ public enum SRTWriter {
 
             output += "\(number)\n"
             output += "\(timecode(cue.start)) --> \(timecode(cue.end))\n"
-            // Duas linhas de ~42 caracteres é a convenção de legendagem.
-            var body = LineBreaker.wrap(text, maximum: 42).joined(separator: "\n")
+            // Duas linhas é a convenção de legendagem; a largura vem do
+            // idioma que vai ser lido.
+            var body = LineBreaker.wrap(text, maximum: charactersPerLine)
+                .joined(separator: "\n")
             // A cor envolve o bloco inteiro, depois da quebra: uma tag por
             // linha dobraria o tamanho do arquivo sem mudar nada na tela.
             if colorBySpeaker, let hex = SpeakerPalette.hex(for: cue.speaker) {

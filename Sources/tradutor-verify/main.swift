@@ -825,7 +825,10 @@ struct Verify {
         print(String(format: "  %.1fs\n", Date().timeIntervalSince(mtStart)))
 
         let output = url.deletingPathExtension().appendingPathExtension("\(target.rawValue).srt")
-        let text = SRTWriter.render(translated, colorBySpeaker: diarize && colors)
+        let text = SRTWriter.render(
+            translated, colorBySpeaker: diarize && colors,
+            charactersPerLine: builder.charactersPerLine
+        )
         do {
             try text.write(to: output, atomically: true, encoding: .utf8)
         } catch {
@@ -1434,6 +1437,22 @@ struct Verify {
                   ? "  ok    texto sem sobreposicao real fica intacto"
                   : "  FALHA cortou texto legitimo -> \"\(unrelated)\"")
             if unrelated != "the meeting starts at noon" { failures += 1 }
+        }
+        print("")
+
+        print("largura da linha pelo idioma de destino\n")
+        do {
+            // Medido gerando ingles -> japones num video de 161 s: com os 42
+            // latinos, 18 das 49 linhas passavam de 20 caracteres e a mais
+            // longa tinha 42 — o dobro do que a legenda em japones admite.
+            expect(SubtitleFileBuilder.lineWidth(for: .japanese) == 20,
+                   "japones usa 20 por linha")
+            expect(SubtitleFileBuilder.lineWidth(for: .chinese) == 20,
+                   "chines usa 20 por linha")
+            for idioma: Language in [.portuguese, .english, .korean, .russian] {
+                expect(SubtitleFileBuilder.lineWidth(for: idioma) == 42,
+                       "\(idioma.rawValue) continua em 42")
+            }
         }
         print("")
 

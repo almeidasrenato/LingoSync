@@ -171,7 +171,8 @@ final class SubtitleStudioModel {
         exportError = nil
         do {
             try SRTWriter.render(
-                cues, colorBySpeaker: diarizeSpeakers && colorBySpeaker
+                cues, colorBySpeaker: diarizeSpeakers && colorBySpeaker,
+                charactersPerLine: SubtitleFileBuilder.lineWidth(for: targetLanguage)
             ).write(to: url, atomically: true, encoding: .utf8)
             savedSRT = url
         } catch {
