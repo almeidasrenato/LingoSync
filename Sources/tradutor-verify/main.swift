@@ -2605,6 +2605,19 @@ struct Verify {
         expect(WhisperTranscriber.firstTokenLogProbThreshold <= -3.0,
                "o limiar do primeiro token nao voltou ao padrao do WhisperKit")
 
+        // A pausa que nao aparece como intervalo. Em japones a Apple emite um
+        // caractere por run e embute o silencio na duracao do caractere
+        // seguinte; a mediana do run e 0,120 s e o limiar fica em 2,0 s, que
+        // dispara em 7 runs de 1490 no video de 9 minutos. Baixar para 1,0 s
+        // dispararia em 82 (5,5%) e picaria a legenda sem motivo — medir antes
+        // de mexer. Ver `AppleSpeechTranscriber.longRunIsPause`.
+        if #available(macOS 26.0, *) {
+            expect(AppleSpeechTranscriber.longRunIsPause >= 2.0,
+                   "o limiar de run longo nao desceu a ponto de picar a legenda")
+            expect(AppleSpeechTranscriber.hardCeiling <= 7.0,
+                   "o teto duro do trecho nao passou do teto da legenda")
+        }
+
         // Parakeet e Whisper sao dois modelos, e o seletor mostra os dois.
         // Cada um so oferece os idiomas que cobre.
         let parakeet = RecognitionEngine.parakeet.supportedLanguages

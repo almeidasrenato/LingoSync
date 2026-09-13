@@ -210,6 +210,18 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
             }
             // Pausa longa é fronteira natural.
             if start != nil, range.start.seconds - end > 0.5 { close() }
+            // E há pausa que não aparece como intervalo.
+            //
+            // Em japonês a Apple emite **um caractere por run** e não deixa
+            // buraco entre eles: o silêncio antes de uma palavra fica embutido
+            // na duração do caractere que a abre. Medido no vídeo de 9
+            // minutos: a mediana do run é 0,120 s, e `本` durava 2,82 s, `緊`
+            // 2,52 s, `そ` 2,10 s — não é vogal longa, é a pausa que antecede.
+            // Sem isto a pausa é invisível, e quando o teto de tempo obriga a
+            // cortar, o corte cai no meio da palavra: `…そうだよ` / `ね。`.
+            if start != nil, range.end.seconds - range.start.seconds >= Self.longRunIsPause {
+                close()
+            }
             // Troca de voz também, e esta não se vê no áudio: sem ela, a
             // última palavra de quem entrou fica no trecho de quem saiu.
             //
@@ -220,6 +232,12 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
             // palavra, então o corte caía uma palavra tarde e o "E" de
             // "Entendi" ficava no trecho da outra pessoa. O meio é o ponto
             // que tolera esse desencontro.
+            // Sonda de medição: cada run com o seu tempo, para achar onde há
+            // pausa dentro de uma fala corrida. Ver `TRADUTOR_SONDA_LINHAS`.
+            if ProcessInfo.processInfo.environment["TRADUTOR_SONDA_RUNS"] != nil {
+                FileHandle.standardError.write(Data(
+                    "[run] \(range.start.seconds) \(range.end.seconds) \(piece)\n".utf8))
+            }
             let lado = Self.side(of: (range.start.seconds + range.end.seconds) / 2,
                                 in: boundaries)
             if start != nil, lado != currentSide { close() }
@@ -275,6 +293,13 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
         }
         return pieces
     }
+
+    /// Run tão longo que o que ele carrega é silêncio, não fala.
+    ///
+    /// Dois segundos para um caractere. Conservador de propósito: varrido no
+    /// vídeo de 9 minutos, dispara em 7 runs de 1490 (0,5%), enquanto 1,0 s
+    /// dispararia em 82 (5,5%) e picaria a legenda sem motivo.
+    public static let longRunIsPause: Double = 2.0
 
     /// A partir daqui o trecho já está grande e fecha no primeiro lugar
     /// seguro. Era o teto único de 5 s, que fechava onde estivesse.
