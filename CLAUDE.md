@@ -47,7 +47,9 @@ As verificações vivem dentro dos próprios binários.
 ./.build/release/tradutor-verify deepl        # tradutores: blocos, link, leitura atrasada
 ./.build/release/tradutor-verify treslinhas <video>
                                               # varre a saída atrás de legenda de 3 linhas
-./.build/release/tradutor-verify modelos-de-voz <audio>...
+./.build/release/tradutor-verify gabarito <marcado.txt> <audio> [modelo] [limiar]
+                                              # pontua quem fala contra marcacao humana
+./.build/release/tradutor-verify modelos-de-voz <audio>... [limiar]
                                               # agrupamento x sortformer no mesmo audio
 ./.build/release/tradutor-verify vozes <audio> [limiares]
                                               # quantas vozes cada limiar devolve
@@ -901,6 +903,52 @@ pela janela de legendas. Duas coisas que ela resolve:
 | `minimumSpeech` | **0,5 s** | o padrão de 1 s descarta a troca curta: 87 faixas e 133 s de fala contra 175 faixas e 201 s. Fim a fim, legendas marcadas de 83/133 para 115/125 |
 | `minimumVoiceTime` | **2 s** | baixar a fala mínima trouxe uma voz de 1 s numa conversa de duas pessoas. `pruneTinyVoices` a descarta, e o trecho fica **sem** locutor em vez de com o do vizinho |
 | `clusteringThreshold` | **0,70** | varrido de 0,50 a 0,90 com `tradutor-verify vozes`; único valor que preserva distinção nos quatro arquivos. Acima de 0,71 o recorte de 96 s colapsa para uma voz |
+
+#### O primeiro gabarito humano, e o que ele derrubou
+
+`Videos Exemplo/video exemplo 2 (Conversa mais complexa).quem-fala.txt` tem a
+marcação feita à mão: uma linha por legenda, com quem fala entre colchetes.
+`tradutor-verify gabarito` pontua qualquer configuração contra ele.
+
+A primeira coisa que ele mostrou não foi sobre modelo nenhum: **o vídeo tem
+dez pessoas em 97 segundos**, e três das 18 legendas têm mais de uma voz
+dentro — uma delas tem três. Os dois modelos vinham devolvendo três vozes ali,
+e isso passava por plausível.
+
+Pontuado contra o gabarito (a legenda recebe o rótulo que mais a cobre, e cada
+rótulo vira a pessoa que ele mais acompanha):
+
+```
+sortformer (o padrão)          3 rótulos    9 de 18   50%
+agrupamento, limiar 0,70       4 rótulos   10 de 18   56%   ← o do app
+agrupamento, limiar 0,55       5 rótulos   12 de 18   67%
+agrupamento, limiar 0,45       7 rótulos   14 de 18   78%
+agrupamento, limiar 0,25       7 rótulos   13 de 18   72%
+```
+
+**E não dá para simplesmente baixar o limiar.** O mesmo 0,45 no vídeo de 9
+minutos, que tem duas pessoas, devolve 12 vozes antes da poda e 5 depois da
+fusão. Separar agressivo e deixar a fusão juntar foi medido e não converge: no
+vídeo de 9 minutos sobram 5 onde deviam ser 2.
+
+O quadro, então:
+
+```
+                          vídeo de 2 pessoas    vídeo de 10 pessoas
+sortformer + fusão            2 (certo)             50% de acerto
+agrupamento 0,70              3                     56%
+agrupamento 0,45              5 a 7                 78%
+```
+
+Nenhuma configuração serve para os dois extremos, e o teto de quatro vozes da
+exportação CoreML do Sortformer é limite duro no material com muita gente. O
+padrão fica onde está — o caso de duas pessoas é o comum, e é onde ele ganha —
+mas a escolha deixou de ser "qual modelo é melhor" e passou a ser "quantas
+vozes tem este material", que é coisa que só quem assiste sabe.
+
+**Um gabarito não decide isto.** O próximo é o do vídeo de 9 minutos, e é ele
+que diz se vale um controle de sensibilidade na interface ou uma troca
+automática de modelo quando o Sortformer bate no teto.
 
 #### Agrupamento contra Sortformer, remedido depois da fusão
 

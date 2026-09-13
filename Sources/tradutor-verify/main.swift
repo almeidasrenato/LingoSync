@@ -149,9 +149,20 @@ struct Verify {
                 language: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .japanese) : .japanese,
                 engine: arguments.count >= 5 ? (RecognitionEngine(rawValue: arguments[4]) ?? .qwen) : .qwen
             )
+        case "gabarito":
+            guard arguments.count >= 4 else {
+                print("uso: gabarito <marcado.txt> <audio> [clustering|sortformer] [limiar]"); exit(1)
+            }
+            await groundTruthGate(
+                marks: arguments[2], audio: arguments[3],
+                model: arguments.count >= 5
+                    ? (SpeakerDiarizer.Model(rawValue: arguments[4]) ?? .sortformer) : .sortformer,
+                threshold: arguments.count >= 6 ? Float(arguments[5]) : nil)
         case "modelos-de-voz":
             guard arguments.count >= 3 else { print("faltam os caminhos dos audios"); exit(1) }
-            await voiceModelGate(paths: Array(arguments.dropFirst(2)))
+            await voiceModelGate(
+                paths: Array(arguments.dropFirst(2)).filter { Float($0) == nil },
+                threshold: arguments.dropFirst(2).compactMap { Float($0) }.first)
         case "vozes":
             guard arguments.count >= 3 else { print("falta o caminho do audio"); exit(1) }
             await voiceSweepGate(
@@ -2857,10 +2868,95 @@ struct Verify {
     ///
     /// Nao precisa de reconhecedor: quem identifica locutor e outro modelo,
     /// sobre o mesmo audio. O numero certo e o que voce sabe do arquivo.
+    /// Pontua a identificação de vozes contra um gabarito feito à mão.
+    ///
+    /// O arquivo tem uma linha por legenda, com o tempo e quem fala entre
+    /// colchetes — `[1]`, ou `[6, 5, 7]` quando há mais de uma pessoa dentro
+    /// da mesma legenda. É a única verdade que existe nestes vídeos: sem ela
+    /// toda comparação entre modelos é indício.
+    static func groundTruthGate(marks: String, audio: String,
+                                model: SpeakerDiarizer.Model, threshold: Float?) async {
+        struct Marca { let numero: Int; let inicio: Double; let fim: Double; let quem: [String] }
+        guard let texto = try? String(contentsOfFile: marks, encoding: .utf8) else {
+            print("nao consegui ler \(marks)"); exit(1)
+        }
+        var marcas: [Marca] = []
+        for linha in texto.split(separator: "\n") {
+            let padrao = #"(\d+)\s+(\d+):(\d+):(\d+),(\d+)\s*-->\s*(\d+):(\d+):(\d+),(\d+)\s+\[([^\]]+)\]"#
+            guard let m = try? NSRegularExpression(pattern: padrao),
+                  let r = m.firstMatch(in: String(linha), range: NSRange(linha.startIndex..., in: linha))
+            else { continue }
+            func campo(_ i: Int) -> String {
+                guard let faixa = Range(r.range(at: i), in: linha) else { return "" }
+                return String(linha[faixa])
+            }
+            func segundos(_ base: Int) -> Double {
+                (Double(campo(base)) ?? 0) * 3600 + (Double(campo(base + 1)) ?? 0) * 60
+                    + (Double(campo(base + 2)) ?? 0) + (Double(campo(base + 3)) ?? 0) / 1000
+            }
+            marcas.append(Marca(numero: Int(campo(1)) ?? 0, inicio: segundos(2), fim: segundos(6),
+                                quem: campo(10).split(separator: ",").map {
+                                    $0.trimmingCharacters(in: .whitespaces) }))
+        }
+        guard !marcas.isEmpty else { print("nenhuma marcacao reconhecida em \(marks)"); exit(1) }
+        guard let samples = load16kMono(path: audio) else { print("nao consegui ler \(audio)"); exit(1) }
+
+        let pessoas = Set(marcas.flatMap(\.quem))
+        let multiplas = marcas.filter { $0.quem.count > 1 }.count
+        print("gabarito: \(marcas.count) legendas · \(pessoas.count) pessoas · \(multiplas) com mais de uma voz dentro")
+
+        guard var turns = try? await SpeakerDiarizer.turns(
+            in: samples, model: model, threshold: threshold) else {
+            print("FALHA na identificacao"); exit(1)
+        }
+        if ProcessInfo.processInfo.environment["TRADUTOR_SEM_FUSAO"] == nil {
+            turns = (try? await SpeakerDiarizer.mergeSameVoice(turns, in: samples)) ?? turns
+        }
+
+        // Quem o modelo põe em cada legenda: o rótulo que mais a cobre.
+        var escolha: [Int: String] = [:]
+        for marca in marcas {
+            var cobertura: [String: Double] = [:]
+            for turn in turns {
+                let sobre = min(marca.fim, turn.end) - max(marca.inicio, turn.start)
+                if sobre > 0 { cobertura[turn.speaker, default: 0] += sobre }
+            }
+            escolha[marca.numero] = cobertura.max { $0.value < $1.value }?.key ?? "nenhum"
+        }
+        // Cada rótulo vira a pessoa que ele mais acompanha: sem isso a
+        // comparação puniria o modelo por chamar de "speaker_2" quem o
+        // gabarito chama de "3".
+        var votos: [String: [String: Int]] = [:]
+        for marca in marcas {
+            let rotulo = escolha[marca.numero] ?? "nenhum"
+            votos[rotulo, default: [:]][marca.quem[0], default: 0] += 1
+        }
+        let mapa = votos.compactMapValues { $0.max { $0.value < $1.value }?.key }
+        let acertos = marcas.filter { marca in
+            guard let pessoa = mapa[escolha[marca.numero] ?? ""] else { return false }
+            return marca.quem.contains(pessoa)
+        }.count
+        let rotulos = Set(escolha.values)
+        print(String(format: "%@%@: %d rótulos · acerto %d de %d (%.0f%%)",
+                     model.rawValue as NSString,
+                     threshold.map { String(format: " limiar %.2f", $0) } ?? "" as String as NSString,
+                     rotulos.count, acertos, marcas.count,
+                     Double(acertos) / Double(marcas.count) * 100))
+        for marca in marcas {
+            let rotulo = escolha[marca.numero] ?? "nenhum"
+            let pessoa = mapa[rotulo] ?? "?"
+            let certo = marca.quem.contains(pessoa)
+            print(String(format: "  %2d  %@ %-11@ → pessoa %-3@  gabarito %@",
+                         marca.numero, certo ? "ok  " : "erro", rotulo as NSString,
+                         pessoa as NSString, marca.quem.joined(separator: "+") as NSString))
+        }
+        exit(0)
+    }
+
     /// Agrupamento contra Sortformer, com o mesmo instrumento e no mesmo
     /// áudio: quantas vozes cada um acha, quanto custa, se repete, e o que
     /// muda depois da fusão por embedding.
-    static func voiceModelGate(paths: [String]) async {
+    static func voiceModelGate(paths: [String], threshold: Float? = nil) async {
         print("modelo · vozes (2 execuções) · faixas · tempo · vozes depois da fusão\n")
         for path in paths {
             guard let samples = load16kMono(path: path) else {
@@ -2874,7 +2970,9 @@ struct Verify {
                 var segundos = 0.0
                 for execucao in 0..<2 {
                     let inicio = Date()
-                    guard let turns = try? await SpeakerDiarizer.turns(in: samples, model: model)
+                    guard let turns = try? await SpeakerDiarizer.turns(
+                        in: samples, model: model,
+                        threshold: model == .clustering ? threshold : nil)
                     else { print("  \(model.rawValue): FALHOU"); break }
                     segundos = max(segundos, Date().timeIntervalSince(inicio))
                     vozes.append(Set(turns.map(\.speaker)).count)
