@@ -48,6 +48,15 @@ struct SubtitleStudioView: View {
     @Bindable var model: SubtitleStudioModel
     @State private var showingGlossary = false
 
+    /// A largura da lista quando o arrasto do divisor começou.
+    ///
+    /// `DragGesture` entrega `translation` **acumulada** desde o início do
+    /// gesto, não o passo desde o último evento. Somando-a à largura atual a
+    /// cada evento, arrastar 12 px deslocava 22 e o efeito acelerava: o
+    /// divisor ia ao limite quase imediatamente. O que se soma é a largura de
+    /// onde o arrasto partiu.
+    @State private var larguraAoComecarArrasto: CGFloat?
+
     var body: some View {
         VStack(spacing: 12) {
             toolbar
@@ -496,10 +505,13 @@ struct SubtitleStudioView: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
+                        let base = larguraAoComecarArrasto ?? model.listWidth
+                        if larguraAoComecarArrasto == nil { larguraAoComecarArrasto = base }
                         // Limites: a lista precisa caber um horário e um
                         // trecho de fala, e o vídeo precisa sobrar.
-                        model.listWidth = min(560, max(240, model.listWidth + value.translation.width))
+                        model.listWidth = min(560, max(240, base + value.translation.width))
                     }
+                    .onEnded { _ in larguraAoComecarArrasto = nil }
             )
             .help("Arraste para redimensionar o vídeo")
     }

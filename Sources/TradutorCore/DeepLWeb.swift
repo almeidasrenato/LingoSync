@@ -41,7 +41,7 @@ public enum DeepLWeb {
     /// margem e foi o tamanho usado na medição que aprovou o motor.
     ///
     /// Fala isolada maior que isto não acontece neste app: o agrupador corta
-    /// em 150 caracteres (`SubtitleFileBuilder.maximumPhraseLength`).
+    /// em 150 caracteres (`SubtitleFileBuilder.maximumCharacters`).
     public static let characterLimit = 1400
 
     /// Reparte as falas em blocos que cabem no limite, cortando em fim de
