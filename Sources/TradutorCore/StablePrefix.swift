@@ -64,6 +64,41 @@ public enum Tokens {
         return tokens
     }
 
+    /// Tira o espaço que o reconhecedor põe entre dois caracteres de escrita
+    /// densa.
+    ///
+    /// A Apple devolve `ですか ？` e `よかったです。 頑張ろうね。` — espaços que
+    /// não existem em japonês e que seguem para o tradutor e para o `.srt`.
+    /// Eram 12 no vídeo de 9 minutos depois de juntar os trechos pela regra
+    /// da escrita; estes nascem **dentro** de um trecho, no texto do próprio
+    /// run, então o conserto é aqui e não na junção.
+    ///
+    /// Só remove entre dois densos: `今 20歳` mantém o espaço, porque o `2`
+    /// não é escrita densa.
+    public static func tightenDense(_ text: String) -> String {
+        var result = ""
+        var pending = 0
+        for character in text {
+            if character == " " {
+                pending += 1
+                continue
+            }
+            if pending > 0 {
+                // Um espaço só, entre dois densos. Dois espaços seguidos são
+                // outra coisa e ficam como estão — assim texto sem escrita
+                // densa sai byte a byte igual ao que entrou.
+                let colar = pending == 1
+                    && result.last.map(isDense) == true
+                    && isDense(character)
+                if !colar { result += String(repeating: " ", count: pending) }
+                pending = 0
+            }
+            result.append(character)
+        }
+        if pending > 0 { result += String(repeating: " ", count: pending) }
+        return result
+    }
+
     public static func join(_ tokens: [String]) -> String {
         if !tokens.contains(where: { $0.contains(where: { $0.isLetter && isDense($0) }) }) {
             return tokens.joined(separator: " ")

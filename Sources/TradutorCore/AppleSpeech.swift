@@ -179,7 +179,10 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
         var currentSide = 0
 
         func close() {
-            let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            // O reconhecedor põe espaço entre caracteres japoneses — `ですか ？`
+            // — e esse espaço segue para o tradutor e para o arquivo.
+            let clean = Tokens.tightenDense(text)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
             if let start, !clean.isEmpty {
                 // Pontuação solta não é um trecho: ela é o fim do anterior.
                 //

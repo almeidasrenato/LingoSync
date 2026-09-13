@@ -1204,6 +1204,23 @@ struct Verify {
         expect(Tokens.split("오늘 날씨가 좋습니다.").count == 3,
                "coreano continua comparando palavras, sem remover espacos")
 
+        // O reconhecedor da Apple devolve `ですか ？` e `です。 頑張ろうね。`, e
+        // esse espaço seguia para o tradutor e para o arquivo. Eram 22 no
+        // video de 9 minutos; juntar os trechos pela regra da escrita tirou
+        // 10 e este conserto tirou mais 7.
+        for (entrada, esperado) in [
+            ("ですか ？", "ですか？"),
+            ("よかったです。 頑張ろうね。", "よかったです。頑張ろうね。"),
+            ("今 20歳です", "今 20歳です"),
+            ("the engineer walked us through it.", "the engineer walked us through it."),
+            ("dois  espacos  ficam", "dois  espacos  ficam"),
+            ("今日は San Francisco", "今日は San Francisco"),
+        ] {
+            let saida = Tokens.tightenDense(entrada)
+            expect(saida == esperado,
+                   "espaco entre densos: \"\(entrada)\" -> \"\(saida)\"")
+        }
+
         var tracker = StablePrefixTracker()
 
         // Passada 1: nada a comparar ainda, nada confirma.
@@ -1446,6 +1463,25 @@ struct Verify {
             ])
             expect(semPonto.count == 1,
                    "sem pontuacao segue junto (deu \(semPonto.count))")
+
+            // Juntar duas legendas curtas nao pode inventar espaco em japones.
+            // `mergeTinyCues` colava com `" " + cue.source`, e era o ultimo
+            // lugar que devolvia "よかったです。 頑張ろうね。" — os outros dois
+            // eram o agrupador e o texto do proprio run.
+            let curtas = builder.makeCues(from: [
+                TimedText(text: "よかったです。", start: 0, end: 0.6),
+                TimedText(text: "頑張ろうね。", start: 1.9, end: 2.6),
+            ])
+            expect(curtas.count == 1 && curtas[0].source == "よかったです。頑張ろうね。",
+                   "juntar legendas curtas em japones nao insere espaco (deu \(curtas.map(\.source)))")
+            // A legenda curta e a SEGUNDA: `mergeTinyCues` junta com a
+            // anterior, nao com a seguinte.
+            let curtasLatinas = builder.makeCues(from: [
+                TimedText(text: "Let us go.", start: 0, end: 0.6),
+                TimedText(text: "Right.", start: 1.9, end: 2.6),
+            ])
+            expect(curtasLatinas.count == 1 && curtasLatinas[0].source == "Let us go. Right.",
+                   "em ingles o espaco continua (deu \(curtasLatinas.map(\.source)))")
 
             // E a virgula japonesa fecha oracao no tempo real, como a latina.
             var acumulador = PhraseAccumulator()

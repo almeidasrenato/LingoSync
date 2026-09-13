@@ -366,8 +366,15 @@ public final class SubtitleFileBuilder {
 
         func flush() {
             guard !buffer.isEmpty else { return }
-            let text = buffer.map(\.text)
-                .joined(separator: " ")
+            // Junta pela regra da escrita, não com espaço fixo.
+            //
+            // Dois trechos japoneses viravam "よかったです。 頑張ろうね。" — com
+            // um espaço no meio que não existe em japonês. Eram 6 no vídeo de
+            // 9 minutos, e esse texto é o que vai para o tradutor e para o
+            // `.srt` quando se pede o original junto. `Tokens.join` só põe
+            // espaço quando os dois lados são de escrita que usa espaço, então
+            // inglês e português continuam idênticos.
+            let text = Tokens.join(buffer.map(\.text))
                 .replacingOccurrences(of: "  ", with: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             guard SentenceSplitter.hasContent(text) else { buffer.removeAll(); return }
@@ -393,7 +400,7 @@ public final class SubtitleFileBuilder {
             if let last = buffer.last, last.speaker != piece.speaker { flush() }
 
             buffer.append(piece)
-            let text = buffer.map(\.text).joined(separator: " ")
+            let text = Tokens.join(buffer.map(\.text))
             let span = (buffer.last?.end ?? 0) - (buffer.first?.start ?? 0)
             let endsSentence = piece.text.last
                 .map { SentenceSplitter.sentenceEnders.contains($0) } ?? false
@@ -986,7 +993,10 @@ public final class SubtitleFileBuilder {
                previous.speaker == cue.speaker,
                max(previous.end, cue.end) - previous.start <= maximumDuration,
                cue.start - previous.end < 1.5 {
-                previous.source += " " + cue.source
+                // Pela regra da escrita, como em `makeCues`: junta com espaço
+                // só onde o espaço existe. Era o último lugar que ainda
+                // devolvia "よかったです。 頑張ろうね。".
+                previous.source = Tokens.join([previous.source, cue.source])
                 previous.end = max(previous.end, cue.end)
                 result[result.count - 1] = previous
                 continue
