@@ -257,10 +257,19 @@ struct SettingsView: View {
             // Visível sempre, inclusive sem janela nenhuma aberta. Escondida
             // atrás de uma condição, ninguém a acharia — é a mesma lição dos
             // controles de locutor no painel.
-            Button("Abrir outra janela", action: onNewStudio)
-                .buttonStyle(.borderless)
-                .font(.system(size: 11))
-                .help("Abre mais uma janela de legendas, para outro vídeo")
+            //
+            // E com moldura, não `.borderless` como o "Restaurar tamanho do
+            // painel": ali o texto solto funciona porque está sozinho, aqui
+            // ficava espremido entre dois botões cheios e era lido como
+            // legenda de um deles. `.small` mantém a diferença de peso.
+            Button {
+                onNewStudio()
+            } label: {
+                Label("Abrir outra janela", systemImage: "plus.rectangle.on.rectangle")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.small)
+            .help("Abre mais uma janela de legendas, para outro vídeo")
 
             Button {
                 onMakeSubtitles()
