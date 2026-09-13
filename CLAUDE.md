@@ -1718,6 +1718,14 @@ não fazia nada visível. Quem avisa é `AVPlayerItemDidPlayToEndTime`.
 aparece sozinha no meio do vídeo. As métricas do modelo não a pegam — para ele
 é predição confiante. Só o texto denuncia (`Hallucinations.swift`).
 
+**`DragGesture` entrega deslocamento acumulado, não o passo.** O
+`value.translation` conta desde o início do gesto, e somá-lo à largura atual a
+cada `onChanged` faz o arrasto acelerar sozinho: 12 px de movimento
+deslocavam 22, e o divisor da janela ia ao limite antes de dar para escolher
+uma largura. O que se soma é o valor de onde o arrasto partiu. A barra de
+progresso do vídeo não tinha o problema porque usa `value.location`, que é
+posição absoluta.
+
 **Legendas podem sair além do fim do vídeo.** No vídeo de 18 min saiu uma
 começando aos 18:04 num vídeo de 18:01, durando 20 s. `clamp` corta.
 
