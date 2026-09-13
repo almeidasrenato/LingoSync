@@ -26,14 +26,6 @@ public protocol Transcriber: AnyObject, Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> [TimedText]
 
-    /// Termos que o motor deve tentar acertar mesmo sem nunca os ter visto.
-    ///
-    /// Vem da lista de termos do usuário. Até agora ela só agia na tradução —
-    /// e o CLAUDE.md registrava o limite: "se o erro nasce no reconhecimento,
-    /// a lista não alcança". Com o Whisper (prompt de prefill) e o Qwen
-    /// (`--context`) ela alcança. Quem não tem como usar, ignora.
-    var vocabularyHint: [String] { get set }
-
     /// Instantes em que uma voz troca por outra.
     ///
     /// Quem monta trecho a partir de palavras precisa disto para não juntar
@@ -46,17 +38,12 @@ public protocol Transcriber: AnyObject, Sendable {
     /// que corta em cada fala, eram 0 de 211 — por isso isto é opcional:
     /// quem já corta certo ignora.
     var speakerBoundaries: [TimeInterval] { get set }
+
 }
 
 extension Transcriber {
-    /// Ignorar é o comportamento padrão: só dois motores sabem o que fazer
-    /// com a lista.
-    public var vocabularyHint: [String] {
-        get { [] }
-        set { _ = newValue }
-    }
-
-    /// Idem: só quem monta trecho a partir de palavras usa as fronteiras.
+    /// Ignorar é o comportamento padrão: só quem monta trecho a partir de
+    /// palavras usa as fronteiras.
     public var speakerBoundaries: [TimeInterval] {
         get { [] }
         set { _ = newValue }
@@ -401,10 +388,6 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
     /// `isRealSpeech` e a lista de alucinacoes.
     public static let firstTokenLogProbThreshold: Float = -3.0
 
-    /// Termos que o Whisper deve acertar mesmo nunca tendo visto. Preenchido
-    /// pelo glossario da sessao — e o caminho barato para nomes proprios.
-    public var vocabularyHint: [String] = []
-
     public init(language: Language) {
         self.language = language
     }
@@ -578,12 +561,6 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         options.withoutTimestamps = true
         options.chunkingStrategy = .none
         options.firstTokenLogProbThreshold = Self.firstTokenLogProbThreshold
-        if !vocabularyHint.isEmpty, let tokenizer = pipeline?.tokenizer {
-            options.promptTokens = tokenizer
-                .encode(text: " " + vocabularyHint.joined(separator: ", "))
-                .filter { $0 < tokenizer.specialTokens.specialTokenBegin }
-            options.usePrefillPrompt = true
-        }
         return options
     }
 

@@ -172,9 +172,6 @@ public final class SubtitleFileBuilder {
     /// Fica como campo para quem quiser medir de novo com outro tradutor.
     public var contextOverlap = 0
 
-    /// Lista de termos aplicada ao original antes de traduzir.
-    public var glossary: Glossary?
-
     /// Aviso do tradutor sobre a geração que acabou de rodar, ou `nil`.
     ///
     /// Quem chama lê depois de `generate` e mostra ao usuário: é como a troca
@@ -230,7 +227,16 @@ public final class SubtitleFileBuilder {
     /// Isso não faz o app aceitar qualquer formato: se o conteúdo realmente
     /// não for um container que o sistema leia, o erro diz qual formato é e
     /// quais são aceitos.
-    public static func extractAudio(from url: URL) async throws -> [Float] {
+    /// - Parameter language: o idioma que se espera ouvir, quando se sabe.
+    ///
+    ///   Vídeo com mais de uma faixa de áudio — dublagem, comentário, um
+    ///   idioma por faixa — não diz qual é a principal, e `tracks.first`
+    ///   pegava a que estivesse na frente. A legenda saía do áudio errado
+    ///   com timecode válido e nada reclamando. Sem faixa que declare o
+    ///   idioma pedido, a primeira continua valendo.
+    public static func extractAudio(
+        from url: URL, preferring language: Language? = nil, processing: Bool = true
+    ) async throws -> [Float] {
         // Distinguir "não consigo ler" de "formato não serve".
         //
         // Sem isto, um arquivo que o app não tem permissão de abrir produzia
@@ -250,14 +256,14 @@ public final class SubtitleFileBuilder {
         let detected = MediaProbe.sniff(url)
 
         // 1. Do jeito que veio.
-        if let samples = try? await decode(url) { return samples }
+        if let samples = try? await decode(url, preferring: language, processing: processing) { return samples }
 
         // 2. Reapresentado como mp4, para o caso de o nome ser o problema.
         if let aliased = try? mp4Alias(for: url) {
             // A pasta inteira, não só o link: apagar só o link deixava uma
             // pasta vazia por vídeo — havia 88 acumuladas.
             defer { try? FileManager.default.removeItem(at: aliased.deletingLastPathComponent()) }
-            if let samples = try? await decode(aliased) { return samples }
+            if let samples = try? await decode(aliased, preferring: language, processing: processing) { return samples }
         }
 
         // 3. Não é falta de nome: o formato não serve mesmo.
@@ -295,10 +301,10 @@ public final class SubtitleFileBuilder {
         return alias
     }
 
-    private static func decode(_ url: URL) async throws -> [Float] {
+    private static func decode(_ url: URL, preferring language: Language?, processing: Bool) async throws -> [Float] {
         let asset = AVURLAsset(url: url)
         let tracks = try await asset.loadTracks(withMediaType: .audio)
-        guard let track = tracks.first else {
+        guard let track = await pickTrack(tracks, preferring: language) else {
             throw SubtitleFileError.noAudioTrack(url.lastPathComponent)
         }
 
@@ -346,7 +352,37 @@ public final class SubtitleFileBuilder {
         guard !samples.isEmpty else {
             throw SubtitleFileError.noAudioTrack(url.lastPathComponent)
         }
-        return boostQuietAudio(samples)
+        return processing ? prepareAudio(samples) : samples
+    }
+
+    /// A medição guarda o PCM original como régua e aplica ao reconhecimento
+    /// exatamente o mesmo tratamento do app, sem mudar variáveis de ambiente.
+    public static func prepareAudio(_ samples: [Float]) -> [Float] {
+        levelQuietSpeech(boostQuietAudio(samples))
+    }
+
+    /// A faixa que fala o idioma pedido, ou a primeira.
+    ///
+    /// Os dois campos que o container traz dizem a mesma coisa em formatos
+    /// diferentes — `languageCode` em ISO 639-2 ("jpn"), `extendedLanguageTag`
+    /// em BCP-47 ("ja-JP"). Normalizar os dois por `Locale.Language` evita a
+    /// tabela de conversão que ninguém mantém, e trata "und" (não declarado)
+    /// como o que ele é: nenhuma correspondência.
+    static func pickTrack(
+        _ tracks: [AVAssetTrack], preferring language: Language?
+    ) async -> AVAssetTrack? {
+        guard let language, tracks.count > 1 else { return tracks.first }
+        let wanted = Locale.Language(identifier: language.rawValue).languageCode
+        for track in tracks {
+            let tags = [
+                try? await track.load(.extendedLanguageTag),
+                try? await track.load(.languageCode),
+            ].compactMap { $0 }
+            if tags.contains(where: { Locale.Language(identifier: $0).languageCode == wanted }) {
+                return track
+            }
+        }
+        return tracks.first
     }
 
     /// Recupera nível apenas em arquivos muito baixos, antes do ASR e das vozes.
@@ -372,6 +408,134 @@ public final class SubtitleFileBuilder {
         guard gain > 1 else { return samples }
         return samples.map { $0 * gain }
     }
+
+
+    /// Iguala o nível ao longo do arquivo, para a fala baixa não sumir ao
+    /// lado da alta.
+    ///
+    /// Medido em 13/09/2026, japonês, atenuando **só metade das janelas de
+    /// 20 s** — que é como fala baixa aparece de verdade: alguém que fala
+    /// baixo no meio de quem fala alto, não o arquivo inteiro baixo.
+    ///
+    ///     vídeo com música, −30 dB alternado   Whisper  355 → 716 caracteres
+    ///     vídeo de 9 min,   −30 dB alternado   Whisper 3571 → 4484
+    ///     vídeo com música, −30 dB alternado   Apple    603 → 717
+    ///
+    /// (o mesmo áudio sem atenuação nenhuma dá 712 e 4085 no Whisper — ou
+    /// seja, o que se perdia volta inteiro.)
+    ///
+    /// Baixar o arquivo INTEIRO não faz o Whisper perder nada: medido até
+    /// −40 dB, o texto sai igual, porque o modelo normaliza a janela que
+    /// decodifica. O que ele perde é o que está baixo **em relação ao resto**
+    /// da mesma janela — e é justamente esse caso que `boostQuietAudio`, que
+    /// mede o arquivo todo de uma vez, não enxerga. Os dois continuam, nesta
+    /// ordem: primeiro o nível do arquivo, depois o nível dentro dele.
+    ///
+    /// Só amplifica. Janela mais alta que o alvo fica como está — comprimir
+    /// a fala alta mudaria o que já estava bom. E janela abaixo de
+    /// `levelingFloor` não ganha nada: amplificar silêncio é o que faz o
+    /// Whisper preencher a pausa com frase de cortesia.
+    public static func levelQuietSpeech(_ samples: [Float]) -> [Float] {
+        // Para refazer a medição de cima sem recompilar.
+        guard ProcessInfo.processInfo.environment["TRADUTOR_SEM_NIVELAMENTO"] == nil else {
+            return samples
+        }
+        guard samples.count > levelingWindow * 4 else { return samples }
+
+        // Dois tamanhos, cada um para uma pergunta. O quadro de 20 ms diz
+        // onde está o fundo: entre duas sílabas a voz cessa, e é essa pausa
+        // curta que revela o ruído de sala mesmo num arquivo que nunca fica
+        // em silêncio. A janela de 0,5 s diz o nível da fala ali.
+        //
+        // Estimar o fundo pela janela de 0,5 s foi tentado e falha no caso
+        // que importa: quando metade do arquivo é fala baixa, o percentil
+        // baixo cai dentro dessa metade e ela vira "ruído" — ganho 1, nada
+        // recuperado. O gate de `tempos` tem exatamente esse caso.
+        let frame = 320                        // 20 ms
+        var frames: [Float] = []
+        frames.reserveCapacity(samples.count / frame + 1)
+        var levels: [Float] = []
+        levels.reserveCapacity(samples.count / levelingWindow + 1)
+        var cursor = 0
+        while cursor < samples.count {
+            let end = min(cursor + levelingWindow, samples.count)
+            var energy = 0.0
+            var inner = cursor
+            while inner < end {
+                let stop = min(inner + frame, end)
+                var chunk = 0.0
+                for index in inner..<stop {
+                    let value = Double(samples[index])
+                    guard value.isFinite else { return samples }
+                    chunk += value * value
+                }
+                frames.append(Float((chunk / Double(stop - inner)).squareRoot()))
+                energy += chunk
+                inner = stop
+            }
+            levels.append(Float((energy / Double(end - cursor)).squareRoot()))
+            cursor = end
+        }
+
+        // Onde está o fundo deste arquivo, e onde está a fala.
+        //
+        // Piso ABSOLUTO não serve, e isso foi medido: com 0,0005 fixo, o
+        // ruído de sala de um dos vídeos foi amplificado 20× e o detector de
+        // energia passou a ver fala onde não havia — 196 trechos de fala
+        // contra 186 no mesmo arquivo sem nivelar, e 402 s de "voz" contra
+        // 357 s. Ruído amplificado é pior que fala baixa: ele vira alucinação
+        // com timecode.
+        //
+        // O critério é o mesmo do `Segmenter` do tempo real: fala é o que
+        // está bem acima do fundo do próprio material. O fundo é o percentil
+        // 10 dos quadros de 20 ms; o alvo, o percentil 75 das janelas que
+        // passaram do fundo.
+        let quiet = frames.sorted()
+        let noise = quiet[Int(Double(quiet.count) * 0.10)]
+        let speechFloor = max(levelingFloor, noise * levelingNoiseMultiplier)
+        let alive = levels.filter { $0 > speechFloor }.sorted()
+        guard alive.count > 3 else { return samples }
+        let target = alive[Int(Double(alive.count) * 0.75)]
+
+        let gains = levels.map { level -> Float in
+            guard level > speechFloor else { return 1 }
+            return min(levelingCeiling, max(1, target / level))
+        }
+        guard gains.contains(where: { $0 > 1.05 }) else { return samples }
+
+        var output = samples
+        for (slot, gain) in gains.enumerated() {
+            let start = slot * levelingWindow
+            let end = min(start + levelingWindow, samples.count)
+            guard start < end else { break }
+            // O ganho caminha até o da janela seguinte em vez de saltar: um
+            // degrau de ganho no meio de uma palavra é um clique, e clique é
+            // exatamente o que o detector de voz confunde com ataque de fala.
+            let next = gains[min(slot + 1, gains.count - 1)]
+            let span = Float(end - start)
+            for index in start..<end {
+                let mix = gain + (next - gain) * (Float(index - start) / span)
+                output[index] = max(-0.99, min(0.99, samples[index] * mix))
+            }
+        }
+        return output
+    }
+
+    /// Meio segundo a 16 kHz: curto o bastante para acompanhar a troca de
+    /// quem fala, longo o bastante para não seguir a sílaba.
+    public static let levelingWindow = 8_000
+
+    /// Teto do ganho, 26 dB. Acima disso o que sobe é ruído de sala.
+    public static let levelingCeiling: Float = 20
+
+    /// Abaixo daqui a janela é silêncio digital, e não ganha nada em
+    /// hipótese nenhuma.
+    public static let levelingFloor: Float = 0.0005
+
+    /// Quantas vezes acima do fundo do arquivo uma janela precisa estar para
+    /// contar como fala. Três, o mesmo patamar que o `Segmenter` usa para
+    /// abrir um trecho no tempo real.
+    public static let levelingNoiseMultiplier: Float = 3
 
     /// Junta palavras ou trechos marcados em legendas de tamanho legível,
     /// preferindo cortar na pontuação.
@@ -474,14 +638,11 @@ public final class SubtitleFileBuilder {
         onBatch: (@Sendable ([Cue]) -> Void)? = nil
     ) async throws -> [Cue] {
         progress(.extracting, 0, "", false)
-        let samples = try await Self.extractAudio(from: url)
+        let samples = try await Self.extractAudio(from: url, preferring: source)
         try Task.checkCancellation()
         let seconds = Double(samples.count) / 16_000
 
         let transcriber = TranscriberFactory.make(for: source, engine: engine)
-        // A lista de termos também vale para o reconhecimento, onde o motor
-        // souber usá-la.
-        transcriber.vocabularyHint = glossary?.activeSources ?? []
         recognitionName = transcriber.engineName
         progress(.loadingASR, 0, transcriber.engineName, false)
         try await transcriber.prepare { fraction, label in
@@ -504,6 +665,14 @@ public final class SubtitleFileBuilder {
                     in: samples, model: speakerModel
                 ) { fraction in
                     progress(.diarizing, fraction, "", false)
+                }
+                // Um identificador por pessoa, não por trecho de voz: ver
+                // `SpeakerDiarizer.mergeSameVoice`.
+                if ProcessInfo.processInfo.environment["TRADUTOR_SEM_FUSAO"] == nil {
+                    let limiar = ProcessInfo.processInfo.environment["TRADUTOR_FUSAO_LIMIAR"]
+                        .flatMap(Float.init) ?? SpeakerDiarizer.sameVoiceThreshold
+                    turns = (try? await SpeakerDiarizer.mergeSameVoice(
+                        turns, in: samples, threshold: limiar)) ?? turns
                 }
                 transcriber.speakerBoundaries = SpeakerDiarizer.boundaries(of: turns)
             } catch is CancellationError {
@@ -647,7 +816,7 @@ public final class SubtitleFileBuilder {
             // descartadas ao voltar. Hoje é zero — ver o comentário do campo.
             let contextStart = max(0, start - contextOverlap)
             let slice = Array(cues[contextStart..<end])
-            let texts = slice.map { glossary?.apply(to: $0.source) ?? $0.source }
+            let texts = slice.map(\.source)
 
             // Antes de mandar: diz qual faixa está no ar. É o único momento
             // em que a interface pode dizer algo honesto sobre uma espera que

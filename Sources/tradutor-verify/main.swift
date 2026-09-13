@@ -1,6 +1,7 @@
 import AudioCapture
 import AVFoundation
 import Foundation
+import CryptoKit
 import TradutorCore
 
 // Portoes das fases 4 e 5. Roda sem captura de audio, entao nao depende da
@@ -28,7 +29,7 @@ struct Verify {
               tradutor-verify tempos        formatacao e agrupamento de legendas
               tradutor-verify formatos      arquivo sem extensao e formato recusado
               tradutor-verify legendas      leitura de arquivo .srt
-              tradutor-verify glossario     lista de termos e janela de contexto
+              tradutor-verify faixas        video com duas faixas: escolha pelo idioma
               tradutor-verify fonte <video> [idioma] [motor]
                                             imprime as falas reconhecidas, uma por linha
               tradutor-verify traduzir <arquivo> [origem] [destino]
@@ -51,11 +52,26 @@ struct Verify {
                                             gera legenda .srt de um video
               tradutor-verify alinhamento <audio> [motor] [idioma]
                                             mede a legenda contra onde ha voz
+              tradutor-verify cobertura [<video> [idioma] [motor]]
+                                            sem video: teste da regua; com video: cobertura por voz
+                --audio-referencia <video>  PCM original com a mesma duracao
+                --referencia <json>         salva/reutiliza as mesmas faixas Sortformer
+                --json <arquivo>           grava as medidas e transcricoes
             """)
             exit(1)
         }
 
+        func option(_ name: String) -> String? {
+            guard let index = arguments.firstIndex(of: name), index + 1 < arguments.count else { return nil }
+            return arguments[index + 1]
+        }
         switch arguments[1] {
+        case "cobertura":
+            guard arguments.count >= 3 else { await coverageSelftest(); return }
+            await coverageGate(path: arguments[2],
+                               language: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .japanese) : .japanese,
+                               engine: arguments.count >= 5 ? (RecognitionEngine(rawValue: arguments[4]) ?? .apple) : .apple,
+                               referencePath: option("--audio-referencia"), cachePath: option("--referencia"), jsonPath: option("--json"))
         case "dialogo": await dialogueGate()
         case "audio":
             guard arguments.count >= 3 else { print("falta o caminho do wav"); exit(1) }
@@ -88,12 +104,13 @@ struct Verify {
                 path: arguments[2],
                 engine: arguments.count >= 4
                     ? (RecognitionEngine(rawValue: arguments[3]) ?? .whisper) : .whisper,
-                language: arguments.count >= 5 ? (Language(rawValue: arguments[4]) ?? .english) : .english
+                language: arguments.count >= 5 ? (Language(rawValue: arguments[4]) ?? .english) : .english,
+                referencePath: option("--audio-referencia")
             )
         case "tempos": await timecodeGate()
         case "formatos": await formatGate()
         case "legendas": legendaGate()
-        case "glossario": glossaryGate()
+        case "faixas": await trackGate()
         case "fonte":
             guard arguments.count >= 3 else { print("falta o caminho do video"); exit(1) }
             await dumpSource(
@@ -413,76 +430,6 @@ struct Verify {
         exit(0)
     }
 
-    // MARK: Lista de termos e contexto
-
-    static func glossaryGate() {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
-
-        print("lista de termos\n")
-
-        // Pasta temporaria: a lista real do usuario nao pode ser tocada por
-        // um teste. `exit()` no fim do gate nao executa `defer`, entao
-        // "salvar e restaurar" nao funciona aqui.
-        let pasta = FileManager.default.temporaryDirectory
-            .appendingPathComponent("glossario-teste-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: pasta) }
-
-        let glossario = Glossary(source: .japanese, target: .portuguese, directory: pasta)
-        glossario.replaceAll(with: [
-            Term(source: "もやし", target: "broto de feijão"),
-            Term(source: "納豆", target: "natto"),
-            Term(source: "山梨", target: "Yamanashi"),
-            Term(source: "山梨県", target: "província de Yamanashi"),
-            Term(source: "水菜", target: "mizuna", enabled: false),
-        ])
-
-        expect(glossario.apply(to: "もやしは安い野菜です").contains("broto de feijão"),
-               "substitui o termo no original")
-        expect(!glossario.apply(to: "もやしは安い野菜です").contains("もやし"),
-               "o termo original sai do texto")
-
-        // O mais longo primeiro: com a ordem errada, 山梨 comeria o começo de
-        // 山梨県 e sobraria um 県 solto.
-        let comarca = glossario.apply(to: "山梨県で採れた野菜")
-        expect(comarca.contains("província de Yamanashi"),
-               "o termo mais longo ganha do mais curto (deu \"\(comarca)\")")
-        expect(!comarca.contains("県"), "nao sobra caractere solto do termo longo")
-
-        expect(glossario.apply(to: "水菜も買います").contains("水菜"),
-               "termo desligado nao e aplicado")
-        expect(glossario.apply(to: "卵も買います") == "卵も買います",
-               "texto sem termo nenhum fica intacto")
-        expect(glossario.activeCount == 4, "conta so os termos ligados")
-
-        print("")
-        print("persistencia")
-        let relido = Glossary(source: .japanese, target: .portuguese, directory: pasta)
-        expect(relido.all.count == 5, "a lista sobrevive a reabertura (deu \(relido.all.count))")
-        expect(relido.apply(to: "納豆は健康です").contains("natto"), "os termos voltam funcionando")
-
-        print("")
-        print("lote de traducao")
-        let builder = SubtitleFileBuilder()
-        // A sobreposicao de contexto saiu, e saiu medida: `tradutor-verify
-        // sobreposicao` planta o caso na borda do lote e as duas traducoes
-        // saem identicas, erradas no genero nas duas. Custava 15% do tempo.
-        // Quem quiser trazer de volta precisa refazer essa medicao.
-        expect(builder.contextOverlap == 0, "nao se reenvia legenda como contexto")
-        expect(builder.maximumCharacters > 100,
-               "o corte antes de traduzir segue a frase, nao o tamanho da legenda (\(builder.maximumCharacters))")
-
-        // Limpa antes de sair, porque `exit` nao roda `defer`.
-        try? FileManager.default.removeItem(at: pasta)
-
-        print("")
-        print(failures == 0 ? "lista de termos ok" : "\(failures) falhas")
-        exit(failures == 0 ? 0 : 1)
-    }
-
     // MARK: Comparacao entre motores de traducao
 
     /// Imprime as falas reconhecidas, uma por linha.
@@ -724,6 +671,114 @@ struct Verify {
         exit(failures == 0 ? 0 : 1)
     }
 
+    // MARK: Faixa de audio por idioma
+
+    /// Video com mais de uma faixa de audio: a legenda tem que sair da faixa
+    /// do idioma escolhido, nao da primeira que estiver no arquivo.
+    ///
+    /// Duas faixas de tom com amplitudes bem diferentes — da para saber qual
+    /// delas foi lida so pelo nivel, sem depender de reconhecimento.
+    static func trackGate() async {
+        var failures = 0
+        func expect(_ condition: Bool, _ label: String) {
+            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
+            if !condition { failures += 1 }
+        }
+
+        print("faixa de audio por idioma\n")
+
+        let pasta = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tradutor-faixas-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: pasta, withIntermediateDirectories: true)
+
+        let video: URL
+        do {
+            let alto = pasta.appendingPathComponent("alto.wav")
+            let baixo = pasta.appendingPathComponent("baixo.wav")
+            try escreveTom(alto, amplitude: 0.5, frequencia: 440)
+            try escreveTom(baixo, amplitude: 0.05, frequencia: 880)
+            // A faixa do idioma pedido e a SEGUNDA de proposito: com a
+            // primeira, o gate passaria mesmo sem o conserto.
+            video = try await montaFaixas(
+                [(alto, "eng"), (baixo, "jpn")],
+                para: pasta.appendingPathComponent("duas-faixas.mov")
+            )
+        } catch {
+            print("FALHA ao montar o arquivo de teste: \(error.localizedDescription)")
+            try? FileManager.default.removeItem(at: pasta)
+            exit(1)
+        }
+
+        func nivel(_ language: Language?) async -> Float {
+            guard let samples = try? await SubtitleFileBuilder.extractAudio(
+                from: video, preferring: language
+            ), !samples.isEmpty else { return -1 }
+            let energia = samples.reduce(0.0) { $0 + Double($1) * Double($1) }
+            return Float((energia / Double(samples.count)).squareRoot())
+        }
+
+        let japones = await nivel(.japanese)
+        let ingles = await nivel(.english)
+        let semPedido = await nivel(nil)
+        let semFaixa = await nivel(.thai)
+        print(String(format: "  niveis: ja=%.3f  en=%.3f  sem pedido=%.3f  sem faixa=%.3f\n",
+                     japones, ingles, semPedido, semFaixa))
+
+        expect(japones > 0 && japones < 0.1,
+               "pedindo japones vem a faixa japonesa, que e a segunda")
+        expect(ingles > 0.2, "pedindo ingles vem a faixa inglesa, que e a primeira")
+        expect(semPedido > 0.2, "sem idioma nenhum a primeira faixa continua valendo")
+        expect(semFaixa > 0.2, "idioma que nenhuma faixa declara cai na primeira")
+
+        try? FileManager.default.removeItem(at: pasta)
+        print("")
+        print(failures == 0 ? "faixa por idioma ok" : "\(failures) falhas")
+        exit(failures == 0 ? 0 : 1)
+    }
+
+    /// Um tom senoidal em .wav, para o teste ter audio sem depender de arquivo
+    /// externo.
+    static func escreveTom(
+        _ url: URL, amplitude: Float, frequencia: Double, segundos: Double = 2
+    ) throws {
+        let taxa = 44_100.0
+        guard let formato = AVAudioFormat(standardFormatWithSampleRate: taxa, channels: 1)
+        else { throw NSError(domain: "faixas", code: 1) }
+        let arquivo = try AVAudioFile(forWriting: url, settings: formato.settings)
+        let quadros = AVAudioFrameCount(taxa * segundos)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: formato, frameCapacity: quadros)
+        else { throw NSError(domain: "faixas", code: 2) }
+        buffer.frameLength = quadros
+        let canal = buffer.floatChannelData![0]
+        for quadro in 0..<Int(quadros) {
+            canal[quadro] = amplitude * Float(sin(2 * .pi * frequencia * Double(quadro) / taxa))
+        }
+        try arquivo.write(from: buffer)
+    }
+
+    /// Junta varios audios num arquivo so, uma faixa cada, com o idioma
+    /// declarado — que e como chega um video com dublagem.
+    static func montaFaixas(_ faixas: [(URL, String)], para destino: URL) async throws -> URL {
+        let composicao = AVMutableComposition()
+        for (url, idioma) in faixas {
+            let asset = AVURLAsset(url: url)
+            guard let origem = try await asset.loadTracks(withMediaType: .audio).first,
+                  let trilha = composicao.addMutableTrack(
+                    withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+            else { continue }
+            let duracao = try await asset.load(.duration)
+            try trilha.insertTimeRange(
+                CMTimeRange(start: .zero, duration: duracao), of: origem, at: .zero)
+            trilha.languageCode = idioma
+        }
+        guard let exportacao = AVAssetExportSession(
+            asset: composicao, presetName: AVAssetExportPresetPassthrough)
+        else { throw NSError(domain: "faixas", code: 3) }
+        try? FileManager.default.removeItem(at: destino)
+        try await exportacao.export(to: destino, as: .mov)
+        return destino
+    }
+
     // MARK: Legenda de arquivo
 
     static func srtGate(
@@ -787,15 +842,11 @@ struct Verify {
         }
 
         let builder = SubtitleFileBuilder()
-        builder.glossary = Glossary(source: source, target: target)
         // Medicao: SOBREPOSICAO troca as legendas reenviadas como contexto.
         if let valor = ProcessInfo.processInfo.environment["SOBREPOSICAO"], let n = Int(valor) {
             builder.contextOverlap = n
             print("sobreposicao: \(n) legendas")
         }
-        let ativos = builder.glossary?.activeCount ?? 0
-        if ativos > 0 { print("glossario: \(ativos) termos ativos") }
-
         let pieces = turnsPrevias.isEmpty
             ? timed
             : SpeakerDiarizer.renumber(SpeakerDiarizer.assign(timed, to: turnsPrevias))
@@ -964,6 +1015,55 @@ struct Verify {
         transient[0] = 0.8
         expect((SubtitleFileBuilder.boostQuietAudio(transient).map { abs($0) }.max() ?? 1) <= 0.951,
                "pico isolado limita o ganho, sem clipping")
+
+        print("")
+        print("nivelamento de fala baixa\n")
+        do {
+            // Fala sintetica: rajadas de 0,25 s separadas por fundo baixo, e
+            // a segunda metade 30 dB abaixo da primeira — que e o caso medido
+            // (alguem que fala baixo no meio de quem fala alto).
+            let taxa = 16_000
+            let total = taxa * 40
+            var audio = [Float](repeating: 0, count: total)
+            for indice in 0..<total {
+                let segundo = Double(indice) / Double(taxa)
+                let falando = Int(segundo / 0.25) % 2 == 0
+                let fundo = Float.random(in: -0.0008...0.0008)
+                let voz = falando
+                    ? Float(sin(2 * .pi * 180 * segundo)) * 0.2 : 0
+                audio[indice] = (voz + fundo) * (segundo > 20 ? 0.0316 : 1)
+            }
+            func rms(_ trecho: ArraySlice<Float>) -> Float {
+                let energia = trecho.reduce(0.0) { $0 + Double($1) * Double($1) }
+                return Float((energia / Double(trecho.count)).squareRoot())
+            }
+            let nivelado = SubtitleFileBuilder.levelQuietSpeech(audio)
+            let antes = rms(audio[0..<(taxa * 20)]) / rms(audio[(taxa * 20)...])
+            let depois = rms(nivelado[0..<(taxa * 20)]) / rms(nivelado[(taxa * 20)...])
+            print(String(format: "  metade alta / metade baixa: %.0fx antes, %.1fx depois",
+                         antes, depois))
+            expect(antes > 20, "o caso de teste tem mesmo as duas metades separadas")
+            expect(depois < 3, "a metade baixa sobe ate perto da alta (deu \(Int(depois))x)")
+            expect(nivelado.count == audio.count, "nivelar nao muda a duracao")
+            expect((nivelado.map { abs($0) }.max() ?? 1) <= 0.99, "nivelar nao satura")
+
+            // Nivel parelho nao e mexido: material bem gravado sai identico.
+            let parelho = (0..<(taxa * 10)).map { indice -> Float in
+                Float(sin(2 * .pi * 180 * Double(indice) / Double(taxa))) * 0.2
+            }
+            expect(SubtitleFileBuilder.levelQuietSpeech(parelho) == parelho,
+                   "audio de nivel parelho passa intacto")
+
+            // Ruido de fundo sozinho nao vira sinal. Com piso absoluto isso
+            // falhava: o fundo de um dos videos subia 20x e o detector de
+            // energia passava a ver fala onde nao havia — 196 trechos contra
+            // 186 no mesmo arquivo.
+            let so_ruido = (0..<(taxa * 10)).map { _ in Float.random(in: -0.002...0.002) }
+            let ruidoNivelado = SubtitleFileBuilder.levelQuietSpeech(so_ruido)
+            let ganhoDoRuido = rms(ruidoNivelado[...]) / rms(so_ruido[...])
+            expect(ganhoDoRuido < 1.2,
+                   String(format: "ruido de fundo sozinho nao e amplificado (deu %.1fx)", ganhoDoRuido))
+        }
 
         print("codigo de tempo\n")
         expect(SRTWriter.timecode(0) == "00:00:00,000", "zero")
@@ -1631,6 +1731,17 @@ struct Verify {
         expect(!SentenceSplitter.hasContent("..."), "so pontuacao nao tem conteudo")
         expect(SentenceSplitter.hasContent("oi"), "letra tem conteudo")
 
+        print("")
+        print("lote de traducao")
+        let builder = SubtitleFileBuilder()
+        // A sobreposicao de contexto saiu, e saiu medida: `tradutor-verify
+        // sobreposicao` planta o caso na borda do lote e as duas traducoes
+        // saem identicas, erradas no genero nas duas. Custava 15% do tempo.
+        // Quem quiser trazer de volta precisa refazer essa medicao.
+        expect(builder.contextOverlap == 0, "nao se reenvia legenda como contexto")
+        expect(builder.maximumCharacters > 100,
+               "o corte antes de traduzir segue a frase, nao o tamanho da legenda (\(builder.maximumCharacters))")
+
         for part in parts { print("    | \(part)") }
         print("")
         print(failures == 0 ? "corte em frases ok" : "\(failures) falhas")
@@ -1645,16 +1756,19 @@ struct Verify {
     /// reconhecedor. Para cada trecho de fala compara o começo e o fim do que
     /// o reconhecedor marcou e das legendas prontas (`makeCues`, já com a
     /// entrada antecipada). Negativo: cedo demais.
-    static func alignmentGate(path: String, engine: RecognitionEngine, language: Language) async {
+    static func alignmentGate(path: String, engine: RecognitionEngine, language: Language, referencePath: String? = nil) async {
         do {
-            let samples = try await SubtitleFileBuilder.extractAudio(from: URL(fileURLWithPath: path))
+            let audio = try await MeasurementAudio.load(URL(fileURLWithPath: path), language: language,
+                                                       reference: referencePath.map { URL(fileURLWithPath: $0) })
+            let samples = audio.samples
             let duration = Double(samples.count) / 16_000
             let transcriber = TranscriberFactory.make(for: language, engine: engine)
             try await transcriber.prepare { _, _ in }
             let pieces = try await transcriber.transcribeTimed(samples) { _ in }
             let cues = SubtitleFileBuilder().makeCues(from: pieces, mediaDuration: duration)
-            let regions = SpeechEnergy.regions(samples, minimumPause: 0.5)
+            let regions = audio.regions
 
+            print(audio.description)
             print("motor: \(transcriber.engineName)  ·  \(regions.count) trechos de fala  ·  \(pieces.count) trechos reconhecidos\n")
             print("fala (s)          reconhecido Δini  Δfim    legenda Δini  Δfim")
 
@@ -2653,6 +2767,32 @@ struct Verify {
                "o .srt colorido volta a ser lido sem as tags")
 
         print("")
+        print("fusão de identificadores da mesma voz\n")
+        // Sem modelo: os embeddings sao dados. A e C sao a mesma voz, B e
+        // outra, e D vem por encadeamento — parecido com C, longe de A.
+        let vozA: [Float] = [1, 0, 0, 0]
+        let vozB: [Float] = [0, 1, 0, 0]
+        let vozC: [Float] = [0.95, 0.31, 0, 0]
+        let vozD: [Float] = [0.80, 0.60, 0, 0]
+        let quando: [String: TimeInterval] = ["s0": 0, "s1": 5, "s2": 10, "s3": 20]
+        let grupos = SpeakerDiarizer.groupSameVoice(
+            ["s0": vozA, "s1": vozB, "s2": vozC, "s3": vozD], firstHeard: quando, threshold: 0.20)
+        expect(grupos["s0"] == "s0" && grupos["s2"] == "s0",
+               "voz parecida entra no grupo de quem falou primeiro")
+        expect(grupos["s1"] == "s1", "voz diferente nao e fundida")
+        expect(grupos["s3"] == "s0",
+               "encadeamento: parecido com o parecido entra no mesmo grupo")
+        expect(Set(grupos.values).count == 2, "quatro identificadores viram duas vozes")
+        // Limiar baixo nao funde nada, e a saida nao pode depender da ordem
+        // do dicionario: quem falou primeiro nomeia o grupo.
+        let separados = SpeakerDiarizer.groupSameVoice(
+            ["s0": vozA, "s1": vozB, "s2": vozC], firstHeard: quando, threshold: 0.001)
+        expect(Set(separados.values).count == 3, "limiar apertado deixa cada um no seu")
+        expect(SpeakerDiarizer.cosineDistance(vozA, vozA) < 0.0001, "voz igual tem distancia zero")
+        expect(SpeakerDiarizer.cosineDistance(vozA, vozB) > 0.9, "vozes ortogonais ficam longe")
+        expect(SpeakerDiarizer.cosineDistance([], []) == 2, "vetor vazio nao vira semelhanca")
+
+        print("")
         print(failures == 0 ? "PASSOU" : "\(failures) falhas")
         exit(failures == 0 ? 0 : 1)
     }
@@ -2772,29 +2912,6 @@ struct Verify {
         for motor in [RecognitionEngine.apple, .parakeet, .whisper] {
             expect(motor.forLive == motor, "\(motor.displayName) ao vivo continua sendo ele mesmo")
         }
-
-        // A lista de termos tambem alimenta o reconhecimento: o Whisper pelo
-        // prompt de prefill, o Qwen pelo `--context`. Pasta temporaria, nunca
-        // a lista do usuario.
-        let pasta = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tradutor-teste-\(UUID().uuidString)", isDirectory: true)
-        try? FileManager.default.createDirectory(at: pasta, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: pasta) }
-        let lista = Glossary(source: .japanese, target: .portuguese, directory: pasta)
-        lista.replaceAll(with: [
-            Term(source: "上村玲香", target: "Reika Uemura"),
-            Term(source: "納豆", target: "natto", enabled: false),
-        ])
-        expect(lista.activeSources == ["上村玲香"],
-               "so os termos ligados vao para o reconhecedor")
-        let motorComLista = TranscriberFactory.make(for: .japanese, engine: .whisper)
-        motorComLista.vocabularyHint = lista.activeSources
-        expect(motorComLista.vocabularyHint == ["上村玲香"],
-               "o motor guarda a lista que recebeu")
-        let motorSemLista = TranscriberFactory.make(for: .japanese, engine: .apple)
-        motorSemLista.vocabularyHint = lista.activeSources
-        expect(motorSemLista.vocabularyHint.isEmpty,
-               "motor que nao usa a lista ignora sem reclamar")
 
         // A retentativa do Neural Engine: uma falha e recuperada, duas sobem,
         // e cancelamento nao e retentado.
@@ -3037,5 +3154,230 @@ struct Verify {
         }
         guard error == nil, let channel = output.floatChannelData?[0] else { return nil }
         return Array(UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
+    }
+}
+
+/// A régua vem do PCM original: tratar o áudio não pode mudar o denominador.
+struct MeasurementAudio {
+    let original: [Float]
+    let samples: [Float]
+    let referencePath: String
+    var regions: [ClosedRange<Double>] { SpeechEnergy.regions(original, minimumPause: 0.5) }
+    var hash: String { original.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() } }
+
+    static func load(_ url: URL, language: Language, reference: URL? = nil) async throws -> Self {
+        let raw = try await SubtitleFileBuilder.extractAudio(from: url, preferring: language, processing: false)
+        let referenceURL = reference ?? url
+        let original = referenceURL == url ? raw : try await SubtitleFileBuilder.extractAudio(
+            from: referenceURL, preferring: language, processing: false)
+        guard original.count == raw.count else {
+            throw NSError(domain: "medição", code: 1, userInfo: [NSLocalizedDescriptionKey: "A referência e o áudio medido precisam ter a mesma duração."])
+        }
+        return Self(original: original, samples: SubtitleFileBuilder.prepareAudio(raw), referencePath: referenceURL.path)
+    }
+
+    var description: String {
+        "referência: PCM original, sem ganho nem nivelamento · \(referencePath) · SHA256 \(hash)"
+    }
+}
+
+struct VoiceReference: Codable {
+    struct Interval: Codable {
+        let speaker: String
+        let start: Double
+        let end: Double
+        var turn: SpeakerDiarizer.Turn { .init(speaker: speaker, start: start, end: end) }
+    }
+    let hash: String
+    let path: String
+    let model: String
+    let intervals: [Interval]
+
+    static func load(_ audio: MeasurementAudio, cache: URL?) async throws -> Self {
+        if let cache, FileManager.default.fileExists(atPath: cache.path) {
+            let saved = try JSONDecoder().decode(Self.self, from: Data(contentsOf: cache))
+            guard saved.hash == audio.hash, saved.model == "sortformer" else {
+                throw NSError(domain: "medição", code: 2, userInfo: [NSLocalizedDescriptionKey: "As faixas salvas pertencem a outro áudio ou modelo."])
+            }
+            guard saved.intervals.allSatisfy({
+                !$0.speaker.isEmpty && $0.start.isFinite && $0.end.isFinite
+                    && $0.start >= 0 && $0.end > $0.start
+                    && $0.end <= Double(audio.original.count) / 16_000
+            }) else {
+                throw NSError(domain: "medição", code: 3, userInfo: [NSLocalizedDescriptionKey: "A referência contém faixas inválidas ou fora do áudio."])
+            }
+            return saved
+        }
+        // Mesmo PCM não garante a mesma diarização em duas inferências. O
+        // arquivo de referência congela também as faixas e seus identificadores.
+        let turns = try await SpeakerDiarizer.turns(in: audio.original, model: .sortformer)
+        // O Sortformer trabalha em blocos e a última faixa costuma passar do
+        // fim do áudio. Sem aparar aqui, o arquivo gravado é recusado pela
+        // validação de cima na execução seguinte — a guarda disparava contra o
+        // dado que ela mesma tinha acabado de gravar.
+        let duration = Double(audio.original.count) / 16_000
+        let reference = Self(hash: audio.hash, path: audio.referencePath, model: "sortformer",
+                             intervals: turns.compactMap {
+                                 let end = min($0.end, duration)
+                                 guard end > $0.start else { return nil }
+                                 return Interval(speaker: $0.speaker, start: $0.start, end: end)
+                             })
+        if let cache { try JSONEncoder().encode(reference).write(to: cache, options: .atomic) }
+        return reference
+    }
+}
+
+struct VoiceCoverage: Codable {
+    let speaker: String
+    let speechSeconds: Double
+    let recognizedSeconds: Double
+    let pieces: Int
+    let characters: Int
+    let firstSecond: Double
+
+    /// União, não soma: sobreposições da mesma voz não aumentam o denominador.
+    static func duration(_ ranges: [ClosedRange<Double>]) -> Double {
+        var end = -Double.infinity
+        var total = 0.0
+        for range in ranges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            total += max(0, range.upperBound - max(end, range.lowerBound))
+            end = max(end, range.upperBound)
+        }
+        return total
+    }
+
+    static func measure(_ pieces: [TimedText], turns: [SpeakerDiarizer.Turn]) -> [Self] {
+        let assigned = SpeakerDiarizer.assign(pieces, to: turns)
+        let names = Set(turns.map(\.speaker)).sorted()
+        return names.map { name in
+            let voice = turns.filter { $0.speaker == name }
+            let recognized = assigned.filter { $0.speaker == name }
+            let covered = voice.flatMap { turn in
+                recognized.compactMap { piece -> ClosedRange<Double>? in
+                    let start = max(turn.start, piece.start), end = min(turn.end, piece.end)
+                    return end > start ? start...end : nil
+                }
+            }
+            return Self(speaker: name,
+                        speechSeconds: duration(voice.map { $0.start...$0.end }),
+                        recognizedSeconds: duration(covered), pieces: recognized.count,
+                        characters: recognized.reduce(0) { $0 + $1.text.filter { !$0.isWhitespace }.count },
+                        firstSecond: voice.map(\.start).min() ?? 0)
+        }.sorted { $0.firstSecond == $1.firstSecond ? $0.speaker < $1.speaker : $0.firstSecond < $1.firstSecond }
+    }
+}
+
+extension Verify {
+    static func coverageGate(path: String, language: Language, engine: RecognitionEngine,
+                             referencePath: String?, cachePath: String?, jsonPath: String?) async {
+        do {
+            let audio = try await MeasurementAudio.load(URL(fileURLWithPath: path), language: language,
+                                                       reference: referencePath.map { URL(fileURLWithPath: $0) })
+            let reference = try await VoiceReference.load(audio, cache: cachePath.map { URL(fileURLWithPath: $0) })
+            var turns = reference.intervals.map(\.turn)
+            if ProcessInfo.processInfo.environment["TRADUTOR_SEM_FUSAO"] == nil {
+                let limiar = ProcessInfo.processInfo.environment["TRADUTOR_FUSAO_LIMIAR"]
+                    .flatMap(Float.init) ?? SpeakerDiarizer.sameVoiceThreshold
+                let antes = Set(turns.map(\.speaker)).count
+                turns = (try? await SpeakerDiarizer.mergeSameVoice(
+                    turns, in: audio.original, threshold: limiar)) ?? turns
+                print("fusão de vozes: \(antes) identificadores → \(Set(turns.map(\.speaker)).count) (limiar \(limiar))")
+            }
+            let transcriber = TranscriberFactory.make(for: language, engine: engine)
+            try await transcriber.prepare { _, _ in }
+            // A mesma fronteira nas duas pontas evita atribuir um bloco com
+            // duas pessoas inteiro a quem só falou por mais tempo.
+            transcriber.speakerBoundaries = SpeakerDiarizer.boundaries(of: turns)
+            let pieces = try await transcriber.transcribeTimed(audio.samples) { _ in }
+            let rows = VoiceCoverage.measure(pieces, turns: turns)
+            print(audio.description)
+            print("motor: \(transcriber.engineName) · referência de vozes: Sortformer · nivelamento: \(ProcessInfo.processInfo.environment["TRADUTOR_SEM_NIVELAMENTO"] == nil ? "ligado" : "desligado")")
+            print("locutor | primeira fala | voz (s) | reconhecido (s) | trechos | caracteres sem espaços")
+            for row in rows {
+                print(String(format: "%@ | %.2f | %.2f | %.2f | %d | %d", row.speaker, row.firstSecond,
+                             row.speechSeconds, row.recognizedSeconds, row.pieces, row.characters))
+            }
+            let assigned = SpeakerDiarizer.assign(pieces, to: turns)
+            let missing = assigned.filter { $0.speaker == nil }
+            print("sem locutor: \(missing.count) trechos · \(missing.reduce(0) { $0 + $1.text.filter { !$0.isWhitespace }.count }) caracteres")
+            print("Contagem de trechos/caracteres não mede acurácia nem identifica gênero.")
+            if let jsonPath {
+                struct Report: Encodable {
+                    let reference: VoiceReference
+                    let rows: [VoiceCoverage]
+                    let engine: String
+                    let leveling: Bool
+                    let pieces: [VoiceReference.Interval]
+                    let texts: [String]
+                }
+                let report = Report(reference: reference, rows: rows, engine: transcriber.engineName,
+                                    leveling: ProcessInfo.processInfo.environment["TRADUTOR_SEM_NIVELAMENTO"] == nil,
+                                    pieces: assigned.map { .init(speaker: $0.speaker ?? "sem locutor", start: $0.start, end: $0.end) },
+                                    texts: assigned.map(\.text))
+                let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                try encoder.encode(report).write(to: URL(fileURLWithPath: jsonPath), options: .atomic)
+            }
+        } catch { print("FALHA: \(error.localizedDescription)"); exit(1) }
+    }
+
+    /// Sem modelos: prova a atribuição e que a régua não recebe nivelamento.
+    static func coverageSelftest() async {
+        var failures = 0
+        func expect(_ ok: Bool, _ label: String) { print("\(ok ? "ok" : "FALHA") \(label)"); if !ok { failures += 1 } }
+        let turns: [SpeakerDiarizer.Turn] = [.init(speaker: "A", start: 0, end: 1),
+            .init(speaker: "B", start: 1, end: 2), .init(speaker: "A", start: 2, end: 3),
+            .init(speaker: "A", start: 0.5, end: 0.8)]
+        let rows = VoiceCoverage.measure([.init(text: "あ い", start: 0, end: 0.9),
+            .init(text: "うえお", start: 1, end: 2), .init(text: "外", start: 4, end: 5)], turns: turns)
+        expect(rows.count == 2 && rows[0].speechSeconds == 2 && rows[1].speechSeconds == 1, "denominador por voz une faixas sobrepostas")
+        expect(rows[0].pieces == 1 && rows[0].characters == 2 && rows[1].characters == 3, "caracteres são atribuídos uma vez, sem contar espaços")
+        expect(abs(rows[0].recognizedSeconds - 0.9) < 0.001, "cobertura temporal não conta duas vezes")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("regua-\(UUID())")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let url = directory.appendingPathComponent("alternado.wav")
+            let format = AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1)!
+            let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 160000)!
+            pcm.frameLength = 160000
+            for i in 0..<160000 {
+                let amplitude: Float = (i / 32000) % 2 == 0 ? 0.2 : 0.002
+                pcm.floatChannelData![0][i] = i % 8000 < 1200 ? 0 : amplitude * Float(sin(2 * .pi * 220 * Double(i) / 16000))
+            }
+            func save() throws {
+                let file = try AVAudioFile(forWriting: url, settings: format.settings)
+                try file.write(from: pcm)
+            }
+            try save()
+            let raw = Array(UnsafeBufferPointer(start: pcm.floatChannelData![0], count: 160000))
+            let audio = try await MeasurementAudio.load(url, language: .japanese)
+            expect(audio.original == raw, "referência contém as amostras originais, sem ganho nem nivelamento")
+            expect(audio.regions == SpeechEnergy.regions(raw, minimumPause: 0.5), "regiões e denominador vêm do áudio original")
+            expect(audio.samples != raw && audio.regions != SpeechEnergy.regions(audio.samples, minimumPause: 0.5), "o caso exercita o denominador que mudava com o nivelamento")
+            // A segunda execução precisa reutilizar as mesmas faixas, sem
+            // chamar o modelo de novo e deixar seus rótulos oscilarem.
+            let cache = directory.appendingPathComponent("vozes.json")
+            let reference = VoiceReference(hash: audio.hash, path: url.path, model: "sortformer",
+                                           intervals: [.init(speaker: "A", start: 1, end: 2)])
+            try JSONEncoder().encode(reference).write(to: cache)
+            let saved = try await VoiceReference.load(audio, cache: cache)
+            expect(saved.intervals.count == 1 && saved.intervals[0].speaker == "A"
+                   && saved.intervals[0].start == 1 && saved.intervals[0].end == 2,
+                   "a referência salva congela faixas e identificadores")
+            let other = MeasurementAudio(original: [Float](repeating: 0, count: raw.count),
+                                         samples: raw, referencePath: url.path)
+            do {
+                _ = try await VoiceReference.load(other, cache: cache)
+                expect(false, "referência de outro PCM é recusada")
+            } catch { expect(true, "referência de outro PCM é recusada") }
+            let invalid = VoiceReference(hash: audio.hash, path: url.path, model: "sortformer",
+                                         intervals: [.init(speaker: "A", start: 2, end: 1)])
+            try JSONEncoder().encode(invalid).write(to: cache)
+            do {
+                _ = try await VoiceReference.load(audio, cache: cache)
+                expect(false, "faixa invertida é recusada antes da medição")
+            } catch { expect(true, "faixa invertida é recusada antes da medição") }
+        } catch { expect(false, error.localizedDescription) }
+        exit(failures == 0 ? 0 : 1)
     }
 }

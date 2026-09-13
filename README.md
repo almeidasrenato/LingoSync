@@ -74,14 +74,21 @@ de novo — ver "Retraduzir sem reconhecer de novo".
 ### Como a legenda é montada
 
 ```
-vídeo ──▶ áudio 16 kHz ──▶ quem fala, quando pedido (fronteiras de voz)
+vídeo ──▶ faixa do idioma escolhido ──▶ áudio 16 kHz ──▶ nivela fala baixa
+                       ──▶ quem fala, quando pedido (fronteiras de voz)
                        ──▶ reconhecimento com marcação de tempo
       ──▶ agrupa em frases (150 chars, pausa > 0,8 s, teto 7 s)
-      ──▶ glossário substitui termos no original
       ──▶ traduz em lotes (40 na Apple e no DeepL, 20 no Hunyuan)
       ──▶ reparte em legendas de 2 linhas × 42 chars
       ──▶ .srt
 ```
+
+Vídeo com mais de uma faixa de áudio — dublagem, comentário, um idioma por
+faixa — é lido na faixa que declara o idioma escolhido, não na primeira. E
+antes do reconhecimento o áudio passa por um nivelamento em janelas de meio
+segundo: quem fala baixo no meio de quem fala alto sobe até perto do resto,
+que é a fala que os modelos perdiam. Vale para todos os motores. Áudio de
+nível parelho passa intacto, e ruído de fundo não é amplificado.
 
 Cada legenda entra 0,25 s antes da fala — o reconhecedor marca o início entre
 0,15 s e 0,8 s tarde, e antecipar é prática corrente de legendagem. O recuo
@@ -125,10 +132,6 @@ Scripts/qwen-setup.sh            # cria o ambiente e baixa o 0.6B (2,2 GB)
 Scripts/qwen-setup.sh --grande   # baixa também o 1.7B (3,4 GB a mais)
 Scripts/qwen-setup.sh --remove   # apaga tudo
 ```
-
-A lista de termos passa a valer também para o reconhecimento com esses motores
-e com o Whisper: os termos vão no prompt do modelo, e nome próprio que saía
-errado passa a sair certo.
 
 Em 96 s de japonês limpo ele devolve 281 caracteres contra 260 do Whisper e
 248 da Apple — mas o que muda a legenda é o formato: **uma fala por bloco, com
@@ -226,18 +229,6 @@ Modelos locais de tradução (Qwen3-4B e 8B via MLX, NLLB-200, MADLAD-400) foram
 testados e removidos: erravam gênero, moeda ou nome próprio, e o 8B custava
 1,02× o tempo do vídeo. Os detalhes das comparações estão no `CLAUDE.md`.
 
-### Lista de termos
-
-Os erros que sobram são substantivos concretos, não gramática. O glossário
-substitui o termo **no original, antes de traduzir** — medido, uma palavra
-estrangeira no meio do japonês atravessa intacta e ainda dá ao tradutor uma
-palavra com que concordar.
-
-Com o Whisper e o Qwen a lista **também** vai para o reconhecedor: o que nasce
-errado no reconhecimento passou a ter conserto. Medido — com `上村玲香` na
-lista, `神村レイカです` virou `上村レイカです`. Nos outros motores o limite
-continua.
-
 ## Construir
 
 Não precisa de Xcode; Command Line Tools bastam.
@@ -277,7 +268,7 @@ vivem dentro dos binários.
 ./.build/release/tradutor-verify tempos     # tempos e limites de legenda
 ./.build/release/tradutor-verify formatos   # arquivo sem extensão, formato recusado
 ./.build/release/tradutor-verify legendas   # leitura de .srt
-./.build/release/tradutor-verify glossario  # lista de termos
+./.build/release/tradutor-verify faixas     # video com duas faixas de audio
 ./.build/release/tradutor-verify modelos    # trocar de idioma não pode recarregar
 ./.build/release/tradutor-verify lotes      # mede tamanho de lote de tradução
 ./.build/release/tradutor-verify motores   # limiar do Whisper, separação dos motores

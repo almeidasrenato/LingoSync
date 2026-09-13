@@ -210,6 +210,125 @@ public enum SpeakerDiarizer {
         return turns
     }
 
+    /// Junta os identificadores que são a mesma voz.
+    ///
+    /// O Sortformer parte uma pessoa em mais de um identificador: num diálogo
+    /// de duas pessoas ele devolveu **quatro** no vídeo de 9 minutos, com o
+    /// terceiro e o quarto aparecendo depois dos 380 s. Isso vira travessão
+    /// onde ninguém trocou de turno e cor nova no meio da conversa, e ainda
+    /// impede dizer quanto uma pessoa falou.
+    ///
+    /// O modelo de identificação não diz se dois rótulos são a mesma pessoa —
+    /// quem diz é o **embedding de voz**, que é outro modelo (o mesmo que o
+    /// caminho de agrupamento já usa, 13 MB). Aqui ele é aplicado uma vez por
+    /// identificador, sobre o áudio que aquele identificador cobre, e dois
+    /// deles são fundidos quando as vozes ficam perto.
+    public static func mergeSameVoice(
+        _ turns: [Turn], in samples: [Float], threshold: Float = sameVoiceThreshold
+    ) async throws -> [Turn] {
+        let labels = Array(Set(turns.map(\.speaker)))
+        guard labels.count > 1 else { return turns }
+
+        let models = try await DiarizerModels.downloadIfNeeded(to: directory)
+        let manager = DiarizerManager(config: .default)
+        manager.initialize(models: models)
+
+        // Embedding de trecho curto é ruído: o modelo precisa de voz para
+        // caracterizar voz. Quem não junta o mínimo fica de fora da fusão e
+        // segue com o rótulo que tinha.
+        var embeddings: [String: [Float]] = [:]
+        for label in labels {
+            let owned = turns.filter { $0.speaker == label }
+                .sorted { ($0.end - $0.start) > ($1.end - $1.start) }
+            var audio: [Float] = []
+            for turn in owned where audio.count < Int(sampleSeconds * 16_000) {
+                let from = max(0, Int(turn.start * 16_000))
+                let to = min(samples.count, Int(turn.end * 16_000))
+                if to > from { audio.append(contentsOf: samples[from..<to]) }
+            }
+            guard audio.count >= Int(minimumVoiceForEmbedding * 16_000) else { continue }
+            if let embedding = try? manager.extractSpeakerEmbedding(from: audio),
+               manager.validateEmbedding(embedding) {
+                embeddings[label] = embedding
+            }
+        }
+        guard embeddings.count > 1 else { return turns }
+
+        // Quem falou primeiro dá o nome ao grupo, para a saída não depender da
+        // ordem em que o dicionário foi percorrido.
+        let firstHeard = Dictionary(
+            turns.map { ($0.speaker, $0.start) }, uniquingKeysWith: min)
+        let groupOf = groupSameVoice(embeddings, firstHeard: firstHeard, threshold: threshold)
+        let merged = Set(groupOf.filter { $0.key != $0.value }.keys)
+        guard !merged.isEmpty else { return turns }
+        log.info("fusão de vozes: \(labels.count, privacy: .public) identificadores viraram \(Set(groupOf.values).count, privacy: .public)")
+        return turns.map {
+            Turn(speaker: groupOf[$0.speaker] ?? $0.speaker, start: $0.start, end: $0.end)
+        }
+    }
+
+    /// Qual identificador representa cada um, dado o quanto as vozes se
+    /// parecem. Separado de `mergeSameVoice` para poder ser verificado sem
+    /// carregar modelo nenhum — ver `tradutor-verify locutores`.
+    ///
+    /// Encadeamento simples: se A se parece com B e B com C, os três ficam
+    /// juntos mesmo que A e C estejam além do limiar. É o que se quer aqui,
+    /// porque a mesma pessoa muda de tom ao longo de uma conversa e os
+    /// pedaços dela chegam justamente como uma corrente.
+    public static func groupSameVoice(
+        _ embeddings: [String: [Float]], firstHeard: [String: TimeInterval], threshold: Float
+    ) -> [String: String] {
+        let ordered = embeddings.keys.sorted {
+            (firstHeard[$0] ?? 0, $0) < (firstHeard[$1] ?? 0, $1)
+        }
+        var groupOf: [String: String] = [:]
+        for (index, label) in ordered.enumerated() {
+            var chosen = label
+            for earlier in ordered[..<index] {
+                guard let a = embeddings[label], let b = embeddings[earlier] else { continue }
+                if cosineDistance(a, b) < threshold {
+                    chosen = groupOf[earlier] ?? earlier
+                    break
+                }
+            }
+            groupOf[label] = chosen
+        }
+        return groupOf
+    }
+
+    /// Distância de cosseno entre dois embeddings já normalizados.
+    public static func cosineDistance(_ a: [Float], _ b: [Float]) -> Float {
+        guard a.count == b.count, !a.isEmpty else { return 2 }
+        var dot: Float = 0, na: Float = 0, nb: Float = 0
+        for index in a.indices {
+            dot += a[index] * b[index]
+            na += a[index] * a[index]
+            nb += b[index] * b[index]
+        }
+        guard na > 0, nb > 0 else { return 2 }
+        return 1 - dot / (na.squareRoot() * nb.squareRoot())
+    }
+
+    /// Abaixo desta distância os dois identificadores são a mesma pessoa.
+    ///
+    /// Varrido de 0,35 a 0,65 nos quatro vídeos de exemplo. O único com
+    /// verdade conhecida é a conversa de 9 minutos, que tem duas pessoas:
+    ///
+    ///     limiar   9 min (2 pessoas)   inglês longo
+    ///     0,35            3                 3
+    ///     0,45 a 0,60     2                 3
+    ///     0,65            2                 2   ← funde o que não devia
+    ///
+    /// Meio da faixa que acerta, longe das duas bordas. Fundir demais é pior
+    /// que fundir de menos: separado sobra uma cor, fundido some uma pessoa.
+    public static var sameVoiceThreshold: Float = 0.50
+
+    /// Quanto áudio por identificador vai para o embedding.
+    static let sampleSeconds: Double = 12
+
+    /// Menos que isto não caracteriza voz nenhuma.
+    static let minimumVoiceForEmbedding: Double = 2
+
     /// Os instantes em que a voz troca, para quem monta trecho a partir de
     /// palavras não juntar duas pessoas. Ver `Transcriber.speakerBoundaries`.
     public static func boundaries(of turns: [Turn]) -> [TimeInterval] {

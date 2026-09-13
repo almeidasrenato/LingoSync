@@ -104,12 +104,6 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         // A janela do DeepL e o servidor do Hunyuan não se fecham sozinhos, e
         // este app fica aberto o dia todo na barra de menus.
         defer { builder.finish() }
-        // A lista de termos é por par de idiomas: 納豆 não vira a mesma coisa
-        // em inglês e em português.
-        builder.glossary = Glossary(
-            source: pipeline.sourceLanguage,
-            target: pipeline.targetLanguage
-        )
         builder.speakerModel = pipeline.speakerModel
 
         do {

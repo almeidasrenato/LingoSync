@@ -33,7 +33,12 @@ As verificações vivem dentro dos próprios binários.
 ./.build/release/tradutor-verify tempos       # tempos, limites de legenda, lote que falha
 ./.build/release/tradutor-verify formatos     # arquivo sem extensão, formato recusado
 ./.build/release/tradutor-verify legendas     # leitura de .srt
-./.build/release/tradutor-verify glossario    # lista de termos
+./.build/release/tradutor-verify faixas       # video com duas faixas: escolha pelo idioma
+./.build/release/tradutor-verify cobertura    # sem argumento: prova a regua e o cache de vozes
+./.build/release/tradutor-verify cobertura <audio> [idioma] [motor] \
+      --audio-referencia <wav>                # PCM original: a regua nunca e o audio tratado
+      --referencia <json>                     # congela as faixas do Sortformer para o A/B
+      --json <saida>                          # relatorio por locutor
 ./.build/release/tradutor-verify modelos      # trocar de idioma não pode recarregar
 ./.build/release/tradutor-verify lotes        # tamanho de lote e custo por string
 ./.build/release/tradutor-verify sobreposicao # se reenviar contexto melhora a tradução
@@ -197,10 +202,10 @@ arriscada e precisa compilar e rodar em segundos para ser depurada sozinha.
 ### Fluxo de arquivo
 
 ```
-vídeo ──▶ áudio 16 kHz ──▶ quem fala, quando pedido (fronteiras de voz)
+vídeo ──▶ faixa do idioma escolhido ──▶ áudio 16 kHz ──▶ nivela fala baixa
+                       ──▶ quem fala, quando pedido (fronteiras de voz)
                        ──▶ reconhecimento com marcação de tempo
       ──▶ agrupa em frases (150 chars, pausa > 0,8 s, teto 7 s)
-      ──▶ glossário substitui termos no original
       ──▶ traduz em lotes (40 na Apple e no DeepL, 20 no Hunyuan)
       ──▶ reparte a tradução em legendas de 2 linhas × 42 chars
       ──▶ .srt
@@ -319,6 +324,26 @@ Whisper turbo   328 pal.   5,6s · 29x   -0,65 / +0,43 s
 
 Em japonês (96 s com música), Apple e Whisper dão o mesmo texto — 735 e 734
 caracteres — com a Apple em 0,6 s contra 3,6 s.
+
+**`DictationTranscriber` foi testado e recusado.** É o outro reconhecedor do
+`Speech`, e cobre **54 locales contra 30** do `SpeechTranscriber` — os 18
+idiomas do app, contra 9. Seria o fim do "a Apple não cobre russo". Medido em
+13/09/2026 nos 161 s de inglês, o único par em que os dois estão instalados
+nesta máquina, com o preset `.timeIndexedLongDictation`:
+
+```
+                        trechos   pontuação   caracteres   tempo
+SpeechTranscriber            50          73         1726    1,4 s
+DictationTranscriber          5          14         1461    3,9 s
+```
+
+Ele devolve tempo por palavra (296 runs, todos com `audioTimeRange`), mas
+entrega o texto em blocos de 30 a 40 s **quase sem pontuação** — e pontuação é
+o que fecha legenda (`makeCues`). É o mesmo defeito que tirou o Qwen 0.6B do
+inglês. Nos idiomas que a Apple não cobre, o Whisper continua sendo a resposta:
+cobre todos e pontua. **Limite da medição:** só em inglês, porque instalar o
+modelo de ditado dos outros idiomas custa download; quem for refazer, meça a
+pontuação antes de qualquer outra coisa.
 
 **Cohere Transcribe (8 bits) foi testado e removido.** Não marca tempo, era o
 mais lento (40 s para 90 s de japonês) e a compilação para o Neural Engine
@@ -439,9 +464,8 @@ escudar no poder". Saiu "usando o poder como escudo". A Apple inverteu quem
 manda em quem.
 
 Mas o erro que **nasce no reconhecimento atravessa intacto** nos três:
-"Vizabank" por Vegapunk, "Ruby" por Luffy, 世 virando "Yo". Isso é caso da lista
-de termos, não de tradutor — e a lista hoje só alcança o reconhecimento no
-Whisper e no Qwen.
+"Vizabank" por Vegapunk, "Ruby" por Luffy, 世 virando "Yo". Não é caso de
+tradutor: nenhum deles tem como saber o que foi dito.
 
 #### Registro
 
@@ -819,22 +843,24 @@ O volume é praticamente o mesmo. O que o 1.7B compra é **nome próprio em áud
 difícil**: onde o 0.6B escreveu `独たべが / パンクは`, o 1.7B escreveu
 `ドクター・ベガ / パンクは` — os caracteres certos. Por 4× o tempo.
 
-#### A lista de termos agora alcança o reconhecimento
+#### A lista de termos foi removida, e o que ela alcançava está medido
 
-O `--context` do Qwen é um prompt de domínio, e o glossário do app já era uma
-lista de termos do usuário. `SubtitleFileBuilder.generate` passa
-`glossary.activeSources` ao `vocabularyHint` do reconhecedor; o Qwen manda em
-`--context` e o Whisper nos `promptTokens` (que existiam e ninguém preenchia).
-
-Medido no vídeo limpo, com `上村玲香 佐藤雄二 レイカ` na lista:
+O app teve uma lista de termos do usuário, aplicada ao original antes de
+traduzir e passada também ao reconhecimento — `--context` no Qwen,
+`promptTokens` no Whisper. Saiu em 13/09/2026, a pedido. O que ela comprava,
+medido no vídeo limpo com `上村玲香 佐藤雄二 レイカ` na lista:
 
 ```
 sem contexto:  はじめまして、神村レイカです。 / 神村さんも？
 com contexto:  はじめまして、上村レイカです。 / 上村さんも？
 ```
 
-Isso derruba o limite que estava registrado aqui — "se o erro nasce no
-reconhecimento, a lista não alcança". Agora alcança, nesses dois motores.
+Quem quiser esse ganho de volta precisa de uma fonte de termos e de três
+ligações: `--context` (Qwen), `promptTokens` (Whisper) e
+`AnalysisContext.contextualStrings` (Apple, nunca ligado — exige
+`SpeechAnalyzer(inputSequence:modules:analysisContext:)` no lugar de
+`SpeechAnalyzer(modules:)`). Sem isso, erro que nasce no reconhecimento não
+tem conserto em lugar nenhum do caminho.
 
 ### Quem fala
 
@@ -887,6 +913,66 @@ clipes curtos as duas execuções bateram. Continua muito mais repetível que o
 agrupamento — e continua sendo o padrão pelo mesmo motivo —, mas quem medir
 precisa guardar entrada e saída em vez de confiar que a segunda execução
 repete a primeira.
+
+#### Um identificador por pessoa, e não por pedaço de conversa
+
+O Sortformer parte a mesma pessoa em mais de um identificador: no vídeo de 9
+minutos, que é uma conversa de **duas** pessoas, ele devolveu **quatro** — o
+terceiro e o quarto aparecendo depois dos 380 s. Isso não é detalhe de
+medição: `SpeakerPalette` numera por ordem de aparição, então a mesma pessoa
+troca de cor no meio do vídeo.
+
+O modelo de identificação não diz se dois rótulos são a mesma pessoa. Quem diz
+é o **embedding de voz**, que é outro modelo — o mesmo do caminho de
+agrupamento, 13 MB, e já em disco. `SpeakerDiarizer.mergeSameVoice` extrai um
+embedding por identificador (até 12 s do áudio que ele cobre, ignorando quem
+não junta 2 s) e funde os que ficam perto.
+
+Medido nos quatro vídeos de exemplo:
+
+```
+                      identificadores   depois da fusão
+9 min japonês (2 pessoas)      4               2
+97 s japonês                   3               3
+161 s inglês                   4               3
+161 s inglês (2)               4               4
+```
+
+No vídeo de 9 minutos a segunda pessoa volta a ser uma só, e as contas batem:
+53,84 + 18,64 + 2,72 = 75,20 s de voz, 393 + 159 + 34 = 586 caracteres. Nos
+outros três a fusão age pouco ou nada, que é o comportamento certo quando as
+vozes são mesmo diferentes.
+
+**O que ela não muda:** o texto, a cobertura e o número de travessões — 103
+trocas de locutor antes e depois, porque os identificadores extras alternavam
+com o outro interlocutor, não com o rótulo que absorveu eles. O que muda é a
+identidade: a cor da mesma pessoa para de trocar no meio do vídeo, e passa a
+existir uma conta por pessoa.
+
+Custa **0,15 s** no vídeo de 9 minutos (2,55 s contra 2,70 s), porque o modelo
+é pequeno e são poucos embeddings.
+
+Duas decisões:
+
+- **O limiar é 0,50**, e o número está no comentário de
+  `sameVoiceThreshold`: varrido de 0,35 a 0,65, a faixa que acerta o caso
+  conhecido vai de 0,45 a 0,60, e em 0,65 o vídeo em inglês colapsa duas vozes
+  numa. Fica no meio. Fundir demais é pior que fundir de menos — separado
+  sobra uma cor, fundido some uma pessoa.
+- **Encadeamento simples:** se A se parece com B e B com C, os três ficam
+  juntos. A mesma pessoa muda de tom ao longo da conversa e os pedaços dela
+  chegam justamente como uma corrente.
+
+`tradutor-verify locutores` verifica o agrupamento com embeddings dados à mão,
+sem carregar modelo nenhum: vozes parecidas se juntam, a diferente fica de
+fora, o encadeamento funciona, quem falou primeiro nomeia o grupo, e limiar
+apertado não funde nada. `TRADUTOR_SEM_FUSAO=1` desliga.
+
+**A referência de vozes do `cobertura` aparava faixa nenhuma, e se recusava
+sozinha.** O Sortformer trabalha em blocos e a última faixa costuma passar do
+fim do áudio; a validação da leitura exige o contrário, então o arquivo
+gravado era rejeitado na execução seguinte — a guarda disparava contra o dado
+que ela mesma tinha acabado de gravar. Hoje a faixa é aparada antes de gravar.
 
 #### Fronteira de voz dentro do trecho
 
@@ -1361,6 +1447,238 @@ O VAD do tempo real **não** é suspeito para fala baixa, e por isso não
 ganhou nada: medido nos 75 s de japonês, ele captura 75,0 s e alcança 37 de
 37 trechos de fala, e varrer os limiares não muda nada.
 
+### A fala baixa que some é a baixa EM RELAÇÃO ao resto
+
+A queixa era o Whisper perder fala baixa em japonês. Medido em 13/09/2026, e a
+primeira suspeita estava errada nas duas pontas.
+
+**Baixar o arquivo inteiro não perde nada.** Atenuando os dois vídeos
+japoneses em 12, 20, 26, 32 e 40 dB, Whisper e Apple devolvem o mesmo texto
+que no original — o modelo normaliza a janela que decodifica. E **os três
+limiares do `isRealSpeech` nunca disparam**: com `ASR_DEBUG=1`, nos quatro
+vídeos e em todas as atenuações, zero segmentos filtrados. Afrouxá-los não
+recupera nada, porque não é ali que o texto se perde.
+
+O que reproduz a queixa é atenuar **metade das janelas de 20 s**, deixando
+fala alta e fala baixa dentro do mesmo trecho — que é como fala baixa aparece
+de verdade. Aí o Whisper perde, e muito.
+
+`levelQuietSpeech` iguala o nível ao longo do arquivo, em janelas de 0,5 s,
+e roda logo depois do `boostQuietAudio`, dentro do `decode`: vale para **todos
+os motores** dos modos de vídeo, não só para o Whisper. Medido com a Apple,
+que repete a mesma saída caractere por caractere:
+
+```
+                            sem nivelar   nivelado   (o mesmo áudio sem atenuar)
+vídeo com música  −20 dB           696        720          723
+vídeo com música  −30 dB           603        720          723
+vídeo de 9 min    −20 dB          4268       4415         4415
+vídeo de 9 min    −30 dB          4170       4323         4415
+Qwen 0.6B, música −30 dB           727        777            —
+```
+
+**Estes números são bytes UTF-8, não caracteres.** Saíram de `wc -m` num shell
+sem locale UTF-8, onde ele conta bytes — e kanji ocupa três. As razões, que é
+o que a tabela quer mostrar, estão certas; a unidade não. Contado de verdade
+(pelo próprio Swift, no gate `cobertura`), o vídeo com música tem 242
+caracteres e o de 9 minutos 1492. Quem for medir de novo: `LC_ALL=en_US.UTF-8`
+antes do `wc -m`, ou conte em Swift.
+
+**No Whisper o ganho é maior, e vem com um segundo:** cinco execuções do mesmo
+arquivo, vídeo com música atenuado em −30 dB, deram 483 · 422 · 626 · 662 ·
+494 caracteres sem nivelar, e 728 · 773 · 734 · 719 · 740 com. No áudio sem
+atenuação nenhuma, as cinco execuções passaram a dar **exatamente 703** —
+antes oscilavam entre 729 e 782. Nivelar tira o material da faixa em que a
+retentativa com temperatura decide a legenda, e o texto que sai é mais
+correto: `海賊王` (rei dos piratas, que é o certo e o que a Apple escreve) no
+lugar de `海底王`.
+
+Áudio normal não é mexido, e isso foi conferido nos dois idiomas: inglês sai
+com 320 → 323 palavras e similaridade 0,992 (a diferença é "of the house",
+fala recuperada), Parakeet e Apple saem idênticos, e o vídeo de 9 minutos
+ganha 4415 → 4451 caracteres na Apple.
+
+Quatro decisões, cada uma com o número que a obrigou:
+
+- **O fundo é medido em quadros de 20 ms, não na janela de 0,5 s.** Quando
+  metade do arquivo é fala baixa, o percentil baixo das janelas cai dentro
+  dessa metade e ela vira "ruído": ganho 1, nada recuperado. O quadro curto
+  pega a pausa entre sílabas, que é onde o fundo aparece mesmo num arquivo que
+  nunca fica em silêncio. O gate de `tempos` tem esse caso.
+- **O piso é relativo ao fundo, nunca absoluto.** Com piso fixo em 0,0005 o
+  ruído de sala de um dos vídeos subiu 20× e o detector de energia passou a
+  ver fala onde não havia — 196 trechos contra 186, 402 s de "voz" contra
+  357 s. Ruído amplificado é pior que fala baixa: vira alucinação com
+  timecode.
+- **Só amplifica, e com rampa.** Comprimir a fala alta mudaria o que já estava
+  bom, e degrau de ganho no meio de uma palavra é um clique — que é
+  exatamente o que o detector de voz confunde com ataque de fala.
+- **Medir só a banda da voz foi testado e não paga.** Um passa-alta em 200 Hz
+  antes de medir deveria ajudar voz aguda sobre fundo grave; medido em banda
+  larga contra 1 e 3 polos, empata em tudo (e 723 → 714 no vídeo com música).
+  Ficou a medida em banda larga, que é mais simples.
+
+**O que ganho nenhum resolve:** fala 25 dB abaixo de um fundo grave contínuo.
+Somando rumble em −27 dBFS ao vídeo de 9 minutos com as janelas atenuadas, a
+Apple cai de 4170 para 2077 caracteres e o nivelamento não muda nada (2059 a
+2071 nas três variantes tentadas). Ali a voz está dentro do ruído, e o que
+falta é supressão de ruído, não volume.
+
+**O sintético do `say` não serve para julgar isto.** Um diálogo de duas vozes
+com a feminina atenuada foi montado e descartado como arnês: a própria Apple,
+chamada direto pelo `SpeechAnalyzer` sem o app no meio, perde 5 das 10 falas
+do arquivo **sem atenuação nenhuma**, enquanto o Whisper pega 9. O CLAUDE.md
+já registrava que essas vozes servem para medir corte e alinhamento, não
+diarização; captação entra na mesma lista.
+
+`TRADUTOR_SEM_NIVELAMENTO=1` desliga o nivelamento, para refazer qualquer
+linha da tabela acima sem recompilar.
+
+#### Quem ganhou o quê: a conta por locutor
+
+A pergunta que sobrava era se a fala recuperada é de quem estava baixo —
+em particular a voz feminina, que era a queixa. `tradutor-verify cobertura`
+responde: ele roda a identificação de vozes, separa as faixas por locutor e
+conta, para cada um, quanto tempo de voz existe, quanto foi alcançado por
+algum trecho reconhecido, e quantos caracteres saíram. Medido com a Apple
+(determinística), atenuando −30 dB nas janelas alternadas:
+
+```
+vídeo com música (97 s)        voz (s)   reconhecido (s)      caracteres
+                                          sem niv → com     sem niv → com
+locutor da 1ª fala (3,20 s)      40,72    24,56 → 35,84        99 → 138
+2º locutor        (13,12 s)      17,60    16,74 → 15,90        82 →  81
+3º locutor        (72,88 s)       4,40     3,60 →  3,88        22 →  23
+
+vídeo de 9 min (540 s)
+locutor da 1ª fala (13,84 s)    139,52   128,40 → 132,64      855 → 880
+2º locutor        (16,16 s)      53,84    49,62 → 50,42       354 → 371
+3º locutor       (399,04 s)      18,64    17,24 → 17,80       151 → 152
+4º locutor       (381,76 s)       2,72     2,72 →  2,72        32 →  33
+```
+
+**A recuperação é concentrada em quem estava baixo.** No vídeo com música, o
+locutor da primeira fala vai de 99 para 138 caracteres — que é exatamente o
+que ele tem no áudio sem atenuação nenhuma (138) — enquanto os outros dois
+ficam parados. No vídeo de 9 minutos o ganho se espalha, porque a atenuação
+alternada não respeita quem fala.
+
+E no áudio **sem atenuação** a conta por locutor fica praticamente igual com e
+sem nivelamento (906/393 contra 904/388 no vídeo de 9 min; idêntica no vídeo
+com música), que é a outra metade do que se queria provar.
+
+**"Locutor" aqui é identificador do modelo, não pessoa.** O Sortformer
+partiu um diálogo de duas pessoas em **quatro** identificadores no vídeo de 9
+minutos e em três no de 97 s — o terceiro e o quarto aparecem depois dos
+380 s. Então a linha de um identificador é um limite inferior do que aquela
+pessoa falou, e somar "o que a mulher ganhou" exige saber quais
+identificadores são dela. Quem for usar esta tabela para falar de gênero
+precisa dessa etapa a mais; o gate não a faz e imprime um aviso dizendo isso.
+
+#### A régua não pode ser tratada junto com o áudio
+
+A primeira tentativa de medir cobertura se contaminou sozinha:
+`SpeechEnergy.regions` rodava sobre o áudio **já nivelado**, então o
+denominador mudava entre as duas execuções que se queria comparar — 402 s de
+"voz" contra 357 s no mesmo vídeo, e percentuais que não queriam dizer nada.
+
+`MeasurementAudio` separa as duas coisas: `original` é o PCM como saiu do
+arquivo, sem ganho e sem nivelamento, e é dele que saem as regiões de fala e
+a identificação de vozes; `samples` é o áudio tratado, que vai para o
+reconhecedor. `alinhamento` e `cobertura` usam os dois, e o denominador passou
+a ser idêntico nas duas pontas — 356,9 s no vídeo de 9 minutos, 53,6 s no de
+97 s, com e sem nivelamento.
+
+Duas guardas que vieram junto, porque a medição depende delas:
+
+- **As faixas de voz são congeladas em arquivo** (`--referencia <json>`). O
+  Sortformer não repete exatamente a mesma saída entre execuções — o CLAUDE.md
+  já registrava 3 vozes numa e 4 noutra —, e sem congelar, metade da diferença
+  medida seria mudança de diarização, não fala recuperada. O arquivo guarda o
+  SHA256 do PCM original, e é recusado se vier de outro áudio ou com faixa
+  invertida.
+- **`extractAudio(processing:)`** existe para essa medição: com `false` ele
+  devolve o PCM sem `boostQuietAudio` nem `levelQuietSpeech`. Fora dos gates,
+  ninguém chama com `false`.
+
+#### Filtro de graves antes do reconhecimento: medido e recusado
+
+O caso que o nivelamento não resolve é fala sob fundo grave contínuo. O
+candidato natural é um passa-alta antes do reconhecimento. Medido em
+13/09/2026 com dois biquads em cascata (vDSP), em 100 Hz e em 180 Hz, sobre
+rumble sintético (senoides de 43, 67 e 91 Hz) somado ao áudio já atenuado:
+
+```
+Apple, caracteres              none   hp100   hp180
+vídeo com música, limpo         245     244     244
+vídeo com música, rumble −39    196     241     245
+vídeo com música, rumble −33    198     204     246
+vídeo com música, rumble −27    194     198     246
+vídeo com música, rumble −21    190     197     239
+
+vídeo de 9 min, limpo          1501    1473    1486
+vídeo de 9 min, rumble −39     1416    1329    1459
+vídeo de 9 min, rumble −33     1399    1355    1436
+vídeo de 9 min, rumble −27     1416    1417    1422
+vídeo de 9 min, rumble −21     1421    1401    1283
+```
+
+No vídeo com música o passa-alta de 180 Hz recupera quase tudo. No vídeo de 9
+minutos ele **piora** no rumble mais forte (1421 → 1283), e o próprio rumble
+quase não atrapalha ali. No Whisper, três execuções de cada:
+
+```
+                        none              hp180
+música, limpo      266 · 266 · 266    266 · 266 · 266
+música, rumble −33 280 · 280 · 280    283 · 275 · 294
+música, rumble −21 266 · 266 · 266    210 · 274 · 273
+```
+
+Ele não perdia nada com o rumble, e com o filtro passou a oscilar — 210 numa
+das três. Em inglês o filtro é neutro em volume (1357 → 1358 e 1036 → 1034) e
+ainda assim muda o texto (similaridade 0,958 e 0,977).
+
+Ganho que aparece num vídeo, some noutro e vira instabilidade num terceiro não
+entra no caminho de todo mundo. E o teste era o **mais favorável possível**
+para um passa-alta: ruído puramente grave e sintético. Nada foi acrescentado
+ao app; o arnês fica em
+`scratchpad/medicoes-cobertura-ruido-2026-09-13/` para quem quiser refazer com
+ruído real. Um filtro que se ligue sozinho só quando a energia grave domina é
+a próxima ideia, e continua não medida.
+
+**`AVAudioUnitEffect` de voice processing não serve aqui**, e isso é da
+documentação da Apple, não medição: ele existe para captura ao vivo e não
+funciona no modo de renderização offline, que é o que a geração de legenda usa.
+
+### Cortar o trecho no silêncio: medido e descartado
+
+A pausa que o reconhecedor não expõe parecia a causa da legenda mal cortada em
+japonês: medido no vídeo de 9 minutos, **44 dos 119 trechos da Apple (37%)**
+carregam um silêncio de 0,6 s ou mais dentro. Em japonês ela é invisível de
+propósito — a Apple emite um caractere por run e embute o silêncio na duração
+do caractere que abre a fala seguinte, e só `longRunIsPause` (2 s) a percebe.
+
+O conserto tentado foi o mesmo desenho das fronteiras de voz: medir os
+silêncios com `SpeechEnergy` e passá-los ao `phrases`, que fecharia o trecho
+ali. Medido com a Apple, varrendo o silêncio mínimo:
+
+```
+limiar        trechos   com pausa dentro   caracteres
+desligado        119           49             1497
+0,6 s            171           40             1495
+1,0 s            132           47             1496
+1,5 s            120           48             1501
+```
+
+O melhor caso corta 9 dos 49 casos e cobra **52 trechos a mais** — 44% de
+fragmentação, que é tempo de tradução (ver "Tamanho de lote") e legenda mais
+picada. No Whisper não muda nada (31 contra 32), porque ele já corta pelo
+próprio detector de voz. O texto sai igual e a fala sem legenda também
+(97,6 s dos dois lados).
+
+A explicação é que o run é indivisível: a fronteira cai entre runs de qualquer
+jeito, então ela fragmenta sem separar o que estava junto. Nada foi mantido.
+
 ### O espaço que não existe em japonês
 
 A legenda saía `よかったです。 頑張ろうね。` e `あのれいかさん、何すればいいですか ？`.
@@ -1696,8 +2014,6 @@ Quatro decisões que o botão obrigou:
   bloco) e o servidor do Hunyuan devolve os 4,5 GB na hora. Antes ninguém
   chamava `reset()` nos modos de vídeo e os dois ficavam vivos até o app
   fechar — um app de barra de menus, que fica aberto o dia todo.
-- **O glossário é relido ao retraduzir.** `Glossary` carrega o arquivo no
-  construtor; sem recriá-lo, editar termos e retraduzir usaria a lista velha.
 - **Legenda aberta de arquivo não dá para retraduzir.** O `SRTParser` põe o
   texto em `translated` e deixa `source` vazio — não há original. O botão fica
   apagado e diz por quê.
@@ -1711,17 +2027,6 @@ E duas armadilhas que o autoteste pegou:
 - **Cancelar e retomar no mesmo instante deixa o lote anterior em voo**, e o
   tempo medido deixa de ser o de uma retradução limpa — 19,6 s contra 10,4 s no
   mesmo vídeo. A ordem do teste importa.
-
-### Lista de termos
-
-Os erros que sobram são substantivos concretos, não gramática. O glossário
-substitui o termo **no original, antes de traduzir** — medido, uma palavra
-estrangeira no meio do japonês atravessa intacta e ainda dá ao tradutor uma
-palavra com que concordar.
-
-Com Whisper e Qwen a lista **também** vai para o reconhecedor (ver o bloco do
-Qwen): o que nasce errado no reconhecimento passou a ter conserto. Nos outros
-motores o limite continua.
 
 ---
 
@@ -1777,6 +2082,16 @@ um tap inclusivo de lista vazia.
 **`VideoPlayer` do SwiftUI aborta neste app.** `getSuperclassMetadata` em
 `_AVKit_SwiftUI`, morte imediata ao escolher um vídeo. Use `AVPlayerView` do
 AppKit via `NSViewRepresentable`.
+
+**A primeira faixa de áudio não é necessariamente a do idioma.** `decode`
+pegava `tracks.first`, e vídeo com dublagem, comentário do diretor ou um
+idioma por faixa não diz qual é a principal: a legenda saía do áudio errado,
+com timecode válido e nada reclamando. Hoje a faixa é escolhida pelo
+`languageCode`/`extendedLanguageTag` dela contra o idioma de origem — os dois
+normalizados por `Locale.Language`, que resolve "jpn", "ja-JP" e "ja" no mesmo
+código sem tabela de conversão. Faixa nenhuma declarando o idioma pedido, a
+primeira continua valendo. `tradutor-verify faixas` monta um arquivo de duas
+faixas e falha se voltar a pegar a primeira.
 
 **`AVPlayer` escolhe o demuxer pela extensão.** Arquivo sem extensão não toca,
 mesmo sendo mp4 válido. Um link temporário `.mp4` resolve.
@@ -1852,8 +2167,6 @@ Fora de `models/`, na mesma pasta do app:
  243 MB models/sortformer/            vozes: modelo ponta a ponta (FluidAudio)
 ```
 
-Glossários: `~/Library/Application Support/Tradutor/glossarios/<origem>-<destino>.json`
-
 ### Nada de cache além dos modelos
 
 `CacheCleanup.run()` roda ao abrir, antes de carregar modelo. Antes dela
@@ -1880,8 +2193,8 @@ FluidAudio). O código atual passa pasta própria às duas bibliotecas.
 - Comentários em português, explicando **por que**, não o que. Vários comentários
   registram uma medição ou um bug que custou caro — preserve-os.
 - Todo bug corrigido ganha uma verificação que falha se ele voltar.
-- **Teste nunca escreve em dado do usuário.** O gate do glossário já destruiu a
-  lista real uma vez: trocava os termos pelos de teste e restaurava num `defer`
-  que `exit()` nunca executa. Hoje ele usa pasta temporária — `Glossary` aceita
-  um diretório no construtor para isso.
+- **Teste nunca escreve em dado do usuário.** O gate da lista de termos já
+  destruiu a lista real uma vez: trocava os termos pelos de teste e restaurava
+  num `defer` que `exit()` nunca executa. Quem guardar dado do usuário aceita
+  um diretório no construtor, e o teste passa uma pasta temporária.
 - Antes de trocar um número que tem comentário de medição, meça de novo.

@@ -565,9 +565,6 @@ final class SubtitleStudioModel {
 
         job = Task { [weak self] in
             guard let self else { return }
-            // A lista de termos é lida do disco no construtor: recriar aqui é
-            // o que faz uma edição do glossário valer para a retradução.
-            builder.glossary = Glossary(source: sourceLanguage, target: targetLanguage)
             do {
                 let translated = try await builder.retranslate(
                     using: self.translationEngine,
@@ -673,9 +670,6 @@ final class SubtitleStudioModel {
         builder?.finish()
         let builder = SubtitleFileBuilder()
         self.builder = builder
-        // A lista de termos é por par de idiomas: 納豆 não vira a mesma coisa
-        // em inglês e em português.
-        builder.glossary = Glossary(source: sourceLanguage, target: targetLanguage)
         builder.speakerModel = speakerModel
 
         do {

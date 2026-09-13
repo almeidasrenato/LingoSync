@@ -46,7 +46,6 @@ private struct Isolated<Content: View>: View {
 struct SubtitleStudioView: View {
 
     @Bindable var model: SubtitleStudioModel
-    @State private var showingGlossary = false
 
     /// A largura da lista quando o arrasto do divisor começou.
     ///
@@ -79,12 +78,6 @@ struct SubtitleStudioView: View {
         .padding(14)
         // Largura mínima com folga para o seletor de reconhecimento e o +.
         .frame(minWidth: 1080, minHeight: 580)
-        .sheet(isPresented: $showingGlossary) {
-            GlossaryView(
-                source: model.sourceLanguage,
-                target: model.targetLanguage
-            ) { showingGlossary = false }
-        }
         .background(
             // Atalhos: espaço reproduz, setas andam no tempo, ⌘← e ⌘→ andam
             // de legenda em legenda.
@@ -257,13 +250,6 @@ struct SubtitleStudioView: View {
                   : "Retraduzir exige uma legenda gerada nesta janela — "
                     + "legenda aberta de arquivo não traz o texto original")
             .disabled(!model.canRetranslate)
-
-            Button {
-                showingGlossary = true
-            } label: {
-                Image(systemName: "character.book.closed")
-            }
-            .help("Lista de termos: como você quer certas palavras traduzidas")
 
             Button {
                 model.showsVideo.toggle()

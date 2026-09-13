@@ -103,10 +103,6 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         }
     }
 
-    /// Termos que o modelo deve tentar acertar. Vão no `--context`, que o
-    /// Qwen usa como prompt de domínio — é o caminho dele para nome próprio.
-    public var vocabularyHint: [String] = []
-
     public init(language: Language, size: Size = .small) {
         self.language = language
         self.size = size
@@ -166,9 +162,6 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
             "--no-progress",
             "--quiet",
         ]
-        if !vocabularyHint.isEmpty {
-            arguments += ["--context", vocabularyHint.joined(separator: " ")]
-        }
         arguments.append(audio.path)
         process.arguments = arguments
         var environment = ProcessInfo.processInfo.environment
