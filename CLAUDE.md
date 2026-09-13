@@ -102,13 +102,50 @@ open build/Tradutor.app --args --selftest-job video.mp4 ja pt     # → /tmp/tra
 # Caminho relativo vale a partir da raiz do projeto: `open` não herda o
 # diretório de trabalho (o app nasce em `/`), então os autotestes resolvem
 # relativo contra a pasta que contém o `.app` — `build/Tradutor.app` → raiz.
+
+# várias janelas de legendas ao mesmo tempo (sem vídeo, milissegundos)
+open -n build/Tradutor.app --args --selftest-janelas   # → /tmp/tradutor-janelas.txt
 ```
+
+**Com o app já aberto, `open` ignora os `--args` em silêncio.** Ele ativa a
+instância que existe e o autoteste nunca roda — nenhum erro, nenhum relatório.
+É fácil não perceber, porque o app é de barra de menus e não aparece no Dock.
+`open -n` abre outra instância e resolve; os autotestes terminam em `exit()`,
+então a instância extra não sobra.
 
 **O aviso de conclusão do item de menu não aparece sob autoteste**
 (`SubtitleJob.silent`). `NSAlert.runModal` segura o laço principal, e o laço do
 autoteste roda no `@MainActor`: com o aviso na tela o relatório ficava parado
 em "gerando…" para sempre, com o `.srt` já gravado certo. Acontecia em duas de
 quatro execuções — é corrida, e quanto mais lenta a geração, mais provável.
+
+### Mais de uma janela de legendas
+
+`AppDelegate.studios` é um dicionário de janela para modelo, e é ele quem retém
+os dois: a janela não é liberada ao fechar, e o modelo só vive enquanto a view
+existir. `windowWillClose` tira a chave e o par cai junto, com `stop()` soltando
+o player e o observador de tempo daquela janela — e só daquela.
+
+**"Assistir com legenda…" levanta as janelas que já existem; quem abre outra é
+o botão "Abrir outra janela", visível sempre — inclusive sem janela nenhuma
+aberta, quando ele faz a mesma coisa que o primeiro.** O app é `.accessory`: sem Dock, sem Cmd-Tab e sem menu Janela, o item do popover é o
+único caminho de volta para uma janela enterrada atrás de outras. Se ele
+passasse a abrir uma janela nova a cada clique, a que tem a legenda já gerada
+ficaria inalcançável — e gerar de novo custa minutos. O levantamento segue a
+ordem de `NSApp.orderedWindows` de trás para a frente, senão uma janela
+qualquer roubava o foco de quem já estava na frente.
+
+O título é numerado por um contador que só cresce (`Legendas`, `Legendas 2`…):
+reaproveitar o número de uma janela fechada daria duas "Legendas 2" ao mesmo
+tempo, e o título é o que distingue as janelas no Mission Control.
+
+Nada no caminho da geração é compartilhado — `Translator.make` e
+`SubtitleFileBuilder` são por instância, e cada modelo tem o seu `AVPlayer`.
+O que **não** tem guarda é gerar em duas janelas ao mesmo tempo: são dois
+modelos residentes disputando GPU e memória (dois Hunyuan não cabem nos 16 GB),
+e duas `WKWebView` no site do DeepL puxam o desafio da Cloudflare, que custa
+195 s por vídeo quando aparece. Assistir em várias e gerar numa só é o uso
+seguro.
 
 A janela de legendas e o item de menu são **arquivos separados**
 (`SubtitleStudioModel` e `SubtitleJob`). A geração é uma função só,

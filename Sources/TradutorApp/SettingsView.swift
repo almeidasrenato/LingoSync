@@ -18,6 +18,7 @@ struct SettingsView: View {
     var onResetPanel: () -> Void
     var onMakeSubtitles: () -> Void
     var onOpenStudio: () -> Void
+    var onNewStudio: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -250,7 +251,16 @@ struct SettingsView: View {
                 Label("Assistir com legenda…", systemImage: "play.rectangle")
                     .frame(maxWidth: .infinity)
             }
-            .help("Gera a legenda e reproduz o vídeo com ela, com navegação por fala")
+            .help("Gera a legenda e reproduz o vídeo com ela, com navegação por "
+                  + "fala. Se já houver uma janela aberta, traz ela de volta.")
+
+            // Visível sempre, inclusive sem janela nenhuma aberta. Escondida
+            // atrás de uma condição, ninguém a acharia — é a mesma lição dos
+            // controles de locutor no painel.
+            Button("Abrir outra janela", action: onNewStudio)
+                .buttonStyle(.borderless)
+                .font(.system(size: 11))
+                .help("Abre mais uma janela de legendas, para outro vídeo")
 
             Button {
                 onMakeSubtitles()

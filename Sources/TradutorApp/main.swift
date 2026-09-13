@@ -19,8 +19,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var panel: OverlayPanel?
     private var hotKey: GlobalHotKey?
     private var subtitleJob: SubtitleJob?
-    private var studioWindow: NSWindow?
-    private var studioModel: SubtitleStudioModel?
+    /// As janelas de legendas abertas, cada uma com o seu modelo.
+    ///
+    /// O dicionario e quem retem as duas coisas: a janela nao e `released`
+    /// ao fechar, e o modelo so vive enquanto a view existir. `windowWillClose`
+    /// tira a chave e o par inteiro cai junto.
+    private var studios: [NSWindow: SubtitleStudioModel] = [:]
+    /// Sempre crescente, so para numerar o titulo. Reaproveitar o numero de
+    /// uma janela fechada daria duas "Legendas 2" ao mesmo tempo.
+    private var studioCounter = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -85,6 +92,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             )
         }
 
+        // Confere que mais de uma janela de legendas coexiste, sem video
+        // nenhum:  open -n build/Tradutor.app --args --selftest-janelas
+        if CommandLine.arguments.contains("--selftest-janelas") {
+            runStudioWindowsSelfTest()
+        }
+
         // Exercita a janela de legendas sem ninguem clicar:
         //   open build/Tradutor.app --args --selftest-studio <video> ja pt
         if let index = CommandLine.arguments.firstIndex(of: "--selftest-studio"),
@@ -132,19 +145,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             onToggle: { [weak self] in self?.toggleTranslation() },
             onResetPanel: { [weak self] in self?.panel?.resetToDefaultSize() },
             onMakeSubtitles: { [weak self] in self?.makeSubtitles() },
-            onOpenStudio: { [weak self] in self?.openStudio() }
+            onOpenStudio: { [weak self] in self?.openStudio() },
+            onNewStudio: { [weak self] in self?.openStudio(nova: true) }
         )
     }
 
     /// Janela de legendas: escolher video, gerar, assistir e navegar.
-    private func openStudio() {
+    ///
+    /// Mais de uma pode ficar aberta — dois videos ao mesmo tempo, ou um
+    /// segundo vídeo sem perder a legenda do primeiro, que custou minutos.
+    ///
+    /// Sem `nova`, o item do menu **levanta as que ja existem** em vez de
+    /// abrir mais uma. O app e `.accessory`: sem Dock, sem Cmd-Tab e sem menu
+    /// Janela, este e o unico caminho de volta para uma janela enterrada
+    /// atras de outras.
+    private func openStudio(nova: Bool = false) {
         popover.performClose(nil)
 
-        // Reabrir traz a janela existente de volta, com o video e as legendas
-        // que ja estavam la — gerar de novo custa minutos.
-        if let studioWindow {
+        if !nova, !studios.isEmpty {
             NSApp.activate(ignoringOtherApps: true)
-            studioWindow.makeKeyAndOrderFront(nil)
+            // Na ordem do app, de tras para a frente: a que ja estava na
+            // frente termina na frente, em vez de uma qualquer roubar o foco.
+            for window in NSApp.orderedWindows.reversed() where studios[window] != nil {
+                window.makeKeyAndOrderFront(nil)
+            }
             return
         }
 
@@ -156,7 +180,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         model.diarizeSpeakers = pipeline.diarizeSpeakers
         model.speakerModel = pipeline.speakerModel
         model.colorBySpeaker = pipeline.colorBySpeaker
-        studioModel = model
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1120, height: 660),
@@ -164,7 +187,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Legendas"
+        studioCounter += 1
+        window.title = studioCounter == 1 ? "Legendas" : "Legendas \(studioCounter)"
         window.center()
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(
@@ -174,7 +198,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        studioWindow = window
+        studios[window] = model
     }
 
     private func makeSubtitles() {
@@ -521,6 +545,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    /// Confere que mais de uma janela de legendas existe ao mesmo tempo, que
+    /// cada uma tem o seu modelo, e que fechar uma nao leva as outras.
+    ///
+    /// Nao carrega video nem modelo: roda em milissegundos.
+    private func runStudioWindowsSelfTest() {
+        let report = "/tmp/tradutor-janelas.txt"
+        var lines = ["teste das janelas de legendas  \(Date().formatted(date: .abbreviated, time: .standard))"]
+        var failures = 0
+        func write(_ text: String) {
+            lines.append(text)
+            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
+        }
+        func expect(_ condition: Bool, _ label: String) {
+            write(condition ? "  ok    \(label)" : "  FALHA \(label)")
+            if !condition { failures += 1 }
+        }
+
+        Task { @MainActor in
+            openStudio()
+            expect(studios.count == 1, "a primeira abre")
+
+            // Sem `nova`, o item do menu levanta o que ja existe. Abrindo mais
+            // uma aqui, quem tivesse a janela enterrada atras de outras ficaria
+            // sem caminho de volta: o app nao tem Dock nem menu Janela.
+            openStudio()
+            expect(studios.count == 1, "reabrir nao cria outra")
+
+            openStudio(nova: true)
+            openStudio(nova: true)
+            expect(studios.count == 3, "abrir outra cria outra")
+
+            let titulos = Set(studios.keys.map(\.title))
+            expect(titulos.count == 3,
+                   "cada janela tem seu titulo (\(titulos.sorted().joined(separator: ", ")))")
+            expect(Set(studios.values.map(ObjectIdentifier.init)).count == 3,
+                   "cada janela tem seu modelo")
+
+            // Fechar uma nao pode levar as outras junto.
+            let primeira = studios.keys.first!
+            let restantes = Set(studios.keys).subtracting([primeira])
+            primeira.close()
+            expect(studios.count == 2, "fechar uma deixa as outras")
+            expect(Set(studios.keys) == restantes, "sobram as que nao foram fechadas")
+
+            for window in Array(studios.keys) { window.close() }
+            expect(studios.isEmpty, "fechar todas esvazia")
+
+            write("")
+            write(failures == 0 ? "PASSOU" : "\(failures) falhas")
+            exit(failures == 0 ? 0 : 1)
+        }
+    }
+
     /// Roda o caminho da janela de legendas de ponta a ponta: abre o video,
     /// gera, e exercita a navegacao por fala.
     private func runStudioSelfTest(path rawPath: String, source: Language, target: Language) {
@@ -570,7 +647,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 write("locutores por: \(model.speakerModel.displayName)"
                       + (model.colorBySpeaker ? ", com cor" : ", sem cor"))
             }
-            studioModel = model
             let kind = TranscriberKind(for: source, engine: model.recognitionEngine)
             write("reconhecimento: \(kind)")
             // Os que reportam progresso durante o reconhecimento. O Parakeet
@@ -593,7 +669,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 rootView: SubtitleStudioView(model: model)
             )
             window.orderFrontRegardless()
-            studioWindow = window
+            studios[window] = model
             write("janela aberta")
 
             model.open(URL(fileURLWithPath: path))
@@ -1162,11 +1238,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        guard (notification.object as? NSWindow) === studioWindow else { return }
+        guard let window = notification.object as? NSWindow,
+              let model = studios.removeValue(forKey: window) else { return }
         // Solta o player e o observador de tempo junto com a janela.
-        studioModel?.stop()
-        studioWindow = nil
-        studioModel = nil
+        model.stop()
     }
 
     private func notify(_ title: String, _ body: String) {
