@@ -435,7 +435,9 @@ public final class SubtitleFileBuilder {
         }
         flush()
 
-        return fixOverlaps(mergeTinyCues(fixOverlaps(clamp(cues, to: mediaDuration))))
+        return bridgeShortGaps(
+            fixOverlaps(mergeTinyCues(fixOverlaps(clamp(cues, to: mediaDuration))))
+        )
     }
 
     /// O caminho inteiro: do vídeo às legendas traduzidas, sem gravar nada.
@@ -992,6 +994,43 @@ public final class SubtitleFileBuilder {
 
             guard cue.end > cue.start else { continue }
             result.append(cue)
+        }
+        return result
+    }
+
+    /// Buraco entre duas legendas menor que isto apaga a tela no meio da
+    /// fala, e é isso que se vê como a legenda piscando.
+    ///
+    /// Medido no vídeo japonês de 9 minutos: com o Whisper são **38 buracos
+    /// abaixo de 1 s, somando 25,5 s de tela apagada** com alguém falando;
+    /// com a Apple, 10 e 6,4 s. A diferença não é defeito do Whisper — ele
+    /// pontua cada fala curta, e o agrupador fecha legenda na pontuação, que
+    /// é o que se quer. O que falta é segurar a legenda até a seguinte.
+    public var maximumGap: TimeInterval = 1.0
+
+    /// O respiro que fica entre duas legendas, para a troca ser visível.
+    ///
+    /// Duas caixas de texto que se sucedem sem intervalo nenhum parecem uma
+    /// só mudando de conteúdo. A legendagem usa dois quadros; 0,08 s é isso a
+    /// 24 quadros por segundo.
+    public var minimumGap: TimeInterval = 0.08
+
+    /// Segura cada legenda até quase a seguinte, quando o buraco é curto.
+    ///
+    /// Prática corrente de legendagem, e aqui ela resolve um defeito real: o
+    /// reconhecedor corta em cada frase, e entre uma frase e a próxima da
+    /// mesma pessoa há meio segundo em que a tela fica vazia. Não estende
+    /// além do teto de leitura nem encurta nada — só preenche o vão.
+    private func bridgeShortGaps(_ cues: [Cue]) -> [Cue] {
+        guard cues.count > 1 else { return cues }
+        var result = cues
+        for index in 0..<(result.count - 1) {
+            let gap = result[index + 1].start - result[index].end
+            guard gap > minimumGap, gap < maximumGap else { continue }
+            let alvo = result[index + 1].start - minimumGap
+            // Nem além do teto de leitura, nem para trás.
+            let teto = result[index].start + maximumDuration
+            result[index].end = max(result[index].end, min(alvo, teto))
         }
         return result
     }

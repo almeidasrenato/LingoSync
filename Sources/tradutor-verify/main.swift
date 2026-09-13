@@ -904,6 +904,47 @@ struct Verify {
             if !condition { failures += 1 }
         }
 
+        print("a legenda nao apaga a tela no meio da fala\n")
+        do {
+            // A queixa real, em japones com o Whisper: a legenda aparece e
+            // some com a pessoa ainda falando. O agrupamento esta certo — o
+            // reconhecedor pontua cada fala curta e o agrupador fecha legenda
+            // na pontuacao —, o que faltava era segurar a legenda ate a
+            // seguinte. Medido no video de 9 minutos: 38 buracos abaixo de
+            // 1 s somando 25,5 s de tela apagada viraram 4,4 s.
+            let builder = SubtitleFileBuilder()
+            let perto = builder.makeCues(from: [
+                TimedText(text: "Primeira fala aqui.", start: 0, end: 2.0),
+                TimedText(text: "Segunda fala aqui.", start: 2.6, end: 4.5),
+            ])
+            expect(perto.count == 2, "duas falas, duas legendas (deu \(perto.count))")
+            if perto.count == 2 {
+                let buraco = perto[1].start - perto[0].end
+                expect(buraco > 0 && buraco <= builder.minimumGap + 0.001,
+                       String(format: "buraco curto e preenchido, com respiro (deu %.3fs)", buraco))
+            }
+
+            // Buraco longo e pausa de verdade: nao se preenche.
+            let longe = builder.makeCues(from: [
+                TimedText(text: "Primeira fala aqui.", start: 0, end: 2.0),
+                TimedText(text: "Segunda fala aqui.", start: 6.0, end: 8.0),
+            ])
+            if longe.count == 2 {
+                expect(longe[1].start - longe[0].end > 1.0,
+                       "buraco longo continua sendo silencio na tela")
+            }
+
+            // E o teto de leitura manda: preencher nao pode esticar a legenda
+            // alem de `maximumDuration`.
+            let esticada = builder.makeCues(from: [
+                TimedText(text: "Uma fala longa que ocupa quase todo o teto.", start: 0, end: 6.8),
+                TimedText(text: "A seguinte.", start: 7.6, end: 9.0),
+            ])
+            expect(esticada.allSatisfy { $0.end - $0.start <= builder.maximumDuration + 0.001 },
+                   "preencher o buraco nao passa do teto de 7 s")
+        }
+        print("")
+
         let silence = [Float](repeating: 0, count: 1_600)
         expect(SubtitleFileBuilder.boostQuietAudio(silence) == silence,
                "normalizacao nao transforma silencio em sinal")
@@ -1610,6 +1651,34 @@ struct Verify {
                 for piece in acima.prefix(5) {
                     print(String(format: "      %6.2f–%6.2f  %@", piece.start, piece.end, piece.text))
                 }
+            }
+
+            // Quanto tempo há voz na tela sem legenda nenhuma.
+            //
+            // É a medida que corresponde à queixa "a legenda some e a pessoa
+            // ainda está falando". A comparação por região de fala engana:
+            // uma região junta falas separadas por menos de 0,5 s, então uma
+            // região de 8 s pode ter três legendas e mesmo assim acusar
+            // "legenda acaba 5 s antes".
+            var descoberto: [(Double, Double)] = []
+            for region in regions {
+                var cursor = region.lowerBound
+                for cue in cues.sorted(by: { $0.start < $1.start })
+                where cue.end > cursor && cue.start < region.upperBound {
+                    if cue.start > cursor { descoberto.append((cursor, min(cue.start, region.upperBound))) }
+                    cursor = max(cursor, cue.end)
+                    if cursor >= region.upperBound { break }
+                }
+                if cursor < region.upperBound { descoberto.append((cursor, region.upperBound)) }
+            }
+            let vozTotal = regions.reduce(0.0) { $0 + ($1.upperBound - $1.lowerBound) }
+            let semLegenda = descoberto.reduce(0.0) { $0 + ($1.1 - $1.0) }
+            print(String(format: "\nfala sem legenda na tela: %.1f s de %.1f s (%.0f%%)",
+                         semLegenda, vozTotal, vozTotal > 0 ? semLegenda / vozTotal * 100 : 0))
+            for buraco in descoberto.filter({ $0.1 - $0.0 >= 1.0 })
+                .sorted(by: { ($0.1 - $0.0) > ($1.1 - $1.0) }).prefix(8) {
+                print(String(format: "   %6.2f–%6.2f  %.1f s de voz sem legenda",
+                             buraco.0, buraco.1, buraco.1 - buraco.0))
             }
 
             print("\ntrechos reconhecidos:")

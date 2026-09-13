@@ -1439,6 +1439,48 @@ porque com ela ligada a troca de voz corta o trecho antes de o teto chegar. A
 matriz anterior rodava tudo com locutores e passava. Quem medir corte de
 trecho roda os dois.
 
+### A legenda que apaga a tela no meio da fala
+
+A queixa: em japonês, com o Whisper, a legenda aparece e some com a pessoa
+ainda falando. Medido no vídeo de 9 minutos, contando o buraco entre uma
+legenda e a seguinte:
+
+```
+                buracos abaixo de 1 s     tela apagada
+Whisper turbo          38 de 106              25,5 s
+Apple                  10 de 105               6,4 s
+```
+
+**Não é defeito do Whisper, e não é o agrupamento.** Onde a Apple devolve dois
+trechos contínuos, o Whisper devolve seis curtos com buraco entre eles:
+
+```
+Whisper  …402,84 → 405,02 → 406,18 → 407,30 → 408,18 → 408,72 → 409,86…
+Apple    403,86–408,54  ·  408,54–411,06
+```
+
+Ele pontua cada fala curta, e o agrupador fecha legenda na pontuação — que é
+exatamente o que se quer. O que faltava era **segurar a legenda até a
+seguinte**, que é prática corrente de legendagem: buraco de meio segundo entre
+duas frases da mesma pessoa não é pausa, é a tela piscando.
+
+`bridgeShortGaps` estende o fim de cada legenda até `minimumGap` (0,08 s, dois
+quadros a 24 fps) antes da seguinte, quando o buraco é menor que `maximumGap`
+(1,0 s). Nunca encurta nada e nunca passa do teto de leitura:
+
+```
+                tela apagada em buracos < 1 s     maior legenda
+Whisper  antes           25,5 s                      6,85 s
+Whisper  depois           4,4 s                      7,00 s
+Apple    antes            6,4 s                      7,00 s
+Apple    depois           0,9 s                      7,00 s
+```
+
+O conserto é em `makeCues`, **antes da tradução** — vale para qualquer
+tradutor, inclusive o DeepL, e para qualquer reconhecedor. `tradutor-verify
+tempos` cobre os três casos: buraco curto preenchido com respiro, buraco longo
+intocado, e preencher sem passar dos 7 s.
+
 ### A legenda de três linhas, e por que ela voltava
 
 `enforceLineLimit` reparte a legenda cuja tradução não cabe em duas linhas.

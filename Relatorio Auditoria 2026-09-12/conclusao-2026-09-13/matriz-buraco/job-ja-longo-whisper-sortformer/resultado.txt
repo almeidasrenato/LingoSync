@@ -1,0 +1,27 @@
+gerar legenda de um video  13 de set. de 2026, 5:53:11
+video: ja-longo.mp4
+idiomas: ja -> pt
+motor: Whisper turbo
+tradutor: Apple
+gerando...
+  ok    grava o .srt ao lado do video (72s)
+legendas: 157
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  ok    nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:08,990 → 00:00:11,319
+    Música
+  00:00:13,489 → 00:00:15,288
+    — bom dia
+  00:00:15,368 → 00:00:17,370
+    — bom dia
+  00:00:17,449 → 00:00:20,489
+    — você é novo aqui?
+
+PASSOU
