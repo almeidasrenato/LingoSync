@@ -1068,6 +1068,23 @@ struct Verify {
         // Nada pode cair fora do video nem ficar tempo demais na tela: no
         // video de 18 min saiu uma legenda comecando 3 s depois do fim e
         // durando 20 s, com teto de 7.
+        let atravessaTeto = builder.makeCues(from: [
+            TimedText(text: "これは長い説明の前半です", start: 0, end: 6.8),
+            TimedText(text: "そして説明は九秒まで続きます。", start: 6.8, end: 9),
+        ], mediaDuration: 10)
+        expect(atravessaTeto.count == 2
+               && abs((atravessaTeto.last?.end ?? 0) - 9) < 0.001
+               && atravessaTeto.allSatisfy { $0.end - $0.start <= builder.maximumDuration }
+               && atravessaTeto.map(\.source).joined() == "これは長い説明の前半ですそして説明は九秒まで続きます。",
+               "fecha antes do teto sem perder texto nem o fim da fala")
+
+        let antecipada = builder.makeCues(from: [
+            TimedText(text: "A fala cabe no teto.", start: 10, end: 16.9),
+        ], mediaDuration: 20)
+        expect(abs((antecipada.last?.end ?? 0) - 16.9) < 0.001
+               && antecipada.allSatisfy { $0.end - $0.start <= builder.maximumDuration + 0.001 },
+               "antecipação cede espaço sem cortar a fala")
+
         let foraDoVideo = builder.makeCues(from: [
             TimedText(text: "dentro do video.", start: 5.0, end: 8.0),
             TimedText(text: "longa demais na tela.", start: 20.0, end: 44.0),
@@ -1137,6 +1154,29 @@ struct Verify {
                "sem fronteira natural, o original fica inteiro na primeira parte")
         expect(partesJa.dropFirst().allSatisfy { $0.source.isEmpty },
                "as partes seguintes ficam sem original em vez de com metade de uma palavra")
+
+        let traducaoComprida = Array(repeating: "teste", count: 18).joined(separator: " ")
+        for duracao in [0.3, 1.0, 1.25, 6.0] {
+            let partes = builder.enforceLineLimit([
+                Cue(index: 1, start: 6, end: 6 + duracao, source: "Original.",
+                    translated: traducaoComprida, speaker: "Locutor 1"),
+            ])
+            expect(partes.count > 1
+                   && partes.first?.start == 6
+                   && abs((partes.last?.end ?? 0) - (6 + duracao)) < 0.001
+                   && partes.allSatisfy { $0.end > $0.start && $0.speaker == "Locutor 1" }
+                   && zip(partes, partes.dropFirst()).allSatisfy { abs($0.end - $1.start) < 0.001 }
+                   && partes.map(\.translated).joined(separator: " ") == traducaoComprida,
+                   "divisão respeita os \(duracao) s disponíveis e preserva texto e locutor")
+        }
+
+        var ultima = builder.makeCues(from: [
+            TimedText(text: "Esta fala termina no último quadro.", start: 6, end: 7),
+        ], mediaDuration: 7)
+        for i in ultima.indices { ultima[i].translated = traducaoComprida }
+        let ultimaRepartida = builder.enforceLineLimit(ultima)
+        expect(ultimaRepartida.count > 1 && abs((ultimaRepartida.last?.end ?? 0) - 7) < 0.001,
+               "gerar e repartir mantém o fim do vídeo")
 
         // Com pontuacao japonesa, aí sim divide.
         let comPontuacao = Cue(
@@ -1462,6 +1502,9 @@ struct Verify {
                  "no complaints at all",
                  "complaints at all"),
                 ("", "primeiro bloco da sessao", "primeiro bloco da sessao"),
+                ("これは", "はじめまして。", "はじめまして。"),
+                ("今天", "天气很好。", "天气很好。"),
+                ("昨日は東京", "東京に行きました。", "に行きました。"),
             ]
             for (previous, incoming, want) in cases {
                 let got = OverlapTrimmer.dropRepeatedPrefix(incoming, after: previous)

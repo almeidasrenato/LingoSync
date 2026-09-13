@@ -406,9 +406,15 @@ public final class SubtitleFileBuilder {
             // A entrada antecipada nunca invade a legenda anterior nem passa
             // do começo do arquivo.
             let floor = cues.last.map { $0.end } ?? 0
-            let start = max(floor, buffer.first!.start - leadIn)
+            let spokenEnd = buffer.map(\.end).max()!
+            var start = max(floor, buffer.first!.start - leadIn)
+            // A antecipação pode ceder espaço; o fim de uma fala que cabe
+            // no teto não pode ser cortado por causa dela.
+            if spokenEnd - buffer.first!.start <= maximumDuration {
+                start = max(start, spokenEnd - maximumDuration)
+            }
             // Nunca menos que o mínimo na tela, mesmo para uma palavra solta.
-            let end = max(buffer.last!.end, start + minimumDuration)
+            let end = max(spokenEnd, start + minimumDuration)
             cues.append(Cue(
                 index: cues.count + 1, start: start, end: end, source: text,
                 speaker: buffer.first?.speaker
@@ -422,6 +428,10 @@ public final class SubtitleFileBuilder {
             // Troca de locutor também é: duas pessoas na mesma legenda é o
             // que fazia a leitura embaralhar quando há diálogo rápido.
             if let last = buffer.last, last.speaker != piece.speaker { flush() }
+
+            // Fecha antes de acrescentar o trecho que faria ultrapassar o
+            // teto; limitar depois cortaria o fim da fala já agrupada.
+            if let first = buffer.first, piece.end - first.start > maximumDuration { flush() }
 
             buffer.append(piece)
             let text = Tokens.join(buffer.map(\.text))
@@ -818,22 +828,24 @@ public final class SubtitleFileBuilder {
             let sourceParts = splitSource(cue.source, into: parts.count)
 
             let totalCharacters = max(parts.reduce(0) { $0 + $1.count }, 1)
-            let span = max(cue.end - cue.start, minimumDuration)
+            let span = cue.end - cue.start
+            // Repartir não cria tempo: em legendas curtas, reduz o mínimo
+            // por parte e reserva esse tempo também para as partes seguintes.
+            let minimumPart = min(minimumDuration * 0.7, span / Double(parts.count))
             var cursor = cue.start
 
             for (offset, part) in parts.enumerated() {
                 let isLast = offset == parts.count - 1
                 let share = span * Double(part.count) / Double(totalCharacters)
-                // Nenhuma parte pode piscar: piso de tela mesmo que roube um
-                // pouco do tempo da seguinte.
+                let latestEnd = cue.end - Double(parts.count - offset - 1) * minimumPart
                 let end = isLast
                     ? cue.end
-                    : min(cursor + max(share, minimumDuration * 0.7), cue.end)
+                    : min(cursor + max(share, minimumPart), latestEnd)
 
                 result.append(Cue(
                     index: result.count + 1,
                     start: cursor,
-                    end: max(end, cursor + minimumDuration * 0.7),
+                    end: end,
                     source: offset < sourceParts.count ? sourceParts[offset] : "",
                     translated: part,
                     // Repartir não muda quem fala. Sem isto, uma legenda longa

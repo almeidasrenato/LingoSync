@@ -99,6 +99,12 @@ public enum OverlapTrimmer {
         // ambiguidade, porque repetir incomoda mais que faltar uma palavra
         // que ja foi lida no bloco anterior.
         for count in stride(from: limit, through: 1, by: -1) {
+            // Um caractere japonês/chinês coincidente pode iniciar outra
+            // palavra: "これは" + "はじめまして" não repete o "は".
+            // ponytail: dois caracteres ainda são heurística; certeza exige
+            // associar a repetição ao intervalo de áudio sobreposto.
+            if count == 1, newWords[0].count == 1,
+               newWords[0].first.map(Tokens.isDense) == true { continue }
             let tail = previousWords.suffix(count).map(normalize)
             let head = newWords.prefix(count).map(normalize)
             if tail == head, !tail.contains(where: \.isEmpty) {
