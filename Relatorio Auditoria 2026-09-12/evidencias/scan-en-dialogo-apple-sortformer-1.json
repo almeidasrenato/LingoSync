@@ -1,0 +1,768 @@
+{
+  "asrSeconds" : 1.0495110750198364,
+  "cues" : [
+    {
+      "end" : 1.74,
+      "speaker" : "Locutor 1",
+      "start" : 0,
+      "text" : "Come in, Egghead."
+    },
+    {
+      "end" : 3.8999999999999999,
+      "speaker" : "Locutor 2",
+      "start" : 1.74,
+      "text" : "What the hell is going on over there?"
+    },
+    {
+      "end" : 6.0599999999999996,
+      "speaker" : "Locutor 2",
+      "start" : 3.8999999999999999,
+      "text" : "What was that broadcast?"
+    },
+    {
+      "end" : 8.2200000000000006,
+      "speaker" : "Locutor 2",
+      "start" : 6.0599999999999996,
+      "text" : "I need a status report immediately."
+    },
+    {
+      "end" : 10.960000000000001,
+      "speaker" : "Locutor 2",
+      "start" : 8.2200000000000006,
+      "text" : "Come in, goddamn it! Again?"
+    },
+    {
+      "end" : 13.06,
+      "speaker" : "Locutor 3",
+      "start" : 10.960000000000001,
+      "text" : "Oh, shut it already. What"
+    },
+    {
+      "end" : 14.06,
+      "speaker" : "Locutor 1",
+      "start" : 13.06,
+      "text" : "happened to everyone else?"
+    },
+    {
+      "end" : 15.84,
+      "speaker" : "Locutor 3",
+      "start" : 14.06,
+      "text" : "Alive, but knocked out."
+    },
+    {
+      "end" : 17.34,
+      "speaker" : "Locutor 3",
+      "start" : 15.84,
+      "text" : "Every last one of them."
+    },
+    {
+      "end" : 23.280000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 17.809999999999999,
+      "text" : "Once these kids wake up, I'll have them give you a report. You'd"
+    },
+    {
+      "end" : 25.84,
+      "speaker" : "Locutor 1",
+      "start" : 23.280000000000001,
+      "text" : "better not be doing a sloppy job. Saint"
+    },
+    {
+      "end" : 27.120000000000001,
+      "speaker" : "Locutor 2",
+      "start" : 25.84,
+      "text" : "Saturn had better be safe."
+    },
+    {
+      "end" : 28.920000000000002,
+      "speaker" : "Locutor 2",
+      "start" : 27.120000000000001,
+      "text" : "What happened to the power plant?"
+    },
+    {
+      "end" : 30.300000000000001,
+      "speaker" : "Locutor 2",
+      "start" : 28.920000000000002,
+      "text" : "And where are the fugitives?"
+    },
+    {
+      "end" : 33.719999999999999,
+      "speaker" : "Locutor 1",
+      "start" : 31.489999999999998,
+      "text" : "Let me ask you something."
+    },
+    {
+      "end" : 35.700000000000003,
+      "speaker" : "Locutor 1",
+      "start" : 33.719999999999999,
+      "text" : "Sakazuki."
+    },
+    {
+      "end" : 42.420000000000002,
+      "speaker" : "Locutor 1",
+      "start" : 38.689999999999998,
+      "text" : "Have you ever been ordered to kill your best friend?"
+    },
+    {
+      "end" : 45.060000000000002,
+      "speaker" : "Locutor 1",
+      "start" : 42.420000000000002,
+      "text" : "That's one hell of a head you've got there."
+    },
+    {
+      "end" : 47.399999999999999,
+      "speaker" : "Locutor 1",
+      "start" : 45.060000000000002,
+      "text" : "Anyhow, nice to meet you."
+    },
+    {
+      "end" : 50.140000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 47.399999999999999,
+      "text" : "Name's Borcelino. How"
+    },
+    {
+      "end" : 51.140000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 50.140000000000001,
+      "text" : "much can you offer?"
+    },
+    {
+      "end" : 57.140000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 51.140000000000001,
+      "text" : "I know the government really wants me for my brain, but I need funding. You're funny."
+    },
+    {
+      "end" : 58.140000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 57.140000000000001,
+      "text" : "I like that."
+    },
+    {
+      "end" : 61.119999999999997,
+      "speaker" : "Locutor 1",
+      "start" : 58.140000000000001,
+      "text" : "You realize I'm an admiral now, don't you? Watch"
+    },
+    {
+      "end" : 62.119999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 61.119999999999997,
+      "text" : "your posture, Uncle."
+    },
+    {
+      "end" : 64.799999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 62.119999999999997,
+      "text" : "Don't want to drop those on your foot. So"
+    },
+    {
+      "end" : 67.200000000000003,
+      "speaker" : "Locutor 1",
+      "start" : 64.799999999999997,
+      "text" : "this is your plan for the island? Yes,"
+    },
+    {
+      "end" : 68.879999999999995,
+      "speaker" : "Locutor 3",
+      "start" : 67.200000000000003,
+      "text" : "I'm going to name it Egghead."
+    },
+    {
+      "end" : 70.799999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 68.879999999999995,
+      "text" : "Keep it up, Mausolino."
+    },
+    {
+      "end" : 71.799999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 70.799999999999997,
+      "text" : "I'm counting on you."
+    },
+    {
+      "end" : 80.459999999999994,
+      "speaker" : "Locutor 3",
+      "start" : 75.109999999999999,
+      "text" : "If you burn it down, you'll set scientific progress back essentially."
+    },
+    {
+      "end" : 81.459999999999994,
+      "speaker" : "Locutor 3",
+      "start" : 80.459999999999994,
+      "text" : "Please."
+    },
+    {
+      "end" : 82.5,
+      "speaker" : "Locutor 3",
+      "start" : 81.459999999999994,
+      "text" : "Kisalo, help."
+    },
+    {
+      "end" : 84.5,
+      "speaker" : "Locutor 3",
+      "start" : 82.5,
+      "text" : "Help me. You"
+    },
+    {
+      "end" : 85.5,
+      "speaker" : "Locutor 1",
+      "start" : 84.5,
+      "text" : "think I did a sloppy job?"
+    },
+    {
+      "end" : 87.239999999999995,
+      "speaker" : "Locutor 1",
+      "start" : 85.5,
+      "text" : "You think I'm being lazy?"
+    },
+    {
+      "end" : 96,
+      "speaker" : "Locutor 1",
+      "start" : 93.109999999999999,
+      "text" : "If you have time to sit there and tell me!"
+    },
+    {
+      "end" : 98.280000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 96,
+      "text" : "Then you come here and look at what I've done!"
+    },
+    {
+      "end" : 100.02,
+      "speaker" : "Locutor 1",
+      "start" : 98.280000000000001,
+      "text" : "You little shit!"
+    },
+    {
+      "end" : 106.08,
+      "speaker" : "Locutor 2",
+      "start" : 102.83,
+      "text" : "I apologize, brother."
+    },
+    {
+      "end" : 107.08,
+      "speaker" : "Locutor 1",
+      "start" : 106.08,
+      "text" : "Shut up."
+    },
+    {
+      "end" : 108.08,
+      "speaker" : "Locutor 1",
+      "start" : 107.08,
+      "text" : "It's too late."
+    }
+  ],
+  "diarizer" : "sortformer",
+  "diarSeconds" : 0.36942398548126221,
+  "duration" : 109.29593749999999,
+  "engine" : "apple",
+  "file" : "\/tmp\/auditoria-tradutor-20260912\/en-dialogo.mp4",
+  "hints" : [
+
+  ],
+  "timed" : [
+    {
+      "end" : 1.74,
+      "speaker" : "Locutor 1",
+      "start" : 0,
+      "text" : "Come in, Egghead."
+    },
+    {
+      "end" : 2.2200000000000002,
+      "speaker" : "Locutor 2",
+      "start" : 1.8,
+      "text" : "What"
+    },
+    {
+      "end" : 3.8999999999999999,
+      "speaker" : "Locutor 2",
+      "start" : 2.2200000000000002,
+      "text" : "the hell is going on over there?"
+    },
+    {
+      "end" : 6.0599999999999996,
+      "speaker" : "Locutor 2",
+      "start" : 3.96,
+      "text" : "What was that broadcast?"
+    },
+    {
+      "end" : 8.2200000000000006,
+      "speaker" : "Locutor 2",
+      "start" : 6.1200000000000001,
+      "text" : "I need a status report immediately."
+    },
+    {
+      "end" : 9.9600000000000009,
+      "speaker" : "Locutor 2",
+      "start" : 8.2799999999999994,
+      "text" : "Come in, goddamn it!"
+    },
+    {
+      "end" : 10.74,
+      "speaker" : "Locutor 2",
+      "start" : 10.08,
+      "text" : "Again?"
+    },
+    {
+      "end" : 12.06,
+      "speaker" : "Locutor 3",
+      "start" : 10.800000000000001,
+      "text" : "Oh, shut it already."
+    },
+    {
+      "end" : 12.9,
+      "speaker" : "Locutor 3",
+      "start" : 12.119999999999999,
+      "text" : "What"
+    },
+    {
+      "end" : 13.800000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 12.9,
+      "text" : "happened to everyone else?"
+    },
+    {
+      "end" : 15.06,
+      "speaker" : "Locutor 3",
+      "start" : 13.92,
+      "text" : "Alive,"
+    },
+    {
+      "end" : 15.84,
+      "speaker" : "Locutor 3",
+      "start" : 15.06,
+      "text" : "but knocked out."
+    },
+    {
+      "end" : 17.34,
+      "speaker" : "Locutor 3",
+      "start" : 15.960000000000001,
+      "text" : "Every last one of them."
+    },
+    {
+      "end" : 21.780000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 18.059999999999999,
+      "text" : "Once these kids wake up, I'll have them give you a report."
+    },
+    {
+      "end" : 23.280000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 21.899999999999999,
+      "text" : "You'd"
+    },
+    {
+      "end" : 24.84,
+      "speaker" : "Locutor 1",
+      "start" : 23.280000000000001,
+      "text" : "better not be doing a sloppy job."
+    },
+    {
+      "end" : 25.620000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 24.899999999999999,
+      "text" : "Saint"
+    },
+    {
+      "end" : 27.120000000000001,
+      "speaker" : "Locutor 2",
+      "start" : 25.620000000000001,
+      "text" : "Saturn had better be safe."
+    },
+    {
+      "end" : 28.920000000000002,
+      "speaker" : "Locutor 2",
+      "start" : 27.18,
+      "text" : "What happened to the power plant?"
+    },
+    {
+      "end" : 30.300000000000001,
+      "speaker" : "Locutor 2",
+      "start" : 29.039999999999999,
+      "text" : "And where are the fugitives?"
+    },
+    {
+      "end" : 33,
+      "speaker" : "Locutor 1",
+      "start" : 31.739999999999998,
+      "text" : "Let"
+    },
+    {
+      "end" : 33.719999999999999,
+      "speaker" : "Locutor 1",
+      "start" : 33,
+      "text" : "me ask you something."
+    },
+    {
+      "end" : 35.700000000000003,
+      "speaker" : "Locutor 1",
+      "start" : 33.840000000000003,
+      "text" : "Sakazuki."
+    },
+    {
+      "end" : 42.420000000000002,
+      "speaker" : "Locutor 1",
+      "start" : 38.939999999999998,
+      "text" : "Have you ever been ordered to kill your best friend?"
+    },
+    {
+      "end" : 45.060000000000002,
+      "speaker" : "Locutor 1",
+      "start" : 42.479999999999997,
+      "text" : "That's one hell of a head you've got there."
+    },
+    {
+      "end" : 47.399999999999999,
+      "speaker" : "Locutor 1",
+      "start" : 45.18,
+      "text" : "Anyhow, nice to meet you."
+    },
+    {
+      "end" : 49.140000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 47.460000000000001,
+      "text" : "Name's Borcelino."
+    },
+    {
+      "end" : 50.100000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 49.200000000000003,
+      "text" : "How"
+    },
+    {
+      "end" : 50.640000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 50.100000000000001,
+      "text" : "much can you offer?"
+    },
+    {
+      "end" : 55.140000000000001,
+      "speaker" : "Locutor 3",
+      "start" : 50.700000000000003,
+      "text" : "I know the government really wants me for my brain, but I need funding."
+    },
+    {
+      "end" : 55.920000000000002,
+      "speaker" : "Locutor 3",
+      "start" : 55.259999999999998,
+      "text" : "You're"
+    },
+    {
+      "end" : 56.159999999999997,
+      "speaker" : "Locutor 1",
+      "start" : 55.920000000000002,
+      "text" : "funny."
+    },
+    {
+      "end" : 56.939999999999998,
+      "speaker" : "Locutor 1",
+      "start" : 56.219999999999999,
+      "text" : "I like that."
+    },
+    {
+      "end" : 60.119999999999997,
+      "speaker" : "Locutor 1",
+      "start" : 57,
+      "text" : "You realize I'm an admiral now, don't you?"
+    },
+    {
+      "end" : 60.960000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 60.18,
+      "text" : "Watch"
+    },
+    {
+      "end" : 61.979999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 60.960000000000001,
+      "text" : "your posture, Uncle."
+    },
+    {
+      "end" : 63.420000000000002,
+      "speaker" : "Locutor 3",
+      "start" : 62.039999999999999,
+      "text" : "Don't want to drop those on your foot."
+    },
+    {
+      "end" : 64.799999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 63.539999999999999,
+      "text" : "So"
+    },
+    {
+      "end" : 66.120000000000005,
+      "speaker" : "Locutor 1",
+      "start" : 64.799999999999997,
+      "text" : "this is your plan for the island?"
+    },
+    {
+      "end" : 67.200000000000003,
+      "speaker" : "Locutor 1",
+      "start" : 66.239999999999995,
+      "text" : "Yes,"
+    },
+    {
+      "end" : 68.879999999999995,
+      "speaker" : "Locutor 3",
+      "start" : 67.200000000000003,
+      "text" : "I'm going to name it Egghead."
+    },
+    {
+      "end" : 70.799999999999997,
+      "speaker" : "Locutor 3",
+      "start" : 68.939999999999998,
+      "text" : "Keep it up, Mausolino."
+    },
+    {
+      "end" : 71.700000000000003,
+      "speaker" : "Locutor 3",
+      "start" : 70.859999999999999,
+      "text" : "I'm counting on you."
+    },
+    {
+      "end" : 76.620000000000005,
+      "speaker" : "Locutor 3",
+      "start" : 75.359999999999999,
+      "text" : "If"
+    },
+    {
+      "end" : 80.459999999999994,
+      "speaker" : "Locutor 3",
+      "start" : 76.620000000000005,
+      "text" : "you burn it down, you'll set scientific progress back essentially."
+    },
+    {
+      "end" : 81.239999999999995,
+      "speaker" : "Locutor 3",
+      "start" : 80.519999999999996,
+      "text" : "Please."
+    },
+    {
+      "end" : 82.5,
+      "speaker" : "Locutor 3",
+      "start" : 81.359999999999999,
+      "text" : "Kisalo, help."
+    },
+    {
+      "end" : 83.040000000000006,
+      "speaker" : "Locutor 3",
+      "start" : 82.680000000000007,
+      "text" : "Help me."
+    },
+    {
+      "end" : 84.120000000000005,
+      "speaker" : "Locutor 3",
+      "start" : 83.099999999999994,
+      "text" : "You"
+    },
+    {
+      "end" : 85.439999999999998,
+      "speaker" : "Locutor 1",
+      "start" : 84.120000000000005,
+      "text" : "think I did a sloppy job?"
+    },
+    {
+      "end" : 87.239999999999995,
+      "speaker" : "Locutor 1",
+      "start" : 85.5,
+      "text" : "You think I'm being lazy?"
+    },
+    {
+      "end" : 96,
+      "speaker" : "Locutor 1",
+      "start" : 93.359999999999999,
+      "text" : "If you have time to sit there and tell me!"
+    },
+    {
+      "end" : 98.280000000000001,
+      "speaker" : "Locutor 1",
+      "start" : 96.120000000000005,
+      "text" : "Then you come here and look at what I've done!"
+    },
+    {
+      "end" : 100.02,
+      "speaker" : "Locutor 1",
+      "start" : 98.400000000000006,
+      "text" : "You little shit!"
+    },
+    {
+      "end" : 104.09999999999999,
+      "speaker" : "Locutor 2",
+      "start" : 103.08,
+      "text" : "I"
+    },
+    {
+      "end" : 104.76000000000001,
+      "speaker" : "Locutor 2",
+      "start" : 104.09999999999999,
+      "text" : "apologize,"
+    },
+    {
+      "end" : 106.08,
+      "speaker" : "Locutor 2",
+      "start" : 104.76000000000001,
+      "text" : "brother."
+    },
+    {
+      "end" : 106.98,
+      "speaker" : "Locutor 1",
+      "start" : 106.08,
+      "text" : "Shut up."
+    },
+    {
+      "end" : 108.06,
+      "speaker" : "Locutor 1",
+      "start" : 107.09999999999999,
+      "text" : "It's too late."
+    }
+  ],
+  "turns" : [
+    {
+      "end" : 1.6799999475479126,
+      "speaker" : "speaker_0",
+      "start" : 0.23999999463558197
+    },
+    {
+      "end" : 4,
+      "speaker" : "speaker_1",
+      "start" : 2.0799999237060547
+    },
+    {
+      "end" : 10.960000038146973,
+      "speaker" : "speaker_1",
+      "start" : 4.880000114440918
+    },
+    {
+      "end" : 12.239999771118164,
+      "speaker" : "speaker_2",
+      "start" : 10.960000038146973
+    },
+    {
+      "end" : 14.239999771118164,
+      "speaker" : "speaker_0",
+      "start" : 12.880000114440918
+    },
+    {
+      "end" : 17.680000305175781,
+      "speaker" : "speaker_2",
+      "start" : 14.559999465942383
+    },
+    {
+      "end" : 22.319999694824219,
+      "speaker" : "speaker_2",
+      "start" : 19.119998931884766
+    },
+    {
+      "end" : 25.279998779296875,
+      "speaker" : "speaker_0",
+      "start" : 22.959999084472656
+    },
+    {
+      "end" : 30.719999313354492,
+      "speaker" : "speaker_1",
+      "start" : 25.279998779296875
+    },
+    {
+      "end" : 34.319999694824219,
+      "speaker" : "speaker_0",
+      "start" : 32.959999084472656
+    },
+    {
+      "end" : 35.840000152587891,
+      "speaker" : "speaker_0",
+      "start" : 34.880001068115234
+    },
+    {
+      "end" : 42.799999237060547,
+      "speaker" : "speaker_0",
+      "start" : 39.680000305175781
+    },
+    {
+      "end" : 45.759998321533203,
+      "speaker" : "speaker_0",
+      "start" : 43.279998779296875
+    },
+    {
+      "end" : 49.520000457763672,
+      "speaker" : "speaker_0",
+      "start" : 46.159999847412109
+    },
+    {
+      "end" : 51.199996948242188,
+      "speaker" : "speaker_2",
+      "start" : 49.919998168945312
+    },
+    {
+      "end" : 55.759998321533203,
+      "speaker" : "speaker_2",
+      "start" : 51.840000152587891
+    },
+    {
+      "end" : 60.639999389648438,
+      "speaker" : "speaker_0",
+      "start" : 55.759998321533203
+    },
+    {
+      "end" : 63.919998168945312,
+      "speaker" : "speaker_2",
+      "start" : 60.879997253417969
+    },
+    {
+      "end" : 66.720001220703125,
+      "speaker" : "speaker_0",
+      "start" : 64.55999755859375
+    },
+    {
+      "end" : 69.1199951171875,
+      "speaker" : "speaker_2",
+      "start" : 66.879997253417969
+    },
+    {
+      "end" : 71.760002136230469,
+      "speaker" : "speaker_2",
+      "start" : 69.599998474121094
+    },
+    {
+      "end" : 74.159996032714844,
+      "speaker" : "speaker_3",
+      "start" : 72
+    },
+    {
+      "end" : 83.360000610351562,
+      "speaker" : "speaker_2",
+      "start" : 76.479995727539062
+    },
+    {
+      "end" : 87.759994506835938,
+      "speaker" : "speaker_0",
+      "start" : 84
+    },
+    {
+      "end" : 100,
+      "speaker" : "speaker_0",
+      "start" : 93.919998168945312
+    },
+    {
+      "end" : 105.36000061035156,
+      "speaker" : "speaker_1",
+      "start" : 104
+    },
+    {
+      "end" : 104.87999725341797,
+      "speaker" : "speaker_0",
+      "start" : 104.79999542236328
+    },
+    {
+      "end" : 106.31999969482422,
+      "speaker" : "speaker_1",
+      "start" : 105.83999633789062
+    },
+    {
+      "end" : 108.31999969482422,
+      "speaker" : "speaker_0",
+      "start" : 106.23999786376953
+    }
+  ]
+}

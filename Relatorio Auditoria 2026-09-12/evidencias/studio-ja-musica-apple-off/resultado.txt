@@ -1,0 +1,91 @@
+teste da janela de legendas  12 de set. de 2026, 14:18:16
+reconhecimento: apple
+janela aberta
+superficie de video renderizada sem abortar
+  ok    o player carrega a midia (96.5s)
+video: ja-musica.mp4
+  ok    o player e criado ao abrir o video
+duracao: 96.5s
+  ok    a duracao do video e lida
+  ok    da para gerar depois de escolher o video
+gerando...
+  [  0.5s] Reconhecendo a fala 47 de 97 s de áudio
+  [  1.0s] Traduzindo (aguardando) 1–11 de 11
+geracao em 7.0s
+legendas: 15
+  ok    a geracao produz legendas
+  ok    a interface anuncia a espera pela resposta do tradutor
+  ok    o reconhecimento mostra progresso (chegou a 90%)
+  ok    gerar nao grava .srt sozinho
+  ok    nenhum .srt aparece ao lado do video sem exportar
+  ok    clicar na legenda 5 leva o video a 18.96s (foi para 18.98s)
+  ok    a legenda clicada fica marcada como atual
+  ok    avancar percorre as legendas em sequencia ([0, 1, 2, 3, 4, 5])
+  ok    sempre ha uma legenda ativa depois de avancar
+  ok    voltar do meio de uma fala vai para o comeco dela
+  (pulado: nao ha silencio entre as duas primeiras)
+  ok    carregar .srt traz as mesmas legendas
+  ok    marca que a legenda veio de arquivo
+  ok    navegacao funciona com legenda carregada
+  [  7.1s] Reconhecendo a fala 0 de 97 s de áudio
+  ok    regerar limpa as legendas antigas
+  ok    regerar limpa a legenda marcada
+  ok    regerar entra em trabalho
+  ok    cancelar deixa o estado em cancelado
+  ok    cancelar encerra o trabalho
+  ok    da para gerar de novo depois de cancelar
+  ok    o volume chega ao player
+  ok    mudo liga
+  ok    mexer no volume tira do mudo
+  ok    a legenda comeca em 60%
+  ok    Parakeet escolhido roda no portugues, que ele cobre
+  ok    Parakeet com idioma que ele nao cobre cai no Whisper
+  ok    Whisper escolhido vale para japones
+  ok    o seletor nao oferece japones no Parakeet
+  ok    o Whisper nao limita idioma
+  ok    Apple escolhida vale para qualquer idioma
+Apple: instalados ["pt", "en", "es", "fr", "de", "ja"], instalaveis ["it", "zh", "ko"]
+  ok    a Apple oferece japones
+  ok    a Apple nao oferece arabe
+  ok    instalado e sempre um dos oferecidos
+  ok    aumentar a legenda sobe 10%
+  ok    diminuir a legenda desce 10%
+  ok    a legenda tem tamanho minimo
+  ok    a legenda tem tamanho maximo
+  ok    arrastar a barra move o tempo na hora
+  ok    soltar a barra cai exatamente na legenda
+  ok    o video comeca visivel
+  ok    o video pode ser ocultado
+  ok    o teste roda com o video pausado
+  ok    clicar numa legenda move o video mesmo pausado
+  ok    a legenda clicada vira a ativa mesmo pausado
+  ok    o quadro exibido acompanha (27.49s vs 27.47s)
+  ok    a coluna de legendas redimensiona
+  ok    comeca pausado
+  ok    o clique no video inicia a reproducao
+  ok    o clique de novo pausa
+  ok    exportar registra onde a legenda foi gravada
+  ok    exportar grava o arquivo no destino escolhido
+  ok    o arquivo exportado tem formato SubRip
+  ok    o exportado tem uma entrada por legenda
+  ok    o nome sugerido traz o idioma (ja-musica.pt.srt)
+layout gravado em /tmp/studio.png (1080x580)
+
+primeiras legendas:
+  00:00:01,909 → 00:00:04,320
+    
+    Se você quiser
+  00:00:06,290 → 00:00:09,820
+    
+    meu nome é Monkey D. Luffy, o rei dos piratas. eu sou um
+  00:00:09,820 → 00:00:13,288
+    
+    homem que se torna rei. o que você está dizendo, Luffy?
+  00:00:15,419 → 00:00:18,957
+    
+    O doutor bezabank nos deu. se você quer salvar
+  00:00:18,957 → 00:00:22,420
+    
+    a vida de yo, evite todos os barcos na costa.
+
+PASSOU

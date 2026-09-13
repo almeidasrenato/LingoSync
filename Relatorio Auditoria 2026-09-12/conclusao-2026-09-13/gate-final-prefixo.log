@@ -1,0 +1,33 @@
+confirmacao de prefixo estavel
+
+  ok    tokenizar e reunir preserva: 今日は晴れです。明日は雨です。
+  ok    tokenizar e reunir preserva: 你好，世界。
+  ok    tokenizar e reunir preserva: 今日はSan Franciscoに行きます。
+  ok    tokenizar e reunir preserva: 안녕하세요 오늘 날씨가 좋습니다.
+  ok    tokenizar e reunir preserva: Hello！ How are you?
+  ok    tokenizar e reunir preserva: the engineer walked us through it.
+  ok    confirma a frase japonesa anterior enquanto a seguinte oscila
+  ok    frase japonesa confirmada chega inteira ao tradutor
+  ok    coreano continua comparando palavras, sem remover espacos
+  ok    a primeira passada nao confirma nada
+  ok    confirma o prefixo em que as duas passadas concordam (deu ["the", "engineer", "walked"])
+  ok    o resto fica pendente, na zona vermelha (deu ["us", "through"])
+  ok    a correcao do fim nao reescreve o que ja saiu
+  ok    pontuacao diferente nao trava a confirmacao (deu ["nobody", "had", "questions,"])
+  ok    a pausa confirma o que estava pendente
+  ok    nada fica pendente depois da pausa
+  ok    confirma o prefixo acordado enquanto o passado bate (deu 7 palavras)
+  ok    passada que reescreve o passado nao confirma nada (deu [])
+  ok    o que ja saiu na tela nao e reescrito nem duplicado
+
+acumulador de frases
+  ok    fecha na pontuacao (deu ["the engineer walked us through it."])
+  ok    fala corrida sem pontuacao ainda fecha por tamanho
+  ok    nenhum pedaco cresce sem limite (maior: 80)
+  ok    fecha nas virgulas (deu 2)
+  ok    todo pedaco termina em pontuacao, nunca no meio da oracao
+    | the engineer walked us through every edge case,
+    | nobody had questions, so she approved.
+  ok    virgula logo no comeco nao fecha um fragmento (deu ["Well, the engineer said something long enough."])
+
+prefixo estavel ok

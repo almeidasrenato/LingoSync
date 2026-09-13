@@ -1,0 +1,15 @@
+# Saída de compilação
+.build/
+build/
+
+# Mídia: os vídeos de exemplo e o áudio extraído não entram no histórico.
+# São grandes, binários e não mudam com o código. O `medicoes-claude/v/`
+# do relatório é cópia dos mesmos arquivos.
+*.mp4
+*.mkv
+*.mov
+*.wav
+*.m4a
+*.aiff
+
+.DS_Store

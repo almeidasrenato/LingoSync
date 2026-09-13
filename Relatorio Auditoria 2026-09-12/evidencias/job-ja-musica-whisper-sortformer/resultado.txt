@@ -1,0 +1,26 @@
+gerar legenda de um video  12 de set. de 2026, 14:02:10
+video: ja-musica.mp4
+idiomas: ja -> pt
+motor: Whisper turbo
+gerando...
+  ok    grava o .srt ao lado do video (17s)
+legendas: 9
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  ok    nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:01,070 → 00:00:02,069
+    E se!
+  00:00:02,069 → 00:00:07,578
+    — Meu nome é Monkey D. Luffy! Sou o homem que se tornará o Rei dos Piratas!
+  00:00:08,509 → 00:00:11,099
+    Ei, luffy! o que você está dizendo!
+  00:00:11,448 → 00:00:14,978
+    — O Doctor Vega Punk foi dado a nós!
+
+PASSOU

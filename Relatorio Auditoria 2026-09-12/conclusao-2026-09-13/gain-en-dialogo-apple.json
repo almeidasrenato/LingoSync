@@ -1,0 +1,1224 @@
+[
+  {
+    "boosted" : false,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8999999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.3399999999999999,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.08,
+        "text" : "Again?"
+      },
+      {
+        "end" : 12.06,
+        "start" : 10.800000000000001,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.119999999999999,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.84,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.34,
+        "start" : 15.960000000000001,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.780000000000001,
+        "start" : 18.059999999999999,
+        "text" : "Once these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.84,
+        "start" : 21.899999999999999,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.899999999999999,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.920000000000002,
+        "start" : 27.18,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.359999999999999,
+        "start" : 28.98,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.739999999999998,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.700000000000003,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 38.939999999999998,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.15129332911865515,
+    "seconds" : 0.48168706893920898,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again? Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8999999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.3399999999999999,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.08,
+        "text" : "Again?"
+      },
+      {
+        "end" : 12.06,
+        "start" : 10.800000000000001,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.119999999999999,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.84,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.34,
+        "start" : 15.960000000000001,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.780000000000001,
+        "start" : 18.059999999999999,
+        "text" : "Once these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.84,
+        "start" : 21.899999999999999,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.899999999999999,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.920000000000002,
+        "start" : 27.18,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.359999999999999,
+        "start" : 28.98,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.739999999999998,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.700000000000003,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 38.939999999999998,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.15129332911865515,
+    "seconds" : 0.40136206150054932,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again? Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.10000000149011612,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9000000000000004,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.800000000000001,
+        "start" : 10.02,
+        "text" : "Aghead!"
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.74,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 20.280000000000001,
+        "start" : 18.059999999999999,
+        "text" : "Watch these kids wake up."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 20.399999999999999,
+        "text" : "I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 39,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.015129333172357779,
+    "seconds" : 0.39818000793457031,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Aghead! Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Watch these kids wake up. I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.10000000149011612,
+    "gain" : 1.982903003692627,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.02,
+        "text" : "Aghead."
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 18,
+        "text" : "Watch these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 39,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.015129333172357779,
+    "seconds" : 0.39924490451812744,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Aghead. Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Watch these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.0099999997764825821,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8600000000000001,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9000000000000004,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it."
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.02,
+        "text" : "Backhead."
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 18.059999999999999,
+        "text" : "Once these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturnet better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 38.939999999999998,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.0015129332574852579,
+    "seconds" : 0.39738500118255615,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it. Backhead. Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturnet better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.0099999997764825821,
+    "gain" : 19.829030990600586,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.02,
+        "text" : "Aghead."
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 18,
+        "text" : "Watch these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 39,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.0015129332574852579,
+    "seconds" : 0.40202701091766357,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Aghead. Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Watch these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8999999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.3399999999999999,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.08,
+        "text" : "Again?"
+      },
+      {
+        "end" : 12.06,
+        "start" : 10.800000000000001,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.119999999999999,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.84,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.34,
+        "start" : 15.960000000000001,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.780000000000001,
+        "start" : 18.059999999999999,
+        "text" : "Once these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.84,
+        "start" : 21.899999999999999,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.899999999999999,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.920000000000002,
+        "start" : 27.18,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.359999999999999,
+        "start" : 28.98,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.739999999999998,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.700000000000003,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 38.939999999999998,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.15129332911865515,
+    "seconds" : 0.39194703102111816,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again? Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8999999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.3399999999999999,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.08,
+        "text" : "Again?"
+      },
+      {
+        "end" : 12.06,
+        "start" : 10.800000000000001,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.119999999999999,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.84,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.34,
+        "start" : 15.960000000000001,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.780000000000001,
+        "start" : 18.059999999999999,
+        "text" : "Once these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.84,
+        "start" : 21.899999999999999,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.899999999999999,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.920000000000002,
+        "start" : 27.18,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.359999999999999,
+        "start" : 28.98,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.739999999999998,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.700000000000003,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 38.939999999999998,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.15129332911865515,
+    "seconds" : 0.40230894088745117,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again? Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.10000000149011612,
+    "gain" : 1.982903003692627,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.02,
+        "text" : "Aghead."
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 18,
+        "text" : "Watch these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 39,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.015129333172357779,
+    "seconds" : 0.40653800964355469,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Aghead. Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Watch these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.10000000149011612,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9000000000000004,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.800000000000001,
+        "start" : 10.02,
+        "text" : "Aghead!"
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.74,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 20.280000000000001,
+        "start" : 18.059999999999999,
+        "text" : "Watch these kids wake up."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 20.399999999999999,
+        "text" : "I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 39,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.015129333172357779,
+    "seconds" : 0.39566600322723389,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Aghead! Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Watch these kids wake up. I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.0099999997764825821,
+    "gain" : 19.829030990600586,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9600000000000009,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it!"
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.02,
+        "text" : "Aghead."
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 18,
+        "text" : "Watch these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturn had better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 39,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.0015129332574852579,
+    "seconds" : 0.40151298046112061,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Aghead. Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Watch these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.0099999997764825821,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 1.74,
+        "start" : 0,
+        "text" : "Come in, Egghead."
+      },
+      {
+        "end" : 3.8399999999999999,
+        "start" : 1.8600000000000001,
+        "text" : "What the hell is going on over there?"
+      },
+      {
+        "end" : 6.0599999999999996,
+        "start" : 3.96,
+        "text" : "What was that broadcast?"
+      },
+      {
+        "end" : 8.2200000000000006,
+        "start" : 6.1200000000000001,
+        "text" : "I need a status report immediately."
+      },
+      {
+        "end" : 9.9000000000000004,
+        "start" : 8.2799999999999994,
+        "text" : "Come in, goddamn it."
+      },
+      {
+        "end" : 10.74,
+        "start" : 10.02,
+        "text" : "Backhead."
+      },
+      {
+        "end" : 12,
+        "start" : 10.859999999999999,
+        "text" : "Oh, shut it already."
+      },
+      {
+        "end" : 13.800000000000001,
+        "start" : 12.06,
+        "text" : "What happened to everyone else?"
+      },
+      {
+        "end" : 15.720000000000001,
+        "start" : 13.92,
+        "text" : "Alive, but knocked out."
+      },
+      {
+        "end" : 17.280000000000001,
+        "start" : 15.84,
+        "text" : "Every last one of them."
+      },
+      {
+        "end" : 21.719999999999999,
+        "start" : 18.059999999999999,
+        "text" : "Once these kids wake up, I'll have them give you a report."
+      },
+      {
+        "end" : 24.780000000000001,
+        "start" : 21.84,
+        "text" : "You'd better not be doing a sloppy job."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.84,
+        "text" : "Saint Saturnet better be safe."
+      },
+      {
+        "end" : 28.800000000000001,
+        "start" : 27.120000000000001,
+        "text" : "What happened to the power plant?"
+      },
+      {
+        "end" : 30.300000000000001,
+        "start" : 28.920000000000002,
+        "text" : "And where are the fugitives?"
+      },
+      {
+        "end" : 33.719999999999999,
+        "start" : 31.620000000000001,
+        "text" : "Let me ask you something."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 33.840000000000003,
+        "text" : "Sakazuki."
+      },
+      {
+        "end" : 40,
+        "start" : 38.939999999999998,
+        "text" : "Have you...?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.0015129332574852579,
+    "seconds" : 0.39889907836914062,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it. Backhead. Oh, shut it already. What happened to everyone else? Alive, but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better not be doing a sloppy job. Saint Saturnet better be safe. What happened to the power plant? And where are the fugitives? Let me ask you something. Sakazuki. Have you...?"
+  }
+]

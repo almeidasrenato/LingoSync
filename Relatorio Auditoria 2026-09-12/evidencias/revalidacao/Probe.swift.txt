@@ -1,0 +1,82 @@
+import Foundation
+import TradutorCore
+
+final class BrokenTranslator: Translator, @unchecked Sendable {
+ let engineName = "falha controlada"
+ func prepare(progress: @escaping @Sendable (Double,String)->Void) async throws {}
+ func reset() {}
+ func translate(_ text:String, from:Language, to:Language) async throws -> String { throw TranslatorError.notPrepared }
+}
+@main struct Probe {
+ @MainActor static func main() async throws {
+  if CommandLine.arguments.count > 1 {try await analyze(); return}
+  let b=SubtitleFileBuilder()
+  let long=String(repeating:"Esta frase precisa manter a identidade de quem fala. ",count:4)
+  let original=Cue(index:1,start:0,end:7,source:"Original.",translated:long,speaker:"Locutor 2")
+  let parts=b.enforceLineLimit([original])
+  print("SPEAKER_LOSS input=1 identified=1 output=\(parts.count) identified=\(parts.filter{$0.speaker != nil}.count)")
+  print(SRTWriter.render(parts,colorBySpeaker:true))
+  let turns=[SpeakerDiarizer.Turn(speaker:"A",start:0,end:3),SpeakerDiarizer.Turn(speaker:"B",start:3,end:7),SpeakerDiarizer.Turn(speaker:"A",start:7,end:10)]
+  let assigned=SpeakerDiarizer.assign([TimedText(text:"Uma frase",start:0,end:10)],to:turns)
+  print("ASSIGN_TOTAL A=6s B=4s selected=\(assigned[0].speaker ?? "nil")")
+  let failed=await b.translate([Cue(index:1,start:0,end:2,source:"This is English.")],using:BrokenTranslator(),from:.english,to:.portuguese)
+  print("TRANSLATION_FAILURE returned=\(failed.count) translated=\(failed[0].translated.debugDescription)")
+  print("TRANSLATION_FAILURE_EXPORT \(SRTWriter.render(failed).replacingOccurrences(of:"\n",with:" | "))")
+  let whitespace="1\n00:00:00,000 --> 00:00:01,000\nPrimeira.\n  \n2\n00:00:02,000 --> 00:00:03,000\nSegunda.\n"
+  let parsed=SRTParser.parse(whitespace)
+  print("SRT_WHITESPACE count=\(parsed.count) body=\(parsed.first?.translated ?? "nil")")
+  var triple:String?=nil
+  for n in 10...90 where triple == nil {
+   let text=(0..<n).map{ _ in "teste" }.joined(separator:" ")
+   if LineBreaker.wrap(text,maximum:42).count == 2 {
+    let c=Cue(index:1,start:0,end:5,source:"",translated:text,speaker:"Locutor 1")
+    let s=SRTWriter.render(b.enforceLineLimit([c]));let count=s.components(separatedBy:"\n").filter{!$0.isEmpty}.count-2
+    if count>2 {triple=s;print("SRT_PREFIX_OVERFLOW n=\(n) lines=\(count) \(s.replacingOccurrences(of:"\n",with:" | "))")}
+   }
+  }
+  let short=[Cue(index:1,start:0,end:1,source:"Original",translated:long,speaker:"Locutor 1"),Cue(index:2,start:1,end:2,source:"Next",translated:"Seguinte.",speaker:"Locutor 2")]
+  let split=b.enforceLineLimit(short)
+  for c in split {print("SHORT_SPLIT \(c.start) \(c.end) \(c.translated.count)")}
+  let shortReply=b.makeCues(from:[TimedText(text:"Você entregou o relatório?",start:0,end:3,speaker:"Locutor 1"),TimedText(text:"Sim.",start:3.05,end:3.8,speaker:"Locutor 2")],mediaDuration:4)
+  print("SHORT_SPEAKER_REPLY count=\(shortReply.count)")
+  for c in shortReply { print("SHORT_SPEAKER_REPLY speaker=\(c.speaker ?? "nil") text=\(c.source)") }
+  let model=SubtitleStudioModel()
+  model.open(URL(fileURLWithPath:"/tmp/auditoria-tradutor-20260912/ja-longo.mp4"))
+  try await Task.sleep(for:.seconds(1))
+  let before=model.duration
+  model.seek(to:400)
+  model.open(URL(fileURLWithPath:"/tmp/auditoria-tradutor-20260912/does-not-exist.mp4"))
+  try await Task.sleep(for:.milliseconds(500))
+  print("OPEN_INVALID previousDuration=\(before) currentDuration=\(model.duration) currentTime=\(model.currentTime) stage=\(model.stage) canGenerate=\(model.canGenerate)")
+  model.open(URL(fileURLWithPath:"/tmp/auditoria-tradutor-20260912/en-dialogo.mp4"))
+  try await Task.sleep(for:.seconds(1))
+  model.seek(to:0);model.togglePlay();try await Task.sleep(for:.seconds(2));model.togglePlay()
+  print("PLAYBACK advanced=\(model.currentTime) player=\(model.player?.currentTime().seconds ?? -1)")
+  model.seek(to:model.duration-0.5);model.togglePlay();try await Task.sleep(for:.seconds(2))
+  print("END_PLAYBACK uiPlaying=\(model.isPlaying) actualRate=\(model.player?.rate ?? -1) time=\(model.currentTime) duration=\(model.duration)")
+  model.volume=0.4;model.isMuted=true
+  model.open(URL(fileURLWithPath:"/tmp/auditoria-tradutor-20260912/ja-musica.mp4"))
+  try await Task.sleep(for:.seconds(1))
+  print("OPEN_VOLUME uiVolume=\(model.volume) actualVolume=\(model.player?.volume ?? -1) uiMuted=\(model.isMuted) actualMuted=\(model.player?.isMuted ?? false)")
+  model.stop()
+ }
+ @MainActor static func analyze() async throws {
+  let a=CommandLine.arguments
+  let path=a[1];let lang=Language(rawValue:a[2])!;let engine=RecognitionEngine(rawValue:a[3])!;let model=SpeakerDiarizer.Model(rawValue:a[4])!
+  let samples=try await SubtitleFileBuilder.extractAudio(from:URL(fileURLWithPath:path))
+  let b=SubtitleFileBuilder();b.glossary=Glossary(source:lang,target:.portuguese)
+  let tr=TranscriberFactory.make(for:lang,engine:engine);tr.vocabularyHint=ProcessInfo.processInfo.environment["AUDIT_NO_HINT"] == nil ? (b.glossary?.activeSources ?? []) : []
+  try await tr.prepare {_,_ in}
+  let diaStart=Date();let turns=try await SpeakerDiarizer.turns(in:samples,model:model);let diaTime=Date().timeIntervalSince(diaStart)
+  tr.speakerBoundaries=SpeakerDiarizer.boundaries(of:turns)
+  let asrStart=Date();let timed=try await tr.transcribeTimed(samples);let asrTime=Date().timeIntervalSince(asrStart)
+  let pieces=SpeakerDiarizer.renumber(SpeakerDiarizer.assign(timed,to:turns))
+  let cues=b.makeCues(from:pieces,mediaDuration:Double(samples.count)/16000)
+  func pieceDict(_ t:TimedText)->[String:Any] { ["text":t.text,"start":t.start,"end":t.end,"speaker":t.speaker as Any? ?? NSNull()] }
+  let result:[String:Any]=["file":path,"engine":engine.rawValue,"diarizer":model.rawValue,"hints":tr.vocabularyHint,"duration":Double(samples.count)/16000,"asrSeconds":asrTime,"diarSeconds":diaTime,"turns":turns.map{["speaker":$0.speaker,"start":$0.start,"end":$0.end] as [String:Any]},"timed":pieces.map{pieceDict($0)},"cues":cues.map{["text":$0.source,"start":$0.start,"end":$0.end,"speaker":$0.speaker as Any? ?? NSNull()] as [String:Any]}]
+  let data=try JSONSerialization.data(withJSONObject:result,options:[.prettyPrinted,.sortedKeys])
+  try data.write(to:URL(fileURLWithPath:a[5]))
+  print("SCAN \(engine.rawValue) \(model.rawValue) turns=\(turns.count) voices=\(Set(turns.map(\.speaker)).count) pieces=\(pieces.count) cues=\(cues.count) asr=\(asrTime)")
+ }
+
+}

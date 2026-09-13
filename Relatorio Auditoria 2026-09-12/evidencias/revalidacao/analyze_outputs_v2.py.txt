@@ -1,0 +1,50 @@
+from pathlib import Path
+import re,json,statistics,hashlib,difflib
+root=Path('/Users/renatoalmeidasilva/Documentos/Tradutor instantaneo');out=root/'Relatorio Auditoria 2026-09-12/evidencias/revalidacao'
+durations={'ja-longo':540.,'ja-musica':96.572,'en-dialogo':109.297,'en-conversa':161.286}
+def sec(t):
+ h,m,s,ms=map(int,re.split('[:,.]',t.strip()));return 3600*h+60*m+s+ms/1000
+
+def parse(s):
+ result=[]
+ for b in re.split(r'\n\s*\n',s.strip()):
+  ls=b.splitlines()
+  if len(ls)<3 or '-->' not in ls[1]:continue
+  a,z=ls[1].split('-->');raw='\n'.join(ls[2:]);text=re.sub(r'<[^>]*>','',raw)
+  color=re.search(r'<font color="([^"]+)"',raw)
+  result.append(dict(n=int(ls[0]),start=sec(a),end=sec(z),text=text,lines=text.splitlines(),color=color.group(1) if color else None))
+ return result
+rows=json.loads((out/'matrix.json').read_text());audits=[]
+for row in rows:
+ path=out/row['name']/('gerado.srt' if row['mode']=='job' else 'studio-gerado.srt')
+ if not path.exists():continue
+ cues=parse(path.read_text());count=len(cues)
+ issues={'threeLines':[],'longLines':[],'short':[],'longDuration':[],'overlap':[],'beyondEnd':[],'fastReading':[]}
+ for i,c in enumerate(cues):
+  span=c['end']-c['start'];cps=len(c['text'].replace('\n',' '))/max(span,.001)
+  if len(c['lines'])>2:issues['threeLines'].append(c)
+  if max(map(len,c['lines']),default=0)>42:issues['longLines'].append(c)
+  if span<.599:issues['short'].append(c)
+  if span>7.001:issues['longDuration'].append(c)
+  if i and c['start'] < cues[i-1]['end']-.001:issues['overlap'].append(c)
+  if c['end']>durations[row['video']]+.02:issues['beyondEnd'].append(c)
+  if cps>20:issues['fastReading'].append(dict(**c,cps=round(cps,1)))
+ coverage=sum(max(0,c['end']-c['start']) for c in cues)
+ audit=dict(name=row['name'],cues=count,first=cues[0]['start'] if cues else None,last=cues[-1]['end'] if cues else None,screenSeconds=round(coverage,2),characters=sum(len(c['text']) for c in cues),colors=sum(bool(c['color']) for c in cues),issues=issues)
+ audits.append(audit)
+(out/'srt-audit.json').write_text(json.dumps(audits,indent=2,ensure_ascii=False))
+comparisons=[]
+for studio in [r for r in rows if r['mode']=='studio']:
+ jobname=studio['name'].replace('studio-','job-',1);a=out/studio['name']/'studio-gerado.srt';b=out/jobname/'gerado.srt'
+ if not a.exists() or not b.exists():continue
+ ca,cb=parse(a.read_text()),parse(b.read_text())
+ ta=' '.join(c['text'].replace('\n',' ') for c in ca);tb=' '.join(c['text'].replace('\n',' ') for c in cb)
+ norm=lambda s:re.sub(r'\s+',' ',s).strip()
+ sameText=norm(ta)==norm(tb)
+ sameTimes=[(x['start'],x['end']) for x in ca]==[(x['start'],x['end']) for x in cb]
+ comparisons.append(dict(studio=studio['name'],job=jobname,sameText=sameText,sameTimes=sameTimes,studioCues=len(ca),jobCues=len(cb),similarity=round(difflib.SequenceMatcher(None,ta,tb,autojunk=False).ratio(),4)))
+(out/'comparison.json').write_text(json.dumps(comparisons,indent=2,ensure_ascii=False))
+print('runs',len(rows),'checks',sum(x['ok'] for x in rows),'failed cases',sum(not x['passed'] for x in rows))
+for a in audits:
+ problems={k:len(v) for k,v in a['issues'].items() if v}
+ print(a['name'],a['cues'],a['first'],a['last'],problems)

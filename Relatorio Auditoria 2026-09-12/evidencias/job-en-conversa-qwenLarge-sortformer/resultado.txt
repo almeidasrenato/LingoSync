@@ -1,0 +1,26 @@
+gerar legenda de um video  12 de set. de 2026, 14:07:23
+video: en-conversa.mp4
+idiomas: en -> pt
+motor: Qwen3-ASR 1.7B
+gerando...
+  ok    grava o .srt ao lado do video (50s)
+legendas: 53
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  ok    nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:00,000 → 00:00:02,798
+    — Mesmo assim, o grande homem ainda está esperando as coisas acabarem.
+  00:00:03,270 → 00:00:05,958
+    Eu estou, é claro, me referindo ao meu camarada,
+  00:00:05,958 → 00:00:08,480
+    o líder de todos os revolucionários do mundo.
+  00:00:13,041 → 00:00:15,611
+    — Você pode conhecê-lo como Dragon.
+
+PASSOU

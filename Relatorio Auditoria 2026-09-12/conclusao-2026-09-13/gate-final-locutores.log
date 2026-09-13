@@ -1,0 +1,50 @@
+Identificacao de quem fala
+
+  ok    trechos dentro da mesma faixa ficam com o mesmo locutor
+  ok    a faixa seguinte vira outro locutor
+  ok    primeira fala de alguem leva travessao
+  ok    mesma pessoa seguindo nao leva
+  ok    trecho sem locutor nao leva
+  ok    trecho sem locutor nao apaga quem falava
+  ok    troca de verdade atualiza
+  ok    dois travessoes: a abertura e a troca, nao o buraco
+  ok    a troca de verdade ganha travessao
+  ok    a mesma pessoa voltando nao ganha
+  ok    Locutor 2 cai na segunda cor
+  ok    sem locutor, sem cor
+  ok    rotulo sem numero nao vira a primeira cor
+  ok    trecho fora de qualquer faixa fica sem locutor, nao com o errado
+  ok    a numeracao segue a ordem da fala, nao o id do modelo
+  ok    empate de fronteira fica com quem cobre mais
+  ok    6s em duas faixas ganham de 4s numa faixa so
+  ok    empate fica com quem falou primeiro, sempre igual
+  ok    o começo de cada voz e o fim da ultima sao fronteira
+  ok    duas faixas seguidas da mesma voz nao viram fronteira
+  ok    o fim da fala de uma voz e fronteira
+  ok    as fronteiras saem em ordem
+  ok    sem faixas, sem fronteiras
+  ok    identificar quem fala vem antes de reconhecer
+  ok    a barra de progresso segue a mesma ordem
+  ok    voz de menos de 2s e descartada
+  ok    as faixas da voz descartada saem junto
+  ok    se todas as vozes sao curtas, nenhuma e descartada
+  ok    sem faixas, os trechos continuam sem locutor
+  ok    a troca de locutor abre legenda nova (4 legendas)
+  ok    a legenda carrega quem fala
+  ok    o mesmo locutor continua na mesma legenda
+  ok    a primeira fala de um locutor leva travessao
+  ok    seguir falando nao leva travessao
+  ok    dois travessoes em tres legendas
+  ok    sem locutor, a legenda sai como sempre saiu
+  ok    o primeiro locutor pega a primeira cor
+  ok    o terceiro pega a terceira
+  ok    passando de quatro, a paleta volta ao inicio
+  ok    sem locutor, sem cor
+  ok    o hexadecimal do arquivo e a cor da tela vem da mesma lista
+  ok    o primeiro locutor sai branco
+  ok    o segundo sai amarelo
+  ok    cada legenda fecha a sua tag
+  ok    sem pedir cor, nenhuma tag entra no arquivo
+  ok    o .srt colorido volta a ser lido sem as tags
+
+PASSOU

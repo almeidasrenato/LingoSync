@@ -1,0 +1,26 @@
+gerar legenda de um video  12 de set. de 2026, 14:16:26
+video: ja-longo.mp4
+idiomas: ja -> pt
+motor: Qwen3-ASR 1.7B
+gerando...
+  ok    grava o .srt ao lado do video (109s)
+legendas: 109
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  ok    nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:13,509 → 00:00:15,038
+    — Bom dia
+  00:00:15,801 → 00:00:17,332
+    — bom dia
+  00:00:18,202 → 00:00:21,172
+    — Você é um novato? Sim.
+  00:00:21,960 → 00:00:26,132
+    — Vou trabalhar hoje, sou yuzo satou
+
+PASSOU

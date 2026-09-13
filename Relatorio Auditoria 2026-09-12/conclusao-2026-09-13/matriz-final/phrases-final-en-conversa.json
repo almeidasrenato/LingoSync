@@ -1,0 +1,2522 @@
+[
+  {
+    "before" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 7.9199999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in"
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 7.9199999999999999,
+        "text" : "the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.079999999999998,
+        "text" : "The name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 88.980000000000004,
+        "text" : "But wait, this might be legit."
+      },
+      {
+        "end" : 96.060000000000002,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own"
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 96.060000000000002,
+        "text" : "way."
+      },
+      {
+        "end" : 101.81999999999999,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and"
+      },
+      {
+        "end" : 103.08,
+        "start" : 101.81999999999999,
+        "text" : "an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111,
+        "text" : "Sage Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.22,
+        "text" : "Do I?"
+      },
+      {
+        "end" : 123.42,
+        "start" : 120.66,
+        "text" : "I suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 127.2,
+        "text" : "Well, I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 140.46000000000001,
+        "text" : "That's enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 159.36000000000001,
+        "text" : "Yes, of course."
+      }
+    ],
+    "diarize" : false,
+    "raw" : [
+      "Even so, the big man's still waiting things out.",
+      " I'm, of course, referring to my comrade, the leader of all revolutionaries in the world.",
+      " You may know him as Dragon.",
+      " Oh, you're talking about my dad.",
+      " Yes, that's the plan.",
+      " When your dad makes a move with that army of his.",
+      " Then I shall do some maneuvering of my own.",
+      " Call it my grand comeback tour.",
+      " If I were to escape from this place now.",
+      " I just end up on a sea of wanted lists.",
+      " Dad",
+      " Oh, dear Papa.",
+      " And I never knew.",
+      " Goodness!",
+      " D d d don't be ridiculous!",
+      " Dragon doesn't have any children?",
+      " That's just crazy talk.",
+      " Maybe I shouldn't have said anything.",
+      " Ah, whatever.",
+      " Grandpa didn't keep it a secret.",
+      " The name of your father... is Monkey D Dragon.",
+      " The revolutionary.",
+      " I don't really know that much about him.",
+      " I've never even seen his face before.",
+      " What?",
+      " But wait, this might be legit.",
+      " He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way.",
+      " Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son.",
+      " Please tell me, where did you come from?",
+      " Huh?",
+      " He's blue.",
+      " Sage Dragon.",
+      " When you step out for air.",
+      " You always seem to face in the same direction, no matter where we go.",
+      " Do I?",
+      " I suppose I never gave it much thought.",
+      " But strange that you would bring it up, isn't it?",
+      " Well, I wondered if it was some sort of homing instinct.",
+      " You know, the same thing animals have.",
+      " Thinking of home, perhaps some family in the East, maybe?",
+      " That's enough.",
+      " Don't stick your nose in my past.",
+      " As you wish.",
+      " Hang on.",
+      " Oh, no.",
+      " If straw hat boy really is dragon son.",
+      " This could be a disaster.",
+      " Inazuma!",
+      " Check to see when they're taking Ace Boy away.",
+      " Yes, of course."
+    ],
+    "received" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.079999999999998,
+        "text" : "The name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 88.980000000000004,
+        "text" : "But wait, this might be legit."
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way."
+      },
+      {
+        "end" : 103.08,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111,
+        "text" : "Sage Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.22,
+        "text" : "Do I?"
+      },
+      {
+        "end" : 123.42,
+        "start" : 120.66,
+        "text" : "I suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 127.2,
+        "text" : "Well, I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 140.46000000000001,
+        "text" : "That's enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 159.36000000000001,
+        "text" : "Yes, of course."
+      }
+    ],
+    "repeat" : 1
+  },
+  {
+    "before" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 7.9199999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in"
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 7.9199999999999999,
+        "text" : "the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 18.84,
+        "start" : 17.640000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 18.84,
+        "text" : "that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 76.379999999999995,
+        "start" : 76.079999999999998,
+        "text" : "The"
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.379999999999995,
+        "text" : "name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 89.700000000000003,
+        "start" : 88.980000000000004,
+        "text" : "But"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 89.700000000000003,
+        "text" : "wait, this might be legit."
+      },
+      {
+        "end" : 96.060000000000002,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own"
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 96.060000000000002,
+        "text" : "way."
+      },
+      {
+        "end" : 101.81999999999999,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and"
+      },
+      {
+        "end" : 103.08,
+        "start" : 101.81999999999999,
+        "text" : "an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 111.95999999999999,
+        "start" : 111,
+        "text" : "Sage"
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111.95999999999999,
+        "text" : "Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 119.94,
+        "start" : 119.22,
+        "text" : "Do"
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.94,
+        "text" : "I?"
+      },
+      {
+        "end" : 121.92,
+        "start" : 120.66,
+        "text" : "I"
+      },
+      {
+        "end" : 123.42,
+        "start" : 121.92,
+        "text" : "suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 128.28,
+        "start" : 127.2,
+        "text" : "Well,"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 128.28,
+        "text" : "I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 141.84,
+        "start" : 140.46000000000001,
+        "text" : "That's"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 141.84,
+        "text" : "enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.5,
+        "start" : 159.36000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 160.5,
+        "text" : "of course."
+      }
+    ],
+    "diarize" : true,
+    "raw" : [
+      "Even so, the big man's still waiting things out.",
+      " I'm, of course, referring to my comrade, the leader of all revolutionaries in the world.",
+      " You may know him as Dragon.",
+      " Oh, you're talking about my dad.",
+      " Yes, that's the plan.",
+      " When your dad makes a move with that army of his.",
+      " Then I shall do some maneuvering of my own.",
+      " Call it my grand comeback tour.",
+      " If I were to escape from this place now.",
+      " I just end up on a sea of wanted lists.",
+      " Dad",
+      " Oh, dear Papa.",
+      " And I never knew.",
+      " Goodness!",
+      " D d d don't be ridiculous!",
+      " Dragon doesn't have any children?",
+      " That's just crazy talk.",
+      " Maybe I shouldn't have said anything.",
+      " Ah, whatever.",
+      " Grandpa didn't keep it a secret.",
+      " The name of your father... is Monkey D Dragon.",
+      " The revolutionary.",
+      " I don't really know that much about him.",
+      " I've never even seen his face before.",
+      " What?",
+      " But wait, this might be legit.",
+      " He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way.",
+      " Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son.",
+      " Please tell me, where did you come from?",
+      " Huh?",
+      " He's blue.",
+      " Sage Dragon.",
+      " When you step out for air.",
+      " You always seem to face in the same direction, no matter where we go.",
+      " Do I?",
+      " I suppose I never gave it much thought.",
+      " But strange that you would bring it up, isn't it?",
+      " Well, I wondered if it was some sort of homing instinct.",
+      " You know, the same thing animals have.",
+      " Thinking of home, perhaps some family in the East, maybe?",
+      " That's enough.",
+      " Don't stick your nose in my past.",
+      " As you wish.",
+      " Hang on.",
+      " Oh, no.",
+      " If straw hat boy really is dragon son.",
+      " This could be a disaster.",
+      " Inazuma!",
+      " Check to see when they're taking Ace Boy away.",
+      " Yes, of course."
+    ],
+    "received" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 18.84,
+        "start" : 17.640000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 18.84,
+        "text" : "that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 76.379999999999995,
+        "start" : 76.079999999999998,
+        "text" : "The"
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.379999999999995,
+        "text" : "name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 89.700000000000003,
+        "start" : 88.980000000000004,
+        "text" : "But"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 89.700000000000003,
+        "text" : "wait, this might be legit."
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way."
+      },
+      {
+        "end" : 103.08,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 111.95999999999999,
+        "start" : 111,
+        "text" : "Sage"
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111.95999999999999,
+        "text" : "Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 119.94,
+        "start" : 119.22,
+        "text" : "Do"
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.94,
+        "text" : "I?"
+      },
+      {
+        "end" : 121.92,
+        "start" : 120.66,
+        "text" : "I"
+      },
+      {
+        "end" : 123.42,
+        "start" : 121.92,
+        "text" : "suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 128.28,
+        "start" : 127.2,
+        "text" : "Well,"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 128.28,
+        "text" : "I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 141.84,
+        "start" : 140.46000000000001,
+        "text" : "That's"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 141.84,
+        "text" : "enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.5,
+        "start" : 159.36000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 160.5,
+        "text" : "of course."
+      }
+    ],
+    "repeat" : 1
+  },
+  {
+    "before" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 7.9199999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in"
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 7.9199999999999999,
+        "text" : "the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.079999999999998,
+        "text" : "The name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 88.980000000000004,
+        "text" : "But wait, this might be legit."
+      },
+      {
+        "end" : 96.060000000000002,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own"
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 96.060000000000002,
+        "text" : "way."
+      },
+      {
+        "end" : 101.81999999999999,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and"
+      },
+      {
+        "end" : 103.08,
+        "start" : 101.81999999999999,
+        "text" : "an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111,
+        "text" : "Sage Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.22,
+        "text" : "Do I?"
+      },
+      {
+        "end" : 123.42,
+        "start" : 120.66,
+        "text" : "I suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 127.2,
+        "text" : "Well, I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 140.46000000000001,
+        "text" : "That's enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 159.36000000000001,
+        "text" : "Yes, of course."
+      }
+    ],
+    "diarize" : false,
+    "raw" : [
+      "Even so, the big man's still waiting things out.",
+      " I'm, of course, referring to my comrade, the leader of all revolutionaries in the world.",
+      " You may know him as Dragon.",
+      " Oh, you're talking about my dad.",
+      " Yes, that's the plan.",
+      " When your dad makes a move with that army of his.",
+      " Then I shall do some maneuvering of my own.",
+      " Call it my grand comeback tour.",
+      " If I were to escape from this place now.",
+      " I just end up on a sea of wanted lists.",
+      " Dad",
+      " Oh, dear Papa.",
+      " And I never knew.",
+      " Goodness!",
+      " D d d don't be ridiculous!",
+      " Dragon doesn't have any children?",
+      " That's just crazy talk.",
+      " Maybe I shouldn't have said anything.",
+      " Ah, whatever.",
+      " Grandpa didn't keep it a secret.",
+      " The name of your father... is Monkey D Dragon.",
+      " The revolutionary.",
+      " I don't really know that much about him.",
+      " I've never even seen his face before.",
+      " What?",
+      " But wait, this might be legit.",
+      " He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way.",
+      " Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son.",
+      " Please tell me, where did you come from?",
+      " Huh?",
+      " He's blue.",
+      " Sage Dragon.",
+      " When you step out for air.",
+      " You always seem to face in the same direction, no matter where we go.",
+      " Do I?",
+      " I suppose I never gave it much thought.",
+      " But strange that you would bring it up, isn't it?",
+      " Well, I wondered if it was some sort of homing instinct.",
+      " You know, the same thing animals have.",
+      " Thinking of home, perhaps some family in the East, maybe?",
+      " That's enough.",
+      " Don't stick your nose in my past.",
+      " As you wish.",
+      " Hang on.",
+      " Oh, no.",
+      " If straw hat boy really is dragon son.",
+      " This could be a disaster.",
+      " Inazuma!",
+      " Check to see when they're taking Ace Boy away.",
+      " Yes, of course."
+    ],
+    "received" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.079999999999998,
+        "text" : "The name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 88.980000000000004,
+        "text" : "But wait, this might be legit."
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way."
+      },
+      {
+        "end" : 103.08,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111,
+        "text" : "Sage Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.22,
+        "text" : "Do I?"
+      },
+      {
+        "end" : 123.42,
+        "start" : 120.66,
+        "text" : "I suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 127.2,
+        "text" : "Well, I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 140.46000000000001,
+        "text" : "That's enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 159.36000000000001,
+        "text" : "Yes, of course."
+      }
+    ],
+    "repeat" : 2
+  },
+  {
+    "before" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 7.9199999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in"
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 7.9199999999999999,
+        "text" : "the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 18.84,
+        "start" : 17.640000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 18.84,
+        "text" : "that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 76.379999999999995,
+        "start" : 76.079999999999998,
+        "text" : "The"
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.379999999999995,
+        "text" : "name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 89.700000000000003,
+        "start" : 88.980000000000004,
+        "text" : "But"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 89.700000000000003,
+        "text" : "wait, this might be legit."
+      },
+      {
+        "end" : 96.060000000000002,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own"
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 96.060000000000002,
+        "text" : "way."
+      },
+      {
+        "end" : 101.81999999999999,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and"
+      },
+      {
+        "end" : 103.08,
+        "start" : 101.81999999999999,
+        "text" : "an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 111.95999999999999,
+        "start" : 111,
+        "text" : "Sage"
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111.95999999999999,
+        "text" : "Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 119.94,
+        "start" : 119.22,
+        "text" : "Do"
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.94,
+        "text" : "I?"
+      },
+      {
+        "end" : 121.92,
+        "start" : 120.66,
+        "text" : "I"
+      },
+      {
+        "end" : 123.42,
+        "start" : 121.92,
+        "text" : "suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 128.28,
+        "start" : 127.2,
+        "text" : "Well,"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 128.28,
+        "text" : "I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 141.84,
+        "start" : 140.46000000000001,
+        "text" : "That's"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 141.84,
+        "text" : "enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.5,
+        "start" : 159.36000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 160.5,
+        "text" : "of course."
+      }
+    ],
+    "diarize" : true,
+    "raw" : [
+      "Even so, the big man's still waiting things out.",
+      " I'm, of course, referring to my comrade, the leader of all revolutionaries in the world.",
+      " You may know him as Dragon.",
+      " Oh, you're talking about my dad.",
+      " Yes, that's the plan.",
+      " When your dad makes a move with that army of his.",
+      " Then I shall do some maneuvering of my own.",
+      " Call it my grand comeback tour.",
+      " If I were to escape from this place now.",
+      " I just end up on a sea of wanted lists.",
+      " Dad",
+      " Oh, dear Papa.",
+      " And I never knew.",
+      " Goodness!",
+      " D d d don't be ridiculous!",
+      " Dragon doesn't have any children?",
+      " That's just crazy talk.",
+      " Maybe I shouldn't have said anything.",
+      " Ah, whatever.",
+      " Grandpa didn't keep it a secret.",
+      " The name of your father... is Monkey D Dragon.",
+      " The revolutionary.",
+      " I don't really know that much about him.",
+      " I've never even seen his face before.",
+      " What?",
+      " But wait, this might be legit.",
+      " He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way.",
+      " Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son.",
+      " Please tell me, where did you come from?",
+      " Huh?",
+      " He's blue.",
+      " Sage Dragon.",
+      " When you step out for air.",
+      " You always seem to face in the same direction, no matter where we go.",
+      " Do I?",
+      " I suppose I never gave it much thought.",
+      " But strange that you would bring it up, isn't it?",
+      " Well, I wondered if it was some sort of homing instinct.",
+      " You know, the same thing animals have.",
+      " Thinking of home, perhaps some family in the East, maybe?",
+      " That's enough.",
+      " Don't stick your nose in my past.",
+      " As you wish.",
+      " Hang on.",
+      " Oh, no.",
+      " If straw hat boy really is dragon son.",
+      " This could be a disaster.",
+      " Inazuma!",
+      " Check to see when they're taking Ace Boy away.",
+      " Yes, of course."
+    ],
+    "received" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 18.84,
+        "start" : 17.640000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 18.84,
+        "text" : "that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 39.840000000000003,
+        "start" : 39.479999999999997,
+        "text" : "Dad"
+      },
+      {
+        "end" : 51.479999999999997,
+        "start" : 49.259999999999998,
+        "text" : "Oh, dear Papa."
+      },
+      {
+        "end" : 54.119999999999997,
+        "start" : 52.140000000000001,
+        "text" : "And I never knew."
+      },
+      {
+        "end" : 55.380000000000003,
+        "start" : 54.299999999999997,
+        "text" : "Goodness!"
+      },
+      {
+        "end" : 60.840000000000003,
+        "start" : 58.5,
+        "text" : "D d d don't be ridiculous!"
+      },
+      {
+        "end" : 62.640000000000001,
+        "start" : 60.960000000000001,
+        "text" : "Dragon doesn't have any children?"
+      },
+      {
+        "end" : 64.319999999999993,
+        "start" : 62.700000000000003,
+        "text" : "That's just crazy talk."
+      },
+      {
+        "end" : 68.099999999999994,
+        "start" : 65.819999999999993,
+        "text" : "Maybe I shouldn't have said anything."
+      },
+      {
+        "end" : 70.980000000000004,
+        "start" : 69.180000000000007,
+        "text" : "Ah, whatever."
+      },
+      {
+        "end" : 73.019999999999996,
+        "start" : 71.040000000000006,
+        "text" : "Grandpa didn't keep it a secret."
+      },
+      {
+        "end" : 76.379999999999995,
+        "start" : 76.079999999999998,
+        "text" : "The"
+      },
+      {
+        "end" : 77.459999999999994,
+        "start" : 76.379999999999995,
+        "text" : "name of your father..."
+      },
+      {
+        "end" : 79.859999999999999,
+        "start" : 77.459999999999994,
+        "text" : "is Monkey D Dragon."
+      },
+      {
+        "end" : 81.299999999999997,
+        "start" : 79.980000000000004,
+        "text" : "The revolutionary."
+      },
+      {
+        "end" : 85.680000000000007,
+        "start" : 84.420000000000002,
+        "text" : "I don't really know that much about him."
+      },
+      {
+        "end" : 87.840000000000003,
+        "start" : 85.739999999999995,
+        "text" : "I've never even seen his face before."
+      },
+      {
+        "end" : 88.859999999999999,
+        "start" : 87.900000000000006,
+        "text" : "What?"
+      },
+      {
+        "end" : 89.700000000000003,
+        "start" : 88.980000000000004,
+        "text" : "But"
+      },
+      {
+        "end" : 90.900000000000006,
+        "start" : 89.700000000000003,
+        "text" : "wait, this might be legit."
+      },
+      {
+        "end" : 96.239999999999995,
+        "start" : 90.959999999999994,
+        "text" : "He doesn't come across as the kind of person who would lie, and he is a rather impressive pirate in his own way."
+      },
+      {
+        "end" : 103.08,
+        "start" : 96.299999999999997,
+        "text" : "Plus, the vitality he's showed is the stuff of legends, an extraordinary father and an extraordinary son."
+      },
+      {
+        "end" : 105.54000000000001,
+        "start" : 103.14,
+        "text" : "Please tell me, where did you come from?"
+      },
+      {
+        "end" : 106.8,
+        "start" : 105.59999999999999,
+        "text" : "Huh?"
+      },
+      {
+        "end" : 107.88,
+        "start" : 106.92,
+        "text" : "He's blue."
+      },
+      {
+        "end" : 111.95999999999999,
+        "start" : 111,
+        "text" : "Sage"
+      },
+      {
+        "end" : 112.68000000000001,
+        "start" : 111.95999999999999,
+        "text" : "Dragon."
+      },
+      {
+        "end" : 114.95999999999999,
+        "start" : 112.8,
+        "text" : "When you step out for air."
+      },
+      {
+        "end" : 119.16,
+        "start" : 115.08,
+        "text" : "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end" : 119.94,
+        "start" : 119.22,
+        "text" : "Do"
+      },
+      {
+        "end" : 120.18000000000001,
+        "start" : 119.94,
+        "text" : "I?"
+      },
+      {
+        "end" : 121.92,
+        "start" : 120.66,
+        "text" : "I"
+      },
+      {
+        "end" : 123.42,
+        "start" : 121.92,
+        "text" : "suppose I never gave it much thought."
+      },
+      {
+        "end" : 127.14,
+        "start" : 124.14,
+        "text" : "But strange that you would bring it up, isn't it?"
+      },
+      {
+        "end" : 128.28,
+        "start" : 127.2,
+        "text" : "Well,"
+      },
+      {
+        "end" : 130.86000000000001,
+        "start" : 128.28,
+        "text" : "I wondered if it was some sort of homing instinct."
+      },
+      {
+        "end" : 133.19999999999999,
+        "start" : 130.97999999999999,
+        "text" : "You know, the same thing animals have."
+      },
+      {
+        "end" : 139.38,
+        "start" : 134.81999999999999,
+        "text" : "Thinking of home, perhaps some family in the East, maybe?"
+      },
+      {
+        "end" : 141.84,
+        "start" : 140.46000000000001,
+        "text" : "That's"
+      },
+      {
+        "end" : 142.19999999999999,
+        "start" : 141.84,
+        "text" : "enough."
+      },
+      {
+        "end" : 143.88,
+        "start" : 142.25999999999999,
+        "text" : "Don't stick your nose in my past."
+      },
+      {
+        "end" : 146.22,
+        "start" : 144.72,
+        "text" : "As you wish."
+      },
+      {
+        "end" : 149.22,
+        "start" : 147.66,
+        "text" : "Hang on."
+      },
+      {
+        "end" : 150.47999999999999,
+        "start" : 149.28,
+        "text" : "Oh, no."
+      },
+      {
+        "end" : 153.06,
+        "start" : 150.53999999999999,
+        "text" : "If straw hat boy really is dragon son."
+      },
+      {
+        "end" : 154.13999999999999,
+        "start" : 153.12,
+        "text" : "This could be a disaster."
+      },
+      {
+        "end" : 157.13999999999999,
+        "start" : 155.16,
+        "text" : "Inazuma!"
+      },
+      {
+        "end" : 159.30000000000001,
+        "start" : 157.19999999999999,
+        "text" : "Check to see when they're taking Ace Boy away."
+      },
+      {
+        "end" : 160.5,
+        "start" : 159.36000000000001,
+        "text" : "Yes,"
+      },
+      {
+        "end" : 160.91999999999999,
+        "start" : 160.5,
+        "text" : "of course."
+      }
+    ],
+    "repeat" : 2
+  }
+]

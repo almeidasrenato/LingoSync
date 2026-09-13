@@ -1,0 +1,62 @@
+[
+  {
+    "gate": "selftest",
+    "exit": 0,
+    "seconds": 0.026,
+    "ok": 39
+  },
+  {
+    "gate": "prefixo",
+    "exit": 0,
+    "seconds": 0.011,
+    "ok": 16
+  },
+  {
+    "gate": "frases",
+    "exit": 0,
+    "seconds": 0.008,
+    "ok": 22
+  },
+  {
+    "gate": "quebra",
+    "exit": 0,
+    "seconds": 0.007,
+    "ok": 7
+  },
+  {
+    "gate": "tempos",
+    "exit": 0,
+    "seconds": 0.006,
+    "ok": 37
+  },
+  {
+    "gate": "formatos",
+    "exit": 0,
+    "seconds": 0.103,
+    "ok": 11
+  },
+  {
+    "gate": "legendas",
+    "exit": 0,
+    "seconds": 0.007,
+    "ok": 13
+  },
+  {
+    "gate": "glossario",
+    "exit": 0,
+    "seconds": 0.009,
+    "ok": 11
+  },
+  {
+    "gate": "motores",
+    "exit": 0,
+    "seconds": 0.009,
+    "ok": 30
+  },
+  {
+    "gate": "locutores",
+    "exit": 0,
+    "seconds": 0.009,
+    "ok": 44
+  }
+]

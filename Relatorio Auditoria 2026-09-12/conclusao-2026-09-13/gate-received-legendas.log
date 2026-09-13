@@ -1,0 +1,20 @@
+leitura de .srt
+
+  ok    le as tres legendas (deu 3)
+  ok    converte o tempo de entrada
+  ok    converte o tempo de saida
+  ok    junta as duas linhas de um bloco
+  ok    hora, minuto e milissegundo (deu 83.456)
+  ok    ida e volta preserva a quantidade
+  ok    ida e volta preserva os tempos
+  ok    ida e volta preserva o texto
+  ok    aceita quebra de linha do Windows
+  ok    aceita bloco sem numero
+  ok    aceita ponto no decimal
+  ok    tira as marcacoes de formatacao
+  ok    texto que nao e legenda nao vira legenda
+  ok    linha so de espacos separa dois blocos (deu 2)
+  ok    o timecode do bloco seguinte nao entra no texto do anterior ("Primeira.")
+  ok    o segundo bloco chega inteiro
+
+leitura de .srt ok

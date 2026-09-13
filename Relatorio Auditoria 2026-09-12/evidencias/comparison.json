@@ -1,0 +1,119 @@
+[
+  {
+    "studio": "studio-en-dialogo-apple-sortformer",
+    "job": "job-en-dialogo-apple-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 44,
+    "jobCues": 44,
+    "similarity": 0.9881
+  },
+  {
+    "studio": "studio-en-dialogo-parakeet-sortformer",
+    "job": "job-en-dialogo-parakeet-sortformer",
+    "sameText": false,
+    "sameTimes": true,
+    "studioCues": 43,
+    "jobCues": 43,
+    "similarity": 0.9875
+  },
+  {
+    "studio": "studio-en-dialogo-whisper-sortformer",
+    "job": "job-en-dialogo-whisper-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 38,
+    "jobCues": 38,
+    "similarity": 0.9889
+  },
+  {
+    "studio": "studio-en-dialogo-qwenLarge-sortformer",
+    "job": "job-en-dialogo-qwenLarge-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 41,
+    "jobCues": 41,
+    "similarity": 0.9811
+  },
+  {
+    "studio": "studio-ja-musica-apple-sortformer",
+    "job": "job-ja-musica-apple-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 18,
+    "jobCues": 18,
+    "similarity": 0.9732
+  },
+  {
+    "studio": "studio-ja-musica-whisper-sortformer",
+    "job": "job-ja-musica-whisper-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 4,
+    "jobCues": 9,
+    "similarity": 0.5541
+  },
+  {
+    "studio": "studio-ja-musica-qwen-sortformer",
+    "job": "job-ja-musica-qwen-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 17,
+    "jobCues": 17,
+    "similarity": 0.8887
+  },
+  {
+    "studio": "studio-ja-musica-qwenLarge-sortformer",
+    "job": "job-ja-musica-qwenLarge-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 22,
+    "jobCues": 21,
+    "similarity": 0.9606
+  },
+  {
+    "studio": "studio-en-conversa-apple-sortformer",
+    "job": "job-en-conversa-apple-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 52,
+    "jobCues": 51,
+    "similarity": 0.993
+  },
+  {
+    "studio": "studio-en-conversa-parakeet-sortformer",
+    "job": "job-en-conversa-parakeet-sortformer",
+    "sameText": true,
+    "sameTimes": true,
+    "studioCues": 53,
+    "jobCues": 53,
+    "similarity": 1.0
+  },
+  {
+    "studio": "studio-en-conversa-whisper-sortformer",
+    "job": "job-en-conversa-whisper-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 50,
+    "jobCues": 44,
+    "similarity": 0.9732
+  },
+  {
+    "studio": "studio-en-conversa-qwenLarge-sortformer",
+    "job": "job-en-conversa-qwenLarge-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 53,
+    "jobCues": 53,
+    "similarity": 0.9957
+  },
+  {
+    "studio": "studio-ja-longo-apple-sortformer",
+    "job": "job-ja-longo-apple-sortformer",
+    "sameText": false,
+    "sameTimes": false,
+    "studioCues": 108,
+    "jobCues": 108,
+    "similarity": 0.9597
+  }
+]

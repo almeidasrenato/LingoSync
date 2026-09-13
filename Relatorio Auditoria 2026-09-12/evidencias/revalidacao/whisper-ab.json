@@ -1,0 +1,102 @@
+[
+  {
+    "name": "whisper-musica-com-glossario-1",
+    "hints": [
+      "もやし",
+      "水菜",
+      "納豆",
+      "山梨県"
+    ],
+    "pieces": 6,
+    "characters": 71,
+    "first": 63.29999923706055,
+    "last": 79.80000305175781,
+    "seconds": 4.8437711000442505,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-com-glossario-2",
+    "hints": [
+      "もやし",
+      "水菜",
+      "納豆",
+      "山梨県"
+    ],
+    "pieces": 11,
+    "characters": 159,
+    "first": 1.3200000524520874,
+    "last": 79.77999877929688,
+    "seconds": 8.079509019851685,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-com-glossario-3",
+    "hints": [
+      "もやし",
+      "水菜",
+      "納豆",
+      "山梨県"
+    ],
+    "pieces": 11,
+    "characters": 157,
+    "first": 1.3200000524520874,
+    "last": 79.80000305175781,
+    "seconds": 6.97494101524353,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-com-glossario-4",
+    "hints": [
+      "もやし",
+      "水菜",
+      "納豆",
+      "山梨県"
+    ],
+    "pieces": 11,
+    "characters": 157,
+    "first": 1.3200000524520874,
+    "last": 79.80000305175781,
+    "seconds": 6.898055076599121,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-sem-glossario-1",
+    "hints": [],
+    "pieces": 30,
+    "characters": 264,
+    "first": 0,
+    "last": 86.13999938964844,
+    "seconds": 7.533170938491821,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-sem-glossario-2",
+    "hints": [],
+    "pieces": 32,
+    "characters": 250,
+    "first": 0,
+    "last": 86.13999938964844,
+    "seconds": 7.039304971694946,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-sem-glossario-3",
+    "hints": [],
+    "pieces": 32,
+    "characters": 250,
+    "first": 0,
+    "last": 86.13999938964844,
+    "seconds": 7.502174973487854,
+    "fallbacks": 0
+  },
+  {
+    "name": "whisper-musica-sem-glossario-4",
+    "hints": [],
+    "pieces": 30,
+    "characters": 263,
+    "first": 0,
+    "last": 86.13999938964844,
+    "seconds": 7.549561023712158,
+    "fallbacks": 0
+  }
+]

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>Tradutor</string>
+    <key>CFBundleIdentifier</key>
+    <string>app.tradutor.instantaneo</string>
+    <key>CFBundleName</key>
+    <string>Tradutor</string>
+    <key>CFBundleDisplayName</key>
+    <string>Tradutor Instantâneo</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>15.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>O Tradutor captura o áudio do aplicativo que você escolher para gerar legendas traduzidas em tempo real. O áudio não sai do seu Mac.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Quando você escolhe o reconhecimento da Apple, a fala é transcrita pelo próprio macOS. Nada sai do seu Mac.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>O Tradutor pode ouvir o microfone quando você escolhe traduzir a sua própria fala.</string>
+</dict>
+</plist>

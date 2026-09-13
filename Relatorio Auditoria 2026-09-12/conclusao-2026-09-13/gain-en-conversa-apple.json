@@ -1,0 +1,804 @@
+[
+  {
+    "boosted" : false,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.17912683827980744,
+    "seconds" : 0.46120405197143555,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists."
+  },
+  {
+    "boosted" : true,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.17912683827980744,
+    "seconds" : 0.38071894645690918,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists."
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.10000000149011612,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 14.4,
+        "start" : 12.119999999999999,
+        "text" : "You may know him..."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 14.4,
+        "text" : "as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.440000000000001,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.84,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.48,
+        "start" : 21.899999999999999,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.539999999999999,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.760000000000002,
+        "start" : 27.120000000000001,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.240000000000002,
+        "start" : 29.879999999999999,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 35.82,
+        "start" : 34.079999999999998,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.017912684133755116,
+    "seconds" : 0.38092803955078125,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him... as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists. Hmm?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.10000000149011612,
+    "gain" : 1.6747908592224121,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 14.640000000000001,
+        "start" : 12.119999999999999,
+        "text" : "You may know him..."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 14.640000000000001,
+        "text" : "as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.5,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.84,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.48,
+        "start" : 21.960000000000001,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.539999999999999,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.760000000000002,
+        "start" : 27.120000000000001,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.240000000000002,
+        "start" : 29.879999999999999,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 35.82,
+        "start" : 34.079999999999998,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.017912684133755116,
+    "seconds" : 0.38208198547363281,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him... as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists. Hmm?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.0099999997764825821,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.4000000000000004,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.18,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.5,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.899999999999999,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.539999999999999,
+        "start" : 21.960000000000001,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.600000000000001,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.82,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 29.940000000000001,
+        "text" : "I just end up on a sea of wonted lists."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 34.140000000000001,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.0017912683428557867,
+    "seconds" : 0.38743507862091064,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wonted lists. Hmm?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.0099999997764825821,
+    "gain" : 16.747909545898438,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 14.640000000000001,
+        "start" : 12.119999999999999,
+        "text" : "You may know him..."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 14.640000000000001,
+        "text" : "as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.5,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.84,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.48,
+        "start" : 21.960000000000001,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.539999999999999,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.760000000000002,
+        "start" : 27.120000000000001,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.240000000000002,
+        "start" : 29.879999999999999,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 35.82,
+        "start" : 34.079999999999998,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 1,
+    "rms" : 0.0017912683428557867,
+    "seconds" : 0.38269495964050293,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him... as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists. Hmm?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.17912683827980744,
+    "seconds" : 0.37961006164550781,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists."
+  },
+  {
+    "boosted" : false,
+    "factor" : 1,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.24,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.579999999999998,
+        "start" : 15.84,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.739999999999998,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 22.02,
+        "start" : 19.800000000000001,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.600000000000001,
+        "start" : 22.079999999999998,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.66,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.879999999999999,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 30,
+        "text" : "I just end up on a sea of wanted lists."
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.17912683827980744,
+    "seconds" : 0.37815499305725098,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists."
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.10000000149011612,
+    "gain" : 1.6747908592224121,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 14.640000000000001,
+        "start" : 12.119999999999999,
+        "text" : "You may know him..."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 14.640000000000001,
+        "text" : "as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.5,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.84,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.48,
+        "start" : 21.960000000000001,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.539999999999999,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.760000000000002,
+        "start" : 27.120000000000001,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.240000000000002,
+        "start" : 29.879999999999999,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 35.82,
+        "start" : 34.079999999999998,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.017912684133755116,
+    "seconds" : 0.3830869197845459,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him... as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists. Hmm?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.10000000149011612,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 14.4,
+        "start" : 12.119999999999999,
+        "text" : "You may know him..."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 14.4,
+        "text" : "as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.440000000000001,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.84,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.48,
+        "start" : 21.899999999999999,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.539999999999999,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.760000000000002,
+        "start" : 27.120000000000001,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.240000000000002,
+        "start" : 29.879999999999999,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 35.82,
+        "start" : 34.079999999999998,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.017912684133755116,
+    "seconds" : 0.38270699977874756,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him... as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists. Hmm?"
+  },
+  {
+    "boosted" : true,
+    "factor" : 0.0099999997764825821,
+    "gain" : 16.747909545898438,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.3399999999999999,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 14.640000000000001,
+        "start" : 12.119999999999999,
+        "text" : "You may know him..."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 14.640000000000001,
+        "text" : "as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.5,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.84,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.48,
+        "start" : 21.960000000000001,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.059999999999999,
+        "start" : 24.539999999999999,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.760000000000002,
+        "start" : 27.120000000000001,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.240000000000002,
+        "start" : 29.879999999999999,
+        "text" : "I just end up on a sea of wanted lists."
+      },
+      {
+        "end" : 35.82,
+        "start" : 34.079999999999998,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.0017912683428557867,
+    "seconds" : 0.38183903694152832,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him... as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wanted lists. Hmm?"
+  },
+  {
+    "boosted" : false,
+    "factor" : 0.0099999997764825821,
+    "gain" : 1,
+    "pieces" : [
+      {
+        "end" : 2.8199999999999998,
+        "start" : 0,
+        "text" : "Even so, the big man's still waiting things out."
+      },
+      {
+        "end" : 8.4000000000000004,
+        "start" : 2.8799999999999999,
+        "text" : "I'm, of course, referring to my comrade, the leader of all revolutionaries in the world."
+      },
+      {
+        "end" : 15.779999999999999,
+        "start" : 12.18,
+        "text" : "You may know him as Dragon."
+      },
+      {
+        "end" : 17.52,
+        "start" : 15.9,
+        "text" : "Oh, you're talking about my dad."
+      },
+      {
+        "end" : 19.5,
+        "start" : 17.640000000000001,
+        "text" : "Yes, that's the plan."
+      },
+      {
+        "end" : 21.899999999999999,
+        "start" : 19.559999999999999,
+        "text" : "When your dad makes a move with that army of his."
+      },
+      {
+        "end" : 24.539999999999999,
+        "start" : 21.960000000000001,
+        "text" : "Then I shall do some maneuvering of my own."
+      },
+      {
+        "end" : 27.120000000000001,
+        "start" : 24.600000000000001,
+        "text" : "Call it my grand comeback tour."
+      },
+      {
+        "end" : 29.82,
+        "start" : 27.18,
+        "text" : "If I were to escape from this place now."
+      },
+      {
+        "end" : 33.359999999999999,
+        "start" : 29.940000000000001,
+        "text" : "I just end up on a sea of wonted lists."
+      },
+      {
+        "end" : 35.759999999999998,
+        "start" : 34.140000000000001,
+        "text" : "Hmm?"
+      }
+    ],
+    "repeat" : 2,
+    "rms" : 0.0017912683428557867,
+    "seconds" : 0.38649106025695801,
+    "text" : "Even so, the big man's still waiting things out. I'm, of course, referring to my comrade, the leader of all revolutionaries in the world. You may know him as Dragon. Oh, you're talking about my dad. Yes, that's the plan. When your dad makes a move with that army of his. Then I shall do some maneuvering of my own. Call it my grand comeback tour. If I were to escape from this place now. I just end up on a sea of wonted lists. Hmm?"
+  }
+]

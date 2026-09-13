@@ -1,0 +1,41 @@
+tokens especiais do Whisper
+  ok    "<|ja|><|transcribe|><|notimestamps"
+  ok    "<|en|>Hello there"
+  ok    "Nenhum token aqui"
+  ok    "<|startoftranscript|>"
+  ok    "Antes <|pt|> depois"
+
+sobreposicao entre blocos
+  ok    "afternoon, it has been running in prod"
+  ok    "so she approved it herself"
+  ok    "no complaints at all"
+  ok    "primeiro bloco da sessao"
+  ok    texto sem sobreposicao real fica intacto
+
+pontuacao japonesa fecha legenda
+
+  ok    tres falas japonesas viram tres legendas (deu 3)
+  ok    sem pontuacao segue junto (deu 1)
+  ok    `。` fecha a frase no tempo real (deu 1)
+
+corte em frases
+
+  ok    tres frases viram tres blocos (deu 3)
+  ok    nenhum bloco fica longo demais
+  ok    "." sozinho nao vira bloco
+  ok    reticencias soltas nao viram bloco
+  ok    vazio nao vira bloco
+  ok    pontuacao no inicio e removida (deu "We shipped the change on Friday.")
+  ok    fragmento curto gruda na frase anterior (deu 1)
+  ok    fala pontuada so com virgula e cortada (deu 2)
+  ok    nenhum pedaco passa de 90 caracteres (maior: 73)
+    | rewriting the retry logic, the engineer walked us through every edge case  (73)
+    | nobody had questions, so she approved it herself.  (49)
+  ok    parcial perde a pontuacao solta do inicio
+  ok    so pontuacao nao tem conteudo
+  ok    letra tem conteudo
+    | We shipped the change on Friday afternoon.
+    | It has been running in production ever since.
+    | Nobody noticed a thing.
+
+corte em frases ok

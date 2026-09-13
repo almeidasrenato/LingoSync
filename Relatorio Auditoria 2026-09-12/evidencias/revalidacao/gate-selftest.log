@@ -1,0 +1,45 @@
+ring buffer
+  ok    le tudo que foi escrito
+  ok    preserva a ordem das amostras
+  ok    nao reporta estouro sem motivo
+  ok    reporta estouro quando o consumidor fica para tras
+  ok    entrega so o que cabe
+  ok    no estouro entrega o audio recente em ordem, nao um embaralhado
+agrupamento de processos
+  ok    Chrome principal vira com.google.Chrome
+  ok    helper do Chrome cai no mesmo grupo
+  ok    renderer do Chrome cai no mesmo grupo
+  ok    Safari nao cai no grupo do Chrome
+  ok    processo sem bundle agrupa pelo executavel
+  ok    isPlaying nao quebra a identidade do aplicativo
+  ok    selecao sobrevive ao app comecar a tocar
+resampler
+  ok    entrada de teste tem 1s a 48 kHz
+  ok    48 kHz -> 16 kHz na razao 3:1 (saida 15989)
+  ok    o filtro nao come o sinal (rms 0.354)
+  ok    fluxo em blocos de 100 ms nao perde audio (saida 31989 para 32000)
+segmentador
+  ok    nao fecha enquanto ha fala
+  ok    pausa de 0,3s nao fecha o segmento
+  ok    pausa acima de 0,6s fecha
+  ok    marca que fechou no silencio
+  ok    nao perde o comeco da fala
+  ok    10s de fala continua nao forcam corte (deu 0)
+  ok    o trecho continua em andamento
+  ok    o audio fica inteiro em voo para ser re-reconhecido (10.0s)
+  ok    o teto de seguranca acaba disparando
+  ok    marca que foi o teto, nao silencio
+  ok    nada passa do teto de 12s (maior: 11.9s)
+  ok    16s de sinal disparam o teto
+  ok    todo corte por teto cai no trecho quieto (1/1)
+  ok    nada e duplicado nem perdido no corte (256000 de 256000)
+  ok    um estalo isolado nao abre segmento
+  ok    fala baixa abre trecho
+  ok    fala baixa fecha normalmente na pausa
+  ok    a fala baixa vem inteira
+  ok    voz que baixa no fim da frase nao fecha o trecho
+  ok    o trecho continua aberto durante a queda
+  ok    so a pausa de verdade fecha
+  ok    o trecho traz fala normal e fala baixa juntas (2.8s)
+
+39 verificacoes, tudo passou

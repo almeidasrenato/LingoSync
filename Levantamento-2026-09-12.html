@@ -1,0 +1,410 @@
+<title>Onde a legenda falha</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #F2F5F6;
+    --surface: #FFFFFF;
+    --sunken: #E7EDEE;
+    --ink: #121A1D;
+    --muted: #566B71;
+    --line: #D2DDDF;
+    --accent: #0C6C76;
+    --accent-soft: #E2F0F1;
+    --critico: #A8332A;
+    --critico-soft: #F8E6E4;
+    --atencao: #86610A;
+    --atencao-soft: #FAF0DA;
+    --bom: #1C6B4C;
+    --bom-soft: #E2F1EA;
+    --cea-branco: #7A8A8E;
+    --cea-amarelo: #A08300;
+    --cea-ciano: #0C6C76;
+    --cea-verde: #23794A;
+    --escala-1: 0.78rem;
+    --escala-2: 0.94rem;
+    --escala-3: 1.06rem;
+    --escala-4: 1.42rem;
+    --escala-5: 2.0rem;
+    --escala-6: 2.9rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0C1113;
+      --surface: #141C1F;
+      --sunken: #0F1618;
+      --ink: #E4EDEF;
+      --muted: #8FA5AA;
+      --line: #27343800;
+      --line: #253337;
+      --accent: #54FFFF;
+      --accent-soft: #10292D;
+      --critico: #FF8172;
+      --critico-soft: #2A1512;
+      --atencao: #F0C35A;
+      --atencao-soft: #2A2211;
+      --bom: #62D7A0;
+      --bom-soft: #10261D;
+      --cea-branco: #FFFFFF;
+      --cea-amarelo: #FFFF54;
+      --cea-ciano: #54FFFF;
+      --cea-verde: #54FF54;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0C1113;
+    --surface: #141C1F;
+    --sunken: #0F1618;
+    --ink: #E4EDEF;
+    --muted: #8FA5AA;
+    --line: #253337;
+    --accent: #54FFFF;
+    --accent-soft: #10292D;
+    --critico: #FF8172;
+    --critico-soft: #2A1512;
+    --atencao: #F0C35A;
+    --atencao-soft: #2A2211;
+    --bom: #62D7A0;
+    --bom-soft: #10261D;
+    --cea-branco: #FFFFFF;
+    --cea-amarelo: #FFFF54;
+    --cea-ciano: #54FFFF;
+    --cea-verde: #54FF54;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: var(--escala-3);
+    line-height: 1.62;
+  }
+  .folha { max-width: 60rem; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+  h1, h2, h3, .eyebrow, .chip, .meta, th, .num {
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  code, kbd, pre, .tc { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+
+  header.capa { display: flex; flex-direction: column; gap: 0.9rem; padding-bottom: 2rem; border-bottom: 2px solid var(--ink); }
+  .eyebrow { font-size: var(--escala-1); text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); font-weight: 600; }
+  h1 { font-size: var(--escala-6); line-height: 1.04; margin: 0; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+  .subtitulo { font-size: var(--escala-4); color: var(--muted); margin: 0; max-width: 34ch; }
+  .meta { font-size: var(--escala-1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; }
+
+  h2 { font-size: var(--escala-5); margin: 3.4rem 0 0.3rem; font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
+  h2 + .intro { color: var(--muted); margin: 0 0 1.4rem; max-width: 66ch; }
+  h3 { font-size: var(--escala-4); margin: 2.2rem 0 0.5rem; font-weight: 600; text-wrap: balance; }
+  p { max-width: 66ch; }
+
+  .placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 1.6rem 0 0; }
+  .placar div { background: var(--surface); padding: 0.9rem 1rem; }
+  .placar .num { font-size: var(--escala-4); font-weight: 600; font-variant-numeric: tabular-nums; display: block; }
+  .placar .rot { font-size: var(--escala-1); color: var(--muted); }
+
+  .achado { display: grid; gap: 0.55rem; padding: 1.1rem 1.2rem 1.2rem 1.4rem; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--muted); margin: 1rem 0; }
+  .achado.alta { border-left-color: var(--critico); }
+  .achado.media { border-left-color: var(--atencao); }
+  .achado.baixa { border-left-color: var(--muted); }
+  .achado h3 { margin: 0; font-size: var(--escala-3); font-weight: 600; }
+  .achado p { margin: 0; font-size: var(--escala-2); max-width: 72ch; }
+  .achado .onde { font-size: var(--escala-1); color: var(--muted); }
+  .rotulos { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; padding: 0.12rem 0.5rem; border: 1px solid var(--line); color: var(--muted); }
+  .chip.alta { color: var(--critico); background: var(--critico-soft); border-color: transparent; }
+  .chip.media { color: var(--atencao); background: var(--atencao-soft); border-color: transparent; }
+  .chip.baixa { color: var(--muted); }
+  .chip.ok { color: var(--bom); background: var(--bom-soft); border-color: transparent; }
+  .chip.feito { color: var(--bom); background: var(--bom-soft); border-color: transparent; }
+  .feito-campo { font-size: var(--escala-2); border-top: 1px solid var(--line); padding-top: 0.55rem; }
+  .feito-campo b { font-family: "IBM Plex Sans", sans-serif; font-size: var(--escala-1); text-transform: uppercase; letter-spacing: 0.07em; color: var(--bom); font-weight: 600; display: block; }
+  .achado.resolvido { border-left-color: var(--bom); }
+  .campo { font-size: var(--escala-2); }
+  .campo b { font-family: "IBM Plex Sans", sans-serif; font-size: var(--escala-1); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; display: block; }
+
+  ul.limpa { list-style: none; padding: 0; margin: 0.8rem 0; display: grid; gap: 0.45rem; }
+  ul.limpa li { display: grid; grid-template-columns: 1.3rem 1fr; gap: 0.5rem; font-size: var(--escala-2); max-width: 72ch; }
+  ul.limpa li::before { content: "✓"; color: var(--bom); font-weight: 700; }
+
+  .rolagem { overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; background: var(--surface); font-size: var(--escala-2); }
+  th, td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: var(--escala-1); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+
+  pre { background: var(--sunken); border: 1px solid var(--line); padding: 0.9rem 1rem; overflow-x: auto; font-size: var(--escala-2); line-height: 1.5; margin: 1rem 0; }
+  code { background: var(--sunken); padding: 0.08em 0.32em; font-size: 0.88em; }
+  pre code { background: none; padding: 0; }
+
+  .legenda-srt { background: #0C1113; color: #FFFFFF; border: 1px solid var(--line); padding: 1rem 1.1rem; margin: 1.2rem 0; font-family: "IBM Plex Mono", monospace; font-size: var(--escala-2); line-height: 1.55; overflow-x: auto; }
+  .legenda-srt .tc { color: #8FA5AA; }
+  .legenda-srt .am { color: #FFFF54; }
+  .legenda-srt .ci { color: #54FFFF; }
+
+  .paleta { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 1rem 0; font-size: var(--escala-1); }
+  .paleta span { display: flex; align-items: center; gap: 0.4rem; font-family: "IBM Plex Mono", monospace; color: var(--muted); }
+  .paleta i { width: 0.85rem; height: 0.85rem; display: block; border: 1px solid var(--line); }
+
+  .nota { border-left: 3px solid var(--accent); padding: 0.2rem 0 0.2rem 1rem; color: var(--muted); font-size: var(--escala-2); margin: 1.4rem 0; max-width: 68ch; }
+  footer { margin-top: 4rem; padding-top: 1.4rem; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--escala-1); }
+  a { color: var(--accent); }
+  a:focus-visible, :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="folha">
+
+<header class="capa">
+  <div class="eyebrow">Tradutor Instantâneo · levantamento técnico</div>
+  <h1>Onde a legenda falha</h1>
+  <p class="subtitulo">Nove pontos achados lendo o código e rodando os dois modos que você usa. Todos atacados.</p>
+  <div class="meta">
+    <span>12 de setembro de 2026</span>
+    <span>Apuração sem tocar no código · correções aplicadas depois, com verificação</span>
+    <span>MacBook Air M5, 16 GB · macOS 15</span>
+  </div>
+</header>
+
+<div class="placar">
+  <div><span class="num">39</span><span class="rot">verificações da captura, todas verdes</span></div>
+  <div><span class="num">11</span><span class="rot">gates do <code>tradutor-verify</code>, todos verdes</span></div>
+  <div><span class="num">62</span><span class="rot">checagens da janela de legendas, PASSOU</span></div>
+  <div><span class="num">9</span><span class="rot">pontos achados — 8 corrigidos, 1 fechado por medição</span></div>
+</div>
+
+<h2>O que foi exercitado</h2>
+<p class="intro">Nada aqui é leitura de código sozinha: cada afirmação abaixo veio de um binário rodando ou de um arquivo gerado hoje.</p>
+
+<ul class="limpa">
+  <li><code>tradutor-probe selftest</code> — 39 verificações de captura, ring buffer, VAD e agrupamento.</li>
+  <li>Onze gates do <code>tradutor-verify</code>: prefixo, frases, quebra, tempos, formatos, legendas, glossário, modelos, motores, locutores, deepl.</li>
+  <li><code>--selftest-studio</code> no vídeo de 9 min, japonês, com <code>--locutores --cores</code>: 62 checagens, PASSOU.</li>
+  <li><code>--selftest-job</code> no vídeo de 96 s, japonês, com Apple e com DeepL: <code>.srt</code> auditado nos dois.</li>
+  <li>Leitura dirigida de <code>SubtitleStudioModel</code>, <code>SubtitleJob</code>, <code>SubtitleFileBuilder</code>, <code>Diarization</code>, <code>SRTWriter</code> e <code>SpeakerPalette</code>.</li>
+  <li><code>tradutor-verify fronteiras … en parakeet</code> — a medição que faltava, feita depois do levantamento.</li>
+</ul>
+
+<h2>Achados</h2>
+<p class="intro">Ordenados por severidade. Oito foram corrigidos com verificação que falha se voltarem; um fechou por medição, sem precisar de conserto. As suítes seguem verdes: 39 da captura, 11 gates, 62 da janela, e os dois autotestes de ponta a ponta.</p>
+
+<article class="achado alta resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip alta">Alta</span><span class="chip">Tradução</span><span class="chip">Só gerar .srt</span></div>
+  <h3>O DeepL cai para a Apple no meio do arquivo, e nada na tela diz isso</h3>
+  <p class="onde"><code>Sources/TradutorCore/DeepLWeb.swift</code> · <code>DeepLWebTranslator.translate</code></p>
+  <div class="campo"><b>O que acontece</b>Depois de algumas cargas seguidas o site dispara o desafio da Cloudflare — “Confirme que é humano”. Vi acontecer hoje, na terceira geração seguida. O bloco desiste, a Apple assume, e a legenda continua saindo: metade com a qualidade do DeepL, metade com a da Apple. O aviso vai para o log do sistema e para <code>fallbackCount</code>. A janela de progresso não muda, e o <code>.srt</code> final não distingue um do outro.</div>
+  <div class="campo"><b>Por que importa</b>É a diferença entre “a senhora Uemura” e “o senhor uemura” aparecendo no mesmo arquivo, sem explicação.</div>
+  <div class="feito-campo"><b>Feito</b><code>Translator.completionNotice</code> sobe por <code>SubtitleFileBuilder.translationNotice</code> até a janela de conclusão do item de menu e a barra da janela de legendas: “3 blocos foram traduzidos pela Apple: o DeepL não respondeu.” O autoteste também escreve o aviso no relatório.</div>
+</article>
+
+<article class="achado alta resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip alta">Alta</span><span class="chip">Arnês</span><span class="chip">Só gerar .srt</span></div>
+  <h3>O autoteste do item de menu trava no próprio aviso de conclusão</h3>
+  <p class="onde"><code>Sources/TradutorApp/main.swift</code> · <code>runSubtitleJobSelfTest</code> · <code>SubtitleJob.finish</code></p>
+  <div class="campo"><b>O que acontece</b>O <code>.srt</code> sai correto e o <code>NSAlert</code> “Legenda pronta” aparece. Como ele é modal, o laço do teste — que roda no <code>@MainActor</code> — não avança, e <code>/tmp/tradutor-job.txt</code> fica parado em <code>gerando…</code> para sempre. Aconteceu em duas das quatro execuções de hoje; nas outras duas o teste escreveu o resultado antes do aviso subir. É corrida, não acaso.</div>
+  <div class="campo"><b>Por que importa</b>Quanto mais lenta a geração, maior a chance de o teste “falhar” quando o produto funcionou. É o teste do modo que você mais usa.</div>
+  <div class="feito-campo"><b>Feito</b><code>SubtitleJob.silent</code> engole os dois alertas sob autoteste e guarda o erro em <code>failure</code>, que o laço agora observa — antes ele só esperava o arquivo aparecer. Verificado: o relatório chegou a <code>PASSOU</code> nas duas execuções seguintes.</div>
+</article>
+
+<article class="achado media resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip media">Média</span><span class="chip">Reconhecimento</span><span class="chip">Ambos os modos</span></div>
+  <h3>O filtro de alucinação só protege o Whisper</h3>
+  <p class="onde"><code>Sources/TradutorCore/Transcriber.swift:529</code> — única chamada de <code>Hallucinations.isIsolatedFiller</code></p>
+  <div class="campo"><b>O que acontece</b>A frase de cortesia inventada no silêncio (ご視聴ありがとうございました) é descartada dentro do <code>WhisperTranscriber</code>. Apple, Parakeet e Qwen passam direto. O Qwen é justamente o que o CLAUDE.md recomenda para japonês.</div>
+  <div class="campo"><b>Como ver</b><code>tradutor-verify fonte &lt;video&gt; ja qwen</code> num vídeo com trecho longo de música e procurar cortesia isolada.</div>
+  <div class="feito-campo"><b>Feito</b>O filtro passou a rodar também em <code>SubtitleFileBuilder.generate</code>, logo depois do reconhecimento, valendo para todos os motores nos modos de vídeo. O do <code>WhisperTranscriber</code> fica onde está porque cobre o caminho ao vivo, que não passa por ali.</div>
+</article>
+
+<article class="achado media resolvido">
+  <div class="rotulos"><span class="chip feito">Medido, sem defeito</span><span class="chip media">Média</span><span class="chip">Locutores</span></div>
+  <h3>O conserto de fronteira de voz existe só no reconhecimento da Apple</h3>
+  <p class="onde"><code>Sources/TradutorCore/AppleSpeech.swift:97</code> · padrão vazio em <code>Transcriber.swift:60</code></p>
+  <div class="campo"><b>O que acontece</b><code>speakerBoundaries</code> é entregue a todo reconhecedor, mas só <code>AppleSpeechTranscriber.phrases</code> usa: ele fecha o trecho quando o meio da palavra muda de lado. Parakeet, Whisper e Qwen recebem e ignoram — a propriedade tem implementação vazia no protocolo.</div>
+  <div class="campo"><b>O que está medido</b>Qwen 0 % e Whisper 1 % de trechos com duas vozes, ou seja, não precisam. <b>Parakeet com locutores nunca foi medido</b> — e ele é o motor que você usaria em inglês.</div>
+  <div class="feito-campo"><b>Medido hoje</b>161 s de inglês, os dois modelos de identificação: <strong>0 de 320 trechos com duas vozes</strong>, idêntico com e sem as fronteiras. O Parakeet devolve um trecho por palavra, e uma palavra não tem como ser de duas pessoas — o conserto não faz falta. Sobram 3 de 44 legendas cujo intervalo encosta na faixa de outra voz, iguais nos dois casos, fora do alcance deste mecanismo.</div>
+</article>
+
+<article class="achado media resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip media">Média</span><span class="chip">Locutores</span><span class="chip">Assistir com legenda</span></div>
+  <h3>Assistir não é pré-visualizar: a janela mostra cor, o arquivo tem travessão</h3>
+  <p class="onde"><code>SubtitleStudioView.swift:820</code> (cor) · <code>SubtitleFile.swift:809</code> (travessão)</p>
+  <div class="campo"><b>O que acontece</b>Sobre o vídeo, a troca de locutor aparece só como mudança de cor. No <code>.srt</code> exportado, cada troca ganha <code>— </code> antes do texto, mais a tag de cor. São duas legendas diferentes saindo do mesmo material.</div>
+  <div class="campo"><b>Por que importa</b>Quem assiste na janela para conferir antes de exportar não está vendo o que vai exportar — e o travessão muda a largura da linha, que é onde a quebra de 42 caracteres decide o corte.</div>
+  <div class="feito-campo"><b>Feito</b>A regra virou <code>SpeakerMark</code>, uma só, usada pelo <code>SRTWriter</code> e pela janela — sobre o vídeo e na lista lateral. O que você assiste é o que vai para o arquivo.</div>
+</article>
+
+<article class="achado media resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip media">Média</span><span class="chip">Locutores</span></div>
+  <h3>Trecho sem locutor no meio faz a mesma pessoa ganhar travessão duas vezes</h3>
+  <p class="onde"><code>Sources/TradutorCore/SubtitleFile.swift</code> · laço de <code>SRTWriter.render</code></p>
+  <div class="campo"><b>O que acontece</b><code>previousSpeaker</code> recebe <code>cue.speaker</code> sempre, inclusive quando é <code>nil</code>. Na sequência Locutor&nbsp;1 → sem locutor → Locutor&nbsp;1, o terceiro bloco é lido como troca e ganha travessão, embora seja a mesma pessoa continuando.</div>
+  <div class="campo"><b>Por que aparece na prática</b><code>pruneTinyVoices</code> existe para deixar trechos <em>sem</em> locutor — ou seja, o app produz essa sequência de propósito.</div>
+  <div class="feito-campo"><b>Decidido</b>O <code>nil</code> <strong>não</strong> zera a memória: só um locutor conhecido substitui o anterior. Marcar troca onde não houve diria ao leitor que apareceu gente nova, e isso é pior que deixar de marcar. Há verificação fim a fim — Locutor 1, buraco, Locutor 1, Locutor 2 tem de dar exatamente dois travessões.</div>
+</article>
+
+<article class="achado baixa resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip baixa">Baixa</span><span class="chip">Tradução</span><span class="chip">Custo</span></div>
+  <h3>A estimativa de tempo ignorava o motor de tradução</h3>
+  <p class="onde">medido hoje, dois vídeos, mesmas opções, do começo ao <code>.srt</code> gravado</p>
+  <div class="rolagem"><table>
+    <tr><th>Tradutor</th><th>96 s · 11 falas</th><th>540 s · 75 legendas</th></tr>
+    <tr><td>Apple</td><td class="n">7 s</td><td class="n">32 s</td></tr>
+    <tr><td>DeepL (site)</td><td class="n">10 s</td><td class="n">18 s</td></tr>
+  </table></div>
+  <div class="campo"><b>O que a medição mostrou</b>Os dois custam quase o mesmo, por motivos opostos: a Apple cobra <strong>por string</strong> e o DeepL cobra <strong>por carga de página</strong>, que leva 1400 caracteres de uma vez. O DeepL sai mais caro no vídeo curto, onde a carga não se dilui, e mais barato no longo. <strong>Uma primeira medição deu 195 s para o vídeo de 96 s e eu a registrei como o custo do motor — era o custo de ser barrado pela Cloudflare</strong>, com cada bloco esperando o tempo esgotar antes de cair para a Apple.</div>
+  <div class="feito-campo"><b>Feito</b>A estimativa saiu do número único e passou a vir de <code>TranslationEngine.costPerSecondOfVideo</code>. Verificação: a conta de cada motor tem de bater com o custo declarado por ele. O que limita o DeepL não é velocidade — é o desafio anti-robô, e esse já cai para a Apple avisando.</div>
+</article>
+
+<article class="achado baixa resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip baixa">Baixa</span><span class="chip">Locutores</span></div>
+  <h3>Rótulo de locutor sem número cai calado na primeira cor</h3>
+  <p class="onde"><code>Sources/TradutorCore/SpeakerPalette.swift</code> · <code>index(for:)</code></p>
+  <div class="campo"><b>O que acontecia</b>A cor sai dos dígitos do rótulo. Sem dígito nenhum, o retorno era <code>0</code> — a primeira cor — em vez de “não sei”.</div>
+  <div class="feito-campo"><b>Feito</b><code>index(for:)</code> devolve <code>nil</code> sem dígito: pintar de branco um locutor que não se sabe qual é seria inventar identidade.</div>
+</article>
+
+<article class="achado baixa resolvido">
+  <div class="rotulos"><span class="chip feito">Corrigido</span><span class="chip baixa">Baixa</span><span class="chip">Arnês</span></div>
+  <h3>Caminho relativo no autoteste morre em “não está mais no lugar”</h3>
+  <p class="onde">documentado hoje no CLAUDE.md</p>
+  <div class="campo"><b>O que acontece</b><code>open</code> não herda o diretório de trabalho, então <code>--selftest-job "Videos Exemplo/x.mp4"</code> abre um caminho que não existe e o app responde que o arquivo saiu do lugar. Custa uma execução inteira até você entender.</div>
+  <div class="feito-campo"><b>Feito</b>Os dois autotestes resolvem caminho relativo contra a pasta que contém o <code>.app</code> — <code>build/Tradutor.app</code> dá a raiz do projeto. Verificado com <code>--selftest-job "Videos Exemplo/…"</code> relativo: PASSOU em 7 s.</div>
+</article>
+
+<h2>Identificação de quem fala</h2>
+<p class="intro">Sua última implementação. Li o caminho inteiro e rodei os dois modelos. O mecanismo está correto; o que erra é o modelo, e isso já estava medido.</p>
+
+<h3>O que confirmei são</h3>
+<ul class="limpa">
+  <li><code>pruneTinyVoices</code> roda nos <strong>dois</strong> modelos — agrupamento e Sortformer —, não só num deles.</li>
+  <li><code>boundaries</code> só marca troca de verdade: duas faixas seguidas da mesma pessoa não viram fronteira.</li>
+  <li><code>assign</code> deixa sem locutor o trecho que nenhuma faixa cobre, em vez de chutar o vizinho.</li>
+  <li><code>renumber</code> numera por ordem de quem falou primeiro, e a cor segue a mesma ordem na janela e no arquivo.</li>
+  <li>A diarização roda <strong>antes</strong> do reconhecimento, como o CLAUDE.md exige, e a verificação da ordem passa.</li>
+  <li>Falha na identificação não derruba a geração: cai no <code>catch</code> e a legenda sai sem locutor.</li>
+</ul>
+
+<h3>Como cada motor se comporta</h3>
+<div class="rolagem"><table>
+  <tr><th>Motor</th><th>Marca tempo</th><th>Usa fronteira de voz</th><th>Trechos com duas vozes</th></tr>
+  <tr><td>Apple</td><td>sim</td><td><strong>sim</strong>, em <code>phrases</code></td><td class="n">17 % → 0 % com o conserto</td></tr>
+  <tr><td>Qwen 0.6B</td><td>sim</td><td>não (nem precisa)</td><td class="n">0 de 211</td></tr>
+  <tr><td>Whisper turbo</td><td>sim</td><td>não (nem precisa)</td><td class="n">1 de 75</td></tr>
+  <tr><td>Parakeet v3</td><td>por palavra</td><td>não precisa</td><td class="n">0 de 320 <span class="chip feito">medido hoje</span></td></tr>
+</table></div>
+
+<h3>A legenda que sai, com cor</h3>
+<div class="legenda-srt">
+<span class="tc">2</span><br>
+<span class="tc">00:00:12,349 --&gt; 00:00:16,199</span><br>
+&lt;font color="#FFFF54"&gt;<span class="am">— bom dia, senhor.</span>&lt;/font&gt;<br><br>
+<span class="tc">3</span><br>
+<span class="tc">00:00:16,199 --&gt; 00:00:17,280</span><br>
+&lt;font color="#54FFFF"&gt;<span class="ci">— Bom dia.</span>&lt;/font&gt;
+</div>
+<div class="paleta">
+  <span><i style="background:#FFFFFF"></i>#FFFFFF Locutor 1</span>
+  <span><i style="background:#FFFF54"></i>#FFFF54 Locutor 2</span>
+  <span><i style="background:#54FFFF"></i>#54FFFF Locutor 3</span>
+  <span><i style="background:#54FF54"></i>#54FF54 Locutor 4</span>
+</div>
+<p>As quatro cores da legenda oculta americana, na ordem de quem falou primeiro. Acima de quatro vozes a cor deixa de identificar e passa a só marcar a troca — o que está certo e documentado.</p>
+
+<h2>Os dois modos que você usa</h2>
+
+<h3>Assistir com legenda</h3>
+<p>A geração é compartilhada com o item de menu desde que <code>SubtitleFileBuilder.generate</code> passou a ser função única, e hoje os dois passam os mesmos parâmetros — inclusive o motor de tradução, que acabou de entrar. A busca da legenda ativa é binária sobre as legendas já sem sobreposição, então não engasga com arquivo grande. O resultado parcial vai para a tela enquanto traduz, o que é o melhor dessa janela.</p>
+<p>Os dois pontos que pesavam aqui eram o <strong>travessão ausente na tela</strong> e a <strong>estimativa de tempo que ignorava o motor de tradução</strong>. Os dois foram corrigidos: a regra do travessão é agora uma só para a tela e o arquivo, e a estimativa pergunta ao motor escolhido. O que você assiste é o que exporta.</p>
+
+<h3>Só gerar o .srt de um vídeo</h3>
+<p>Grava ao lado do vídeo, como deve. Sobrescreve <code>&lt;nome&gt;.pt.srt</code> existente sem perguntar — é o comportamento esperado de um comando “gerar”, mas vale saber. O cancelamento fecha a janela e descarta; nada vai para o disco antes do fim.</p>
+<p>Aqui moravam os dois achados de severidade alta: a queda calada para a Apple quando o DeepL é desafiado, e o autoteste que travava no aviso modal. A queda deixou de ser calada — a janela de conclusão diz quantos blocos a Apple traduziu — e o autoteste não abre mais alerta nenhum, então o relatório chega ao fim.</p>
+
+<div class="nota">Sobre o DeepL, o que foi implementado hoje funciona ponta a ponta e é <strong>mais rápido que a Apple no vídeo de 9 minutos</strong> — 18 s contra 32 s. O fluxo mudou depois do levantamento: a página é carregada <strong>uma vez por geração</strong> e os blocos seguintes entram pelo botão de limpar do site mais um evento de cola, sem recarregar. Recarregar a cada bloco era o que fazia cada bloco chegar como visitante novo e provocava o desafio da Cloudflare. O teto do site continua: 1400 caracteres por bloco.</div>
+
+<h2>Modelos gratuitos que talvez ganhem dos seus</h2>
+<p class="intro">Candidatos a medir, não recomendações. Meu conhecimento vai até maio de 2026, e nenhum destes foi rodado nesta máquina — a coluna que importa é a última.</p>
+
+<h3>Japonês</h3>
+<div class="rolagem"><table>
+  <tr><th>Modelo</th><th>Licença</th><th>Custo de porte</th><th>Por que pode ganhar</th></tr>
+  <tr>
+    <td><strong>Kotoba-Whisper v2.x</strong><br><span class="onde">kotoba-tech</span></td>
+    <td>Apache-2.0</td>
+    <td><strong>Baixo</strong> — arquitetura Whisper, o WhisperKit já é seu caminho</td>
+    <td>Destilado só para japonês; feito para ser mais rápido que o large-v3 mantendo o WER. É o único desta lista que entra pela porta que você já abriu.</td>
+  </tr>
+  <tr>
+    <td><strong>Anime-Whisper</strong><br><span class="onde">litagin</span></td>
+    <td>aberta (conferir)</td>
+    <td><strong>Baixo</strong> — também família Whisper</td>
+    <td>Ajustado em fala de anime e visual novel. Seu material de teste é exatamente isso, e é onde a Apple escreveu “o banco de vistos médicos”.</td>
+  </tr>
+  <tr>
+    <td><strong>ReazonSpeech v2</strong><br><span class="onde">Reazon, NeMo</span></td>
+    <td>Apache-2.0</td>
+    <td><strong>Alto</strong> — NeMo, fora do processo como o Qwen</td>
+    <td>Treinado em milhares de horas de TV japonesa. Domínio mais próximo do seu que qualquer modelo multilíngue.</td>
+  </tr>
+  <tr>
+    <td><strong>SenseVoice-Small</strong><br><span class="onde">FunAudioLLM</span></td>
+    <td>aberta</td>
+    <td><strong>Alto</strong> — e há um risco que mata</td>
+    <td>Muito rápido em ja/en/zh/ko. <strong>Confira primeiro se devolve tempo por trecho</strong>: sem isso não serve a este app, e nenhuma velocidade compensa.</td>
+  </tr>
+</table></div>
+
+<h3>Inglês</h3>
+<p>Aqui minha sugestão principal é <strong>não trocar de reconhecedor</strong>. Sua própria medição já diz por quê: em 161 s de inglês, Apple, Parakeet e Whisper transcreveram o <em>mesmo texto</em> — 319, 320 e 328 palavras. O teto não está no reconhecimento.</p>
+<div class="rolagem"><table>
+  <tr><th>Modelo</th><th>Licença</th><th>Custo de porte</th><th>Leitura honesta</th></tr>
+  <tr>
+    <td><strong>Canary-1B v2 / Canary-Qwen</strong><br><span class="onde">NVIDIA</span></td>
+    <td>CC-BY-4.0</td>
+    <td>Alto — NeMo</td>
+    <td>Bem posicionado nos rankings de inglês. Ganho provável no texto: pequeno, pelo argumento acima.</td>
+  </tr>
+  <tr>
+    <td><strong>Distil-Whisper v3.5</strong></td>
+    <td>MIT</td>
+    <td>Baixo</td>
+    <td>Mais rápido que o turbo, não melhor. Só interessa se velocidade virar o problema.</td>
+  </tr>
+  <tr>
+    <td><strong>Parakeet TDT v3</strong> <span class="chip ok">já é seu</span></td>
+    <td>CC-BY-4.0</td>
+    <td>—</td>
+    <td>Devolve <strong>tempo por palavra</strong>, que é o que resolveria a fronteira de voz sem depender do conserto dentro do motor da Apple. O ganho em inglês está aí, não em trocar de modelo.</td>
+  </tr>
+</table></div>
+
+<h3>Tradução local, se a nuvem incomodar</h3>
+<p>Você acabou de pagar a premissa do projeto para ter o DeepL. Dois modelos abertos de 2025 existem para tentar o mesmo resultado sem sair da máquina — ambos cobrem japonês e português, ambos convertíveis para MLX:</p>
+<div class="rolagem"><table>
+  <tr><th>Modelo</th><th>Tamanho</th><th>O que esperar</th></tr>
+  <tr><td><strong>Hunyuan-MT-7B</strong> · Tencent</td><td class="n">7 B</td><td>Especializado em tradução, 33 idiomas. Candidato mais forte a bater a Apple sem nuvem.</td></tr>
+  <tr><td><strong>Seed-X-7B</strong> · ByteDance</td><td class="n">7 B</td><td>Também especializado, 28 idiomas. Mesma faixa.</td></tr>
+</table></div>
+<p>O aviso vem da sua própria medição: o Qwen3-8B custou <strong>1,02× o tempo do vídeo</strong>. Um 7B ficará na mesma ordem — vinte vezes o orçamento atual da Apple e ainda pior que o DeepL de hoje. Vale uma medição pela qualidade, não pela velocidade.</p>
+
+<h2>Como medir tudo isto</h2>
+<p class="intro">Com o arnês que já existe. Nenhum comando novo.</p>
+<pre><code># Parakeet + locutores: o buraco de medição da seção de fronteiras
+./.build/release/tradutor-verify fronteiras "Videos Exemplo/video exemplo conversa de pessoas ingles.mp4" en parakeet
+
+# Alucinação fora do Whisper
+./.build/release/tradutor-verify fonte "&lt;video com música&gt;" ja qwen
+
+# Comparar um motor novo contra os seus, pelo texto e não pela contagem
+./.build/release/tradutor-verify fonte "&lt;video&gt;" ja apple  &gt; /tmp/apple.txt
+./.build/release/tradutor-verify fonte "&lt;video&gt;" ja whisper &gt; /tmp/whisper.txt
+python3 scratchpad/compara.py /tmp/apple.txt /tmp/whisper.txt
+
+# Tradução: as mesmas falas, motores diferentes, contagem conferida primeiro
+tail -n +2 /tmp/apple.txt &gt; /tmp/ja.txt
+./.build/release/tradutor-verify traduzir /tmp/ja.txt ja pt &gt; /tmp/apple-pt.txt
+python3 scratchpad/compara.py /tmp/ja.txt /tmp/apple-pt.txt</code></pre>
+
+<footer>
+  Levantamento gerado em 12 de setembro de 2026 · a apuração não alterou código; as correções vieram depois, cada uma com verificação ·
+  os números de desempenho citados sem nova medição vêm do CLAUDE.md do projeto.
+</footer>
+
+</div>

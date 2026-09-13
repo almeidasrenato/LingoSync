@@ -1,0 +1,22 @@
+[
+ {
+  "name": "progresso-studio-ja-quiet-whisper-off",
+  "ok": 73,
+  "failures": [],
+  "passed": true,
+  "progresso": [
+   "  (pulado: video de 40s, curto demais para relatar progresso)"
+  ],
+  "wall": 12.83
+ },
+ {
+  "name": "progresso-studio-ja-longo-whisper-off",
+  "ok": 73,
+  "failures": [],
+  "passed": true,
+  "progresso": [
+   "  ok    o reconhecimento mostra progresso (chegou a 96%)"
+  ],
+  "wall": 86.02
+ }
+]

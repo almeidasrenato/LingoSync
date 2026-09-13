@@ -1,0 +1,26 @@
+gerar legenda de um video  12 de set. de 2026, 14:09:02
+video: ja-longo.mp4
+idiomas: ja -> pt
+motor: Apple
+gerando...
+  ok    grava o .srt ao lado do video (48s)
+legendas: 108
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  FALHA nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:00,000 → 00:00:01,000
+    Ah
+  00:00:12,349 → 00:00:16,199
+    — bom dia, senhor.
+  00:00:16,199 → 00:00:17,280
+    — Bom dia.
+  00:00:17,280 → 00:00:21,059
+    — Você é novo aqui?
+
+1 falhas

@@ -1,0 +1,25 @@
+Fase 5 — contexto de dialogo
+carregando o tradutor do sistema...
+
+motor: Apple Translation
+
+  Maria is our lead engineer on the payments team.
+  -> Maria é nossa engenheira principal na equipe de pagamentos.   [862 ms]
+
+  She spent the last month rewriting the retry logic.
+  -> Ela passou o último mês reescrevendo a lógica de tentativa de novo.   [494 ms]
+
+  The engineer walked us through every edge case.
+  -> O engenheiro nos explicou todos os casos extremos.   [309 ms]
+
+  Nobody had questions, so she approved it herself.
+  -> Ninguém tinha perguntas, então ela aprovou sozinha.   [253 ms]
+
+media por linha: 479 ms
+
+O que conferir na saida acima:
+  - a terceira linha traduziu "The engineer" no feminino
+    ("a engenheira"), coisa que so o historico permite saber
+  - a quarta manteve o referente de "it"
+
+Se ambos passaram, a fase 5 esta feita.

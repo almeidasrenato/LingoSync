@@ -1,0 +1,31 @@
+from pathlib import Path
+import subprocess,time,json,os
+root=Path('/Users/renatoalmeidasilva/Documentos/Tradutor instantaneo');out=root/'Relatorio Auditoria 2026-09-12/evidencias/revalidacao';tmp=Path('/tmp/auditoria-tradutor-20260912')
+while True:
+ try:
+  if len(json.loads((out/'matrix.json').read_text()))>=48:break
+ except Exception:pass
+ time.sleep(10)
+print('Matriz encerrada; iniciando diagnósticos sem concorrência de modelos.',flush=True)
+def scan(video,lang,engine,model,tag,nohint=False):
+ env=os.environ.copy()
+ if nohint:env['AUDIT_NO_HINT']='1'
+ if engine=='whisper':env['ASR_DEBUG']='1'
+ with (out/(tag+'.log')).open('w') as log:
+  r=subprocess.run([str(tmp/'revalidacao/audit-probe'),str(tmp/(video+'.mp4')),lang,engine,model,str(out/(tag+'.json'))],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=240)
+ print(tag,r.returncode,flush=True)
+for video in ['ja-musica','ja-longo','en-dialogo','en-conversa']:
+ for model in ['sortformer','clustering']:
+  for rep in [1,2]:scan(video,'ja' if video.startswith('ja') else 'en','apple',model,f'scan-{video}-apple-{model}-{rep}')
+for nohint in [False,True]:
+ for rep in range(1,5):scan('ja-musica','ja','whisper','sortformer',f'whisper-musica-{"sem" if nohint else "com"}-glossario-{rep}',nohint)
+for gate in ['dialogo','sobreposicao']:
+ t=time.monotonic()
+ with (out/('gate-'+gate+'.log')).open('w') as log:r=subprocess.run([str(root/'.build/release/tradutor-verify'),gate,'-motorDeTraducao','apple'],stdout=log,stderr=subprocess.STDOUT,timeout=240)
+ print('gate',gate,r.returncode,round(time.monotonic()-t,1),flush=True)
+for video in ['ja-musica','ja-longo','en-dialogo','en-conversa']:
+ wav=tmp/(video+'.wav')
+ subprocess.run(['ffmpeg','-v','error','-i',str(tmp/(video+'.mp4')),'-vn','-ar','16000','-ac','1','-y',str(wav)],check=True)
+ with (out/('vad-'+video+'.log')).open('w') as log:r=subprocess.run([str(root/'.build/release/tradutor-verify'),'vivo',str(wav)],stdout=log,stderr=subprocess.STDOUT,timeout=60)
+ print('vad',video,r.returncode,flush=True)
+(out/'extras-done.txt').write_text('Concluído')

@@ -1,0 +1,917 @@
+[
+  {
+    "video": "ja-musica",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-musica-apple-sortformer-1.json",
+    "cue": {
+      "end": 86.5,
+      "speaker": "Locutor 1",
+      "start": 76.98,
+      "text": "あ えーと怪我してるやつも いて ガ チャ"
+    },
+    "pieces": [
+      {
+        "end": 77.52,
+        "speaker": "Locutor 1",
+        "start": 76.98,
+        "text": "あ"
+      },
+      {
+        "end": 80.52,
+        "speaker": "Locutor 1",
+        "start": 78.12,
+        "text": "えーと怪我してるやつも"
+      },
+      {
+        "end": 81.06,
+        "speaker": "Locutor 1",
+        "start": 80.52,
+        "text": "いて"
+      },
+      {
+        "end": 85.5,
+        "speaker": "Locutor 2",
+        "start": 81.06,
+        "text": "ガ"
+      },
+      {
+        "end": 85.86,
+        "speaker": "Locutor 3",
+        "start": 85.5,
+        "text": "チャ"
+      }
+    ]
+  },
+  {
+    "video": "ja-musica",
+    "model": "clustering",
+    "sourceFile": "scan-ja-musica-apple-clustering-1.json",
+    "cue": {
+      "end": 79.92,
+      "speaker": "Locutor 3",
+      "start": 72,
+      "text": "エ ッグヘッドの中では今誰が生き残っている 。 えーと怪我"
+    },
+    "pieces": [
+      {
+        "end": 73.14,
+        "speaker": "Locutor 3",
+        "start": 72,
+        "text": "エ"
+      },
+      {
+        "end": 76.8,
+        "speaker": "Locutor 3",
+        "start": 73.14,
+        "text": "ッグヘッドの中では今誰が生き残っている"
+      },
+      {
+        "end": 76.98,
+        "speaker": "Locutor 3",
+        "start": 76.8,
+        "text": "。"
+      },
+      {
+        "end": 79.92,
+        "speaker": "Locutor 1",
+        "start": 78.42,
+        "text": "えーと怪我"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 43.26,
+      "speaker": "Locutor 2",
+      "start": 38.09,
+      "text": "20 歳です。 本"
+    },
+    "pieces": [
+      {
+        "end": 39.78,
+        "speaker": "Locutor 2",
+        "start": 38.34,
+        "text": "20"
+      },
+      {
+        "end": 40.44,
+        "speaker": "Locutor 2",
+        "start": 39.78,
+        "text": "歳です。"
+      },
+      {
+        "end": 43.26,
+        "speaker": "Locutor 1",
+        "start": 40.44,
+        "text": "本"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 62.46,
+      "speaker": "Locutor 1",
+      "start": 56.39,
+      "text": "あと私のことはいかでいいよ い か先輩"
+    },
+    "pieces": [
+      {
+        "end": 60.18,
+        "speaker": "Locutor 1",
+        "start": 56.64,
+        "text": "あと私のことはいかでいいよ"
+      },
+      {
+        "end": 61.92,
+        "speaker": "Locutor 2",
+        "start": 60.36,
+        "text": "い"
+      },
+      {
+        "end": 62.46,
+        "speaker": "Locutor 2",
+        "start": 61.92,
+        "text": "か先輩"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 92.34,
+      "speaker": "Locutor 2",
+      "start": 82.98,
+      "text": "は い、ありがとうございます。 いやーよかったー 優しい先輩で"
+    },
+    "pieces": [
+      {
+        "end": 83.22,
+        "speaker": "Locutor 1",
+        "start": 82.98,
+        "text": "。"
+      },
+      {
+        "end": 84.54,
+        "speaker": "Locutor 2",
+        "start": 83.22,
+        "text": "は"
+      },
+      {
+        "end": 86.64,
+        "speaker": "Locutor 2",
+        "start": 84.54,
+        "text": "い、ありがとうございます。"
+      },
+      {
+        "end": 89.88,
+        "speaker": "Locutor 2",
+        "start": 86.64,
+        "text": "いやーよかったー"
+      },
+      {
+        "end": 92.34,
+        "speaker": "Locutor 2",
+        "start": 90.9,
+        "text": "優しい先輩で"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 210.42,
+      "speaker": "Locutor 2",
+      "start": 208.14,
+      "text": "らっしゃいませ そ う 。"
+    },
+    "pieces": [
+      {
+        "end": 208.98,
+        "speaker": "Locutor 2",
+        "start": 208.14,
+        "text": "らっしゃいませ"
+      },
+      {
+        "end": 210,
+        "speaker": "Locutor 1",
+        "start": 208.98,
+        "text": "そ"
+      },
+      {
+        "end": 210.12,
+        "speaker": "Locutor 1",
+        "start": 210,
+        "text": "う"
+      },
+      {
+        "end": 210.42,
+        "speaker": "Locutor 1",
+        "start": 210.12,
+        "text": "。"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 242.1,
+      "speaker": "Locutor 2",
+      "start": 232.38,
+      "text": "れ ん、今日はすいませんでした 。 謝ってんの"
+    },
+    "pieces": [
+      {
+        "end": 234.66,
+        "speaker": "Locutor 2",
+        "start": 232.38,
+        "text": "れ"
+      },
+      {
+        "end": 238.26,
+        "speaker": "Locutor 2",
+        "start": 234.66,
+        "text": "ん、今日はすいませんでした"
+      },
+      {
+        "end": 238.5,
+        "speaker": "Locutor 2",
+        "start": 238.26,
+        "text": "。"
+      },
+      {
+        "end": 242.1,
+        "speaker": "Locutor 1",
+        "start": 240.24,
+        "text": "謝ってんの"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 270.36,
+      "speaker": "Locutor 2",
+      "start": 267.3,
+      "text": "は い、お疲れ様でした。"
+    },
+    "pieces": [
+      {
+        "end": 267.48,
+        "speaker": "Locutor 1",
+        "start": 267.3,
+        "text": "。"
+      },
+      {
+        "end": 268.32,
+        "speaker": "Locutor 2",
+        "start": 267.48,
+        "text": "は"
+      },
+      {
+        "end": 270.36,
+        "speaker": "Locutor 2",
+        "start": 268.32,
+        "text": "い、お疲れ様でした。"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 318.36,
+      "speaker": "Locutor 2",
+      "start": 313.97,
+      "text": "今 20歳で す。 同じです 本"
+    },
+    "pieces": [
+      {
+        "end": 314.4,
+        "speaker": "Locutor 2",
+        "start": 314.22,
+        "text": "今"
+      },
+      {
+        "end": 315.42,
+        "speaker": "Locutor 2",
+        "start": 314.4,
+        "text": "20歳で"
+      },
+      {
+        "end": 315.66,
+        "speaker": "Locutor 2",
+        "start": 315.42,
+        "text": "す。"
+      },
+      {
+        "end": 317.22,
+        "speaker": "Locutor 1",
+        "start": 315.66,
+        "text": "同じです"
+      },
+      {
+        "end": 318.36,
+        "speaker": "Locutor 1",
+        "start": 317.22,
+        "text": "本"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 369.79,
+      "speaker": null,
+      "start": 367.79,
+      "text": "よ かったです"
+    },
+    "pieces": [
+      {
+        "end": 369,
+        "speaker": "Locutor 2",
+        "start": 368.46,
+        "text": "かったです"
+      },
+      {
+        "end": 369.54,
+        "speaker": "Locutor 1",
+        "start": 369.18,
+        "text": "ちょ"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 399.88,
+      "speaker": "Locutor 1",
+      "start": 395.99,
+      "text": "ちょっとどいて邪魔だよ 。 すいません"
+    },
+    "pieces": [
+      {
+        "end": 398.76,
+        "speaker": "Locutor 1",
+        "start": 396.24,
+        "text": "ちょっとどいて邪魔だよ"
+      },
+      {
+        "end": 398.88,
+        "speaker": "Locutor 1",
+        "start": 398.76,
+        "text": "。"
+      },
+      {
+        "end": 399.66,
+        "speaker": "Locutor 3",
+        "start": 398.88,
+        "text": "すいません"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 421.84,
+      "speaker": "Locutor 1",
+      "start": 418.67,
+      "text": "ゆ うじくん、 こ"
+    },
+    "pieces": [
+      {
+        "end": 420.18,
+        "speaker": "Locutor 1",
+        "start": 418.92,
+        "text": "ゆ"
+      },
+      {
+        "end": 420.84,
+        "speaker": "Locutor 1",
+        "start": 420.18,
+        "text": "うじくん、"
+      },
+      {
+        "end": 421.38,
+        "speaker": "Locutor 3",
+        "start": 420.84,
+        "text": "こ"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 439.34,
+      "speaker": "Locutor 1",
+      "start": 435.83,
+      "text": "い ら せ ち"
+    },
+    "pieces": [
+      {
+        "end": 437.34,
+        "speaker": "Locutor 1",
+        "start": 436.08,
+        "text": "い"
+      },
+      {
+        "end": 438.06,
+        "speaker": "Locutor 3",
+        "start": 437.4,
+        "text": "せ"
+      },
+      {
+        "end": 438.96,
+        "speaker": "Locutor 3",
+        "start": 438.06,
+        "text": "ち"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 442.96,
+      "speaker": "Locutor 1",
+      "start": 439.34,
+      "text": "ょっと声小さくないほんと元気に は い"
+    },
+    "pieces": [
+      {
+        "end": 441.96,
+        "speaker": "Locutor 1",
+        "start": 441.42,
+        "text": "は"
+      },
+      {
+        "end": 442.08,
+        "speaker": "Locutor 3",
+        "start": 441.96,
+        "text": "い"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 453.8,
+      "speaker": "Locutor 3",
+      "start": 450.23,
+      "text": "いらっしゃいませ そ うそれでい い。"
+    },
+    "pieces": [
+      {
+        "end": 451.32,
+        "speaker": "Locutor 3",
+        "start": 450.48,
+        "text": "いらっしゃいませ"
+      },
+      {
+        "end": 451.8,
+        "speaker": "Locutor 3",
+        "start": 451.32,
+        "text": "そ"
+      },
+      {
+        "end": 452.58,
+        "speaker": "Locutor 1",
+        "start": 451.8,
+        "text": "うそれでい"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 469.96,
+      "speaker": "Locutor 3",
+      "start": 459.65,
+      "text": "疲 れたいやマジ無理だろ。 やってらんねえや クソ。 お 疲れ様。 あ"
+    },
+    "pieces": [
+      {
+        "end": 461.16,
+        "speaker": "Locutor 3",
+        "start": 459.9,
+        "text": "疲"
+      },
+      {
+        "end": 463.5,
+        "speaker": "Locutor 3",
+        "start": 461.16,
+        "text": "れたいやマジ無理だろ。"
+      },
+      {
+        "end": 464.28,
+        "speaker": "Locutor 3",
+        "start": 463.5,
+        "text": "やってらんねえや"
+      },
+      {
+        "end": 468,
+        "speaker": "Locutor 1",
+        "start": 466.74,
+        "text": "お"
+      },
+      {
+        "end": 468.96,
+        "speaker": "Locutor 1",
+        "start": 468,
+        "text": "疲れ様。"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "sortformer",
+    "sourceFile": "scan-ja-longo-apple-sortformer-1.json",
+    "cue": {
+      "end": 507.22,
+      "speaker": "Locutor 1",
+      "start": 503.04,
+      "text": "う んじゃあちょっとお先に失礼します。 お 疲れ様です。"
+    },
+    "pieces": [
+      {
+        "end": 503.4,
+        "speaker": "Locutor 1",
+        "start": 503.04,
+        "text": "う"
+      },
+      {
+        "end": 505.62,
+        "speaker": "Locutor 1",
+        "start": 503.4,
+        "text": "んじゃあちょっとお先に失礼します。"
+      },
+      {
+        "end": 506.22,
+        "speaker": "Locutor 1",
+        "start": 505.62,
+        "text": "お"
+      },
+      {
+        "end": 506.88,
+        "speaker": "Locutor 3",
+        "start": 506.22,
+        "text": "疲れ様です。"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 43.26,
+      "speaker": "Locutor 1",
+      "start": 38.09,
+      "text": "20 歳 です。 本"
+    },
+    "pieces": [
+      {
+        "end": 39.78,
+        "speaker": "Locutor 1",
+        "start": 38.34,
+        "text": "20"
+      },
+      {
+        "end": 39.96,
+        "speaker": "Locutor 1",
+        "start": 39.78,
+        "text": "歳"
+      },
+      {
+        "end": 43.26,
+        "speaker": "Locutor 2",
+        "start": 40.44,
+        "text": "本"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 47.64,
+      "speaker": "Locutor 1",
+      "start": 43.26,
+      "text": "当ですか上村さんも はい 20歳です。"
+    },
+    "pieces": [
+      {
+        "end": 45.48,
+        "speaker": "Locutor 1",
+        "start": 43.26,
+        "text": "当ですか上村さんも"
+      },
+      {
+        "end": 47.64,
+        "speaker": "Locutor 2",
+        "start": 46.32,
+        "text": "20歳です。"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 176.46,
+      "speaker": "Locutor 2",
+      "start": 171.06,
+      "text": "も うさっき説明したよね。 すみません"
+    },
+    "pieces": [
+      {
+        "end": 172.08,
+        "speaker": "Locutor 2",
+        "start": 171.06,
+        "text": "も"
+      },
+      {
+        "end": 174.84,
+        "speaker": "Locutor 2",
+        "start": 172.08,
+        "text": "うさっき説明したよね。"
+      },
+      {
+        "end": 176.46,
+        "speaker": "Locutor 1",
+        "start": 175.38,
+        "text": "すみません"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 311.02,
+      "speaker": "Locutor 2",
+      "start": 305.15,
+      "text": "はじめまして、上村れいかです。 よろしくお願いします。 よろしくお 願いします。"
+    },
+    "pieces": [
+      {
+        "end": 307.68,
+        "speaker": "Locutor 2",
+        "start": 305.4,
+        "text": "はじめまして、上村れいかです。"
+      },
+      {
+        "end": 308.64,
+        "speaker": "Locutor 2",
+        "start": 307.68,
+        "text": "よろしくお願いします。"
+      },
+      {
+        "end": 310.02,
+        "speaker": "Locutor 2",
+        "start": 308.64,
+        "text": "よろしくお"
+      },
+      {
+        "end": 310.56,
+        "speaker": "Locutor 1",
+        "start": 310.02,
+        "text": "願いします。"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 318.9,
+      "speaker": "Locutor 2",
+      "start": 311.02,
+      "text": "今っておいくつですか ？ 今 20歳で す。 同 じです 本 当ですか"
+    },
+    "pieces": [
+      {
+        "end": 312.9,
+        "speaker": "Locutor 2",
+        "start": 312.72,
+        "text": "？"
+      },
+      {
+        "end": 315.42,
+        "speaker": "Locutor 1",
+        "start": 314.22,
+        "text": "今 20歳で"
+      },
+      {
+        "end": 316.86,
+        "speaker": "Locutor 2",
+        "start": 315.66,
+        "text": "同"
+      },
+      {
+        "end": 317.28,
+        "speaker": "Locutor 2",
+        "start": 316.86,
+        "text": "じです"
+      },
+      {
+        "end": 318.36,
+        "speaker": "Locutor 1",
+        "start": 317.28,
+        "text": "本"
+      },
+      {
+        "end": 318.9,
+        "speaker": "Locutor 1",
+        "start": 318.36,
+        "text": "当ですか"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 409.3,
+      "speaker": "Locutor 1",
+      "start": 403.61,
+      "text": "あのレカさん何 すればいいで すか ？"
+    },
+    "pieces": [
+      {
+        "end": 407.58,
+        "speaker": "Locutor 1",
+        "start": 403.86,
+        "text": "あのレカさん何"
+      },
+      {
+        "end": 408.3,
+        "speaker": "Locutor 1",
+        "start": 407.58,
+        "text": "すればいいで"
+      },
+      {
+        "end": 408.84,
+        "speaker": "Locutor 2",
+        "start": 408.54,
+        "text": "あ"
+      }
+    ]
+  },
+  {
+    "video": "ja-longo",
+    "model": "clustering",
+    "sourceFile": "scan-ja-longo-apple-clustering-1.json",
+    "cue": {
+      "end": 487.84,
+      "speaker": "Locutor 1",
+      "start": 482.76,
+      "text": "のいや、迷 惑かけましたよ ね。"
+    },
+    "pieces": [
+      {
+        "end": 485.88,
+        "speaker": "Locutor 1",
+        "start": 482.76,
+        "text": "のいや、迷"
+      },
+      {
+        "end": 486.84,
+        "speaker": "Locutor 1",
+        "start": 485.88,
+        "text": "惑かけましたよ"
+      },
+      {
+        "end": 487.68,
+        "speaker": "Locutor 2",
+        "start": 487.08,
+        "text": "え"
+      }
+    ]
+  },
+  {
+    "video": "en-dialogo",
+    "model": "sortformer",
+    "sourceFile": "scan-en-dialogo-apple-sortformer-1.json",
+    "cue": {
+      "end": 57.14,
+      "speaker": "Locutor 3",
+      "start": 51.14,
+      "text": "I know the government really wants me for my brain, but I need funding. You're funny."
+    },
+    "pieces": [
+      {
+        "end": 55.92,
+        "speaker": "Locutor 3",
+        "start": 55.26,
+        "text": "You're"
+      },
+      {
+        "end": 56.16,
+        "speaker": "Locutor 1",
+        "start": 55.92,
+        "text": "funny."
+      },
+      {
+        "end": 56.94,
+        "speaker": "Locutor 1",
+        "start": 56.22,
+        "text": "I like that."
+      }
+    ]
+  },
+  {
+    "video": "en-conversa",
+    "model": "sortformer",
+    "sourceFile": "scan-en-conversa-apple-sortformer-1.json",
+    "cue": {
+      "end": 89.86,
+      "speaker": "Locutor 1",
+      "start": 85.68,
+      "text": "I've never even seen his face before. What? But"
+    },
+    "pieces": [
+      {
+        "end": 87.84,
+        "speaker": "Locutor 1",
+        "start": 85.74,
+        "text": "I've never even seen his face before."
+      },
+      {
+        "end": 88.86,
+        "speaker": "Locutor 1",
+        "start": 87.9,
+        "text": "What?"
+      },
+      {
+        "end": 89.7,
+        "speaker": "Locutor 3",
+        "start": 88.98,
+        "text": "But"
+      }
+    ]
+  },
+  {
+    "video": "en-conversa",
+    "model": "clustering",
+    "sourceFile": "scan-en-conversa-apple-clustering-1.json",
+    "cue": {
+      "end": 121.16,
+      "speaker": "Locutor 1",
+      "start": 114.96,
+      "text": "You always seem to face in the same direction, no matter where we go. Do I?"
+    },
+    "pieces": [
+      {
+        "end": 119.16,
+        "speaker": "Locutor 1",
+        "start": 115.08,
+        "text": "You always seem to face in the same direction, no matter where we go."
+      },
+      {
+        "end": 119.94,
+        "speaker": "Locutor 1",
+        "start": 119.22,
+        "text": "Do"
+      },
+      {
+        "end": 120.18,
+        "speaker": "Locutor 3",
+        "start": 119.94,
+        "text": "I?"
+      }
+    ]
+  }
+]

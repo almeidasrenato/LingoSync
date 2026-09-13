@@ -1,0 +1,24 @@
+confirmacao de prefixo estavel
+
+  ok    a primeira passada nao confirma nada
+  ok    confirma o prefixo em que as duas passadas concordam (deu ["the", "engineer", "walked"])
+  ok    o resto fica pendente, na zona vermelha (deu ["us", "through"])
+  ok    a correcao do fim nao reescreve o que ja saiu
+  ok    pontuacao diferente nao trava a confirmacao (deu ["nobody", "had", "questions,"])
+  ok    a pausa confirma o que estava pendente
+  ok    nada fica pendente depois da pausa
+  ok    confirma o prefixo acordado enquanto o passado bate (deu 7 palavras)
+  ok    passada que reescreve o passado nao confirma nada (deu [])
+  ok    o que ja saiu na tela nao e reescrito nem duplicado
+
+acumulador de frases
+  ok    fecha na pontuacao (deu ["the engineer walked us through it."])
+  ok    fala corrida sem pontuacao ainda fecha por tamanho
+  ok    nenhum pedaco cresce sem limite (maior: 80)
+  ok    fecha nas virgulas (deu 2)
+  ok    todo pedaco termina em pontuacao, nunca no meio da oracao
+    | the engineer walked us through every edge case,
+    | nobody had questions, so she approved.
+  ok    virgula logo no comeco nao fecha um fragmento (deu ["Well, the engineer said something long enough."])
+
+prefixo estavel ok

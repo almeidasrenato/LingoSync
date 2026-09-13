@@ -1,0 +1,26 @@
+gerar legenda de um video  12 de set. de 2026, 13:58:25
+video: en-dialogo.mp4
+idiomas: en -> pt
+motor: Parakeet TDT v3
+gerando...
+  ok    grava o .srt ao lado do video (13s)
+legendas: 43
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  FALHA nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:00,000 → 00:00:01,839
+    — Entre, Egghead!
+  00:00:01,839 → 00:00:05,480
+    — O que diabos está acontecendo por lá? o que
+  00:00:05,480 → 00:00:06,480
+    Isso foi transmitido?
+  00:00:06,480 → 00:00:08,400
+    Eu preciso de um relatório de status imediatamente.
+
+1 falhas

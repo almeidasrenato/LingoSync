@@ -1,0 +1,27 @@
+gerar legenda de um video  12 de set. de 2026, 18:56:13
+video: ja-musica.mp4
+idiomas: ja -> pt
+motor: Apple
+tradutor: Apple
+gerando...
+  ok    grava o .srt ao lado do video (8s)
+legendas: 17
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  FALHA nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:01,909 → 00:00:04,320
+    — Se você quiser
+  00:00:06,290 → 00:00:12,720
+    meu nome é monkey dealfish, rei dos piratas. sou um homem que se tornará rei.
+  00:00:12,720 → 00:00:16,079
+    — O que você está dizendo, luffy?
+  00:00:16,079 → 00:00:19,579
+    O banco de vistos de catterbaugh nos deu. se você quer salvar
+
+1 falhas

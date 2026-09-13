@@ -1,0 +1,101 @@
+teste da janela de legendas  12 de set. de 2026, 14:05:24
+locutores por: Sortformer, com cor
+reconhecimento: whisper
+janela aberta
+superficie de video renderizada sem abortar
+  ok    o player carrega a midia (161.2s)
+video: en-conversa.mp4
+  ok    o player e criado ao abrir o video
+duracao: 161.2s
+  ok    a duracao do video e lida
+  ok    da para gerar depois de escolher o video
+gerando...
+  [  0.5s] Carregando o reconhecedor carregando Whisper turbo
+  [  1.5s] Identificando quem fala 
+  [  2.0s] Reconhecendo a fala 0 de 161 s de áudio
+  [ 11.8s] Traduzindo (aguardando) 1–39 de 39
+geracao em 31.3s
+legendas: 50
+  ok    a geracao produz legendas
+  ok    a interface anuncia a espera pela resposta do tradutor
+locutores: Locutor 1, Locutor 2, Locutor 3, Locutor 4
+  ok    com locutores ligado, as legendas ganham quem fala (24 de 50)
+  ok    o reconhecimento mostra progresso (chegou a 98%)
+  ok    gerar nao grava .srt sozinho
+  ok    nenhum .srt aparece ao lado do video sem exportar
+no arquivo: 16 travessoes, 24 legendas coloridas
+  ok    a troca de locutor marca travessao no arquivo
+  ok    o .srt exportado leva a cor de cada locutor
+  ok    cada cor fecha a sua tag
+  ok    o .srt colorido volta a ser lido com as mesmas legendas
+layout com locutores em /tmp/studio-locutores.png
+  ok    clicar na legenda 5 leva o video a 15.77s (foi para 15.79s)
+  ok    a legenda clicada fica marcada como atual
+  ok    avancar percorre as legendas em sequencia ([0, 1, 2, 3, 4, 5])
+  ok    sempre ha uma legenda ativa depois de avancar
+  ok    voltar do meio de uma fala vai para o comeco dela
+  (pulado: nao ha silencio entre as duas primeiras)
+  ok    carregar .srt traz as mesmas legendas
+  ok    marca que a legenda veio de arquivo
+  ok    navegacao funciona com legenda carregada
+  ok    regerar limpa as legendas antigas
+  ok    regerar limpa a legenda marcada
+  ok    regerar entra em trabalho
+  ok    cancelar deixa o estado em cancelado
+  ok    cancelar encerra o trabalho
+  ok    da para gerar de novo depois de cancelar
+  ok    o volume chega ao player
+  ok    mudo liga
+  ok    mexer no volume tira do mudo
+  ok    a legenda comeca em 60%
+  ok    Parakeet escolhido roda no portugues, que ele cobre
+  ok    Parakeet com idioma que ele nao cobre cai no Whisper
+  ok    Whisper escolhido vale para japones
+  ok    o seletor nao oferece japones no Parakeet
+  ok    o Whisper nao limita idioma
+  ok    Apple escolhida vale para qualquer idioma
+Apple: instalados ["pt", "en", "es", "fr", "de", "ja"], instalaveis ["it", "zh", "ko"]
+  ok    a Apple oferece japones
+  ok    a Apple nao oferece arabe
+  ok    instalado e sempre um dos oferecidos
+  ok    aumentar a legenda sobe 10%
+  ok    diminuir a legenda desce 10%
+  ok    a legenda tem tamanho minimo
+  ok    a legenda tem tamanho maximo
+  ok    arrastar a barra move o tempo na hora
+  ok    soltar a barra cai exatamente na legenda
+  ok    o video comeca visivel
+  ok    o video pode ser ocultado
+  ok    o teste roda com o video pausado
+  ok    clicar numa legenda move o video mesmo pausado
+  ok    a legenda clicada vira a ativa mesmo pausado
+  ok    o quadro exibido acompanha (21.17s vs 21.15s)
+  ok    a coluna de legendas redimensiona
+  ok    comeca pausado
+  ok    o clique no video inicia a reproducao
+  ok    o clique de novo pausa
+  ok    exportar registra onde a legenda foi gravada
+  ok    exportar grava o arquivo no destino escolhido
+  ok    o arquivo exportado tem formato SubRip
+  ok    o exportado tem uma entrada por legenda
+  ok    o nome sugerido traz o idioma (en-conversa.pt.srt)
+layout gravado em /tmp/studio.png (1080x580)
+
+primeiras legendas:
+  00:00:00,000 → 00:00:02,740
+    
+    — Mesmo assim, o grande homem ainda está esperando as coisas acabarem.
+  00:00:03,209 → 00:00:05,724
+    
+    Claro que estou me referindo ao meu camarada,
+  00:00:05,724 → 00:00:08,239
+    
+    o líder de todos os revolucionários do mundo.
+  00:00:12,689 → 00:00:15,398
+    
+    — Você pode conhecê-lo como Dragon!
+  00:00:15,769 → 00:00:17,798
+    
+    — Ah, você está falando sobre meu pai.
+
+PASSOU

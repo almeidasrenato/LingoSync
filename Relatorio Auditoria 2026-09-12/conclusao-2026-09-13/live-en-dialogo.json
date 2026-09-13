@@ -1,0 +1,627 @@
+[
+  {
+    "final" : false,
+    "text" : "Come.",
+    "time" : 0.59999999999999998
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Heck.",
+    "time" : 1.2
+  },
+  {
+    "final" : false,
+    "text" : "Come in, egghead.",
+    "time" : 1.8
+  },
+  {
+    "final" : false,
+    "text" : "Come in, egghead. What the heck?",
+    "time" : 2.3999999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going?",
+    "time" : 3
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there?",
+    "time" : 3.6000000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there?",
+    "time" : 4.2000000000000002
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there?",
+    "time" : 4.7999999999999998
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that?",
+    "time" : 5.4000000000000004
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast?",
+    "time" : 6
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast?",
+    "time" : 6.5999999999999996
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status.",
+    "time" : 7.2000000000000002
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report...",
+    "time" : 7.7999999999999998
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately.",
+    "time" : 8.4000000000000004
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in...",
+    "time" : 9
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, God damn...",
+    "time" : 9.5999999999999996
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it!",
+    "time" : 10.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again?",
+    "time" : 10.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again? Oh, shit.",
+    "time" : 11.4
+  },
+  {
+    "final" : true,
+    "text" : "Come in, Egghead. What the hell is going on over there? What was that broadcast? I need a status report immediately. Come in, goddamn it! Again? Oh, shut it up.",
+    "time" : 12
+  },
+  {
+    "final" : false,
+    "text" : "already.",
+    "time" : 12.6
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened?",
+    "time" : 13.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else?",
+    "time" : 13.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else?",
+    "time" : 14.4
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive.",
+    "time" : 15
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but not...",
+    "time" : 15.6
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out.",
+    "time" : 16.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last...",
+    "time" : 16.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of...",
+    "time" : 17.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive, but knocked out. Every last one of them.",
+    "time" : 18
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them.",
+    "time" : 18.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them.",
+    "time" : 19.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Watch these kids.",
+    "time" : 19.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Watch these kids wake up.",
+    "time" : 20.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Once these kids wake up, I'll have...",
+    "time" : 21
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Once these kids wake up, I'll have them give you...",
+    "time" : 21.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report.",
+    "time" : 22.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report.",
+    "time" : 22.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report. You'd better.",
+    "time" : 23.399999999999999
+  },
+  {
+    "final" : true,
+    "text" : "already. What happened to everyone else? Alive but knocked out. Every last one of them. Once these kids wake up, I'll have them give you a report.",
+    "time" : 24
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing.",
+    "time" : 24
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a slop.",
+    "time" : 24.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job.",
+    "time" : 25.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job.",
+    "time" : 25.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Say, Saturnet.",
+    "time" : 26.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be...",
+    "time" : 27
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe.",
+    "time" : 27.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened?",
+    "time" : 28.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant?",
+    "time" : 28.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant?",
+    "time" : 29.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the...",
+    "time" : 30
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives?",
+    "time" : 30.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives?",
+    "time" : 31.199999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives?",
+    "time" : 31.800000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives?",
+    "time" : 32.399999999999999
+  },
+  {
+    "final" : true,
+    "text" : "Better not be doing a sloppy job. Saint Saturn had better be safe. What happened to the power plant? And where are the fugitives?",
+    "time" : 33
+  },
+  {
+    "final" : false,
+    "text" : "Let me ask.",
+    "time" : 33.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Let me ask you something.",
+    "time" : 34.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "Let me ask you something.",
+    "time" : 34.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "Let me ask you something. Sakazu...",
+    "time" : 35.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Let me ask you something. Sukazuki.",
+    "time" : 36
+  },
+  {
+    "final" : true,
+    "text" : "Let me ask you something. Sukazuki.",
+    "time" : 36.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "",
+    "time" : 37.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "",
+    "time" : 37.799999999999997
+  },
+  {
+    "final" : true,
+    "text" : "",
+    "time" : 38.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Have you?",
+    "time" : 40.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been away?",
+    "time" : 40.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to...",
+    "time" : 41.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your...",
+    "time" : 42
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend?",
+    "time" : 42.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend?",
+    "time" : 43.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one...",
+    "time" : 43.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a hit.",
+    "time" : 44.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got.",
+    "time" : 45
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there.",
+    "time" : 45.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there.",
+    "time" : 46.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow.",
+    "time" : 46.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you.",
+    "time" : 47.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you.",
+    "time" : 48
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you. Name's...",
+    "time" : 48.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you. Name's Borcelino.",
+    "time" : 49.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you. Name's Borcelino.",
+    "time" : 49.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you. Name's Borcelino. How much?",
+    "time" : 50.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you. Name's Borcelino. How much can you offer?",
+    "time" : 51
+  },
+  {
+    "final" : true,
+    "text" : "Have you ever been ordered to kill your best friend? That's one hell of a head you've got there. Anyhow, nice to meet you. Name's Borcelino. How much can you offer?",
+    "time" : 51.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "",
+    "time" : 51.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "I know, Sam.",
+    "time" : 52.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "I know it's a government...",
+    "time" : 52.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "I know it's the government really wants...",
+    "time" : 53.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my bread.",
+    "time" : 54
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain.",
+    "time" : 54.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need...",
+    "time" : 55.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding.",
+    "time" : 55.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. So funny.",
+    "time" : 56.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like...",
+    "time" : 57
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that.",
+    "time" : 57.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You really...",
+    "time" : 58.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize that?",
+    "time" : 58.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral?",
+    "time" : 59.399999999999999
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral now, do you?",
+    "time" : 60
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral now, don't you?",
+    "time" : 60.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral now, don't you? Watch your...",
+    "time" : 61.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral now, don't you? Watch your posture, Uncle.",
+    "time" : 61.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral now, don't you? Watch your posture, Uncle.",
+    "time" : 62.399999999999999
+  },
+  {
+    "final" : true,
+    "text" : "I know the government really wants me for my brain, but I need funding. You're funny. I like that. You realize I'm an admiral now, don't you? Watch your posture, Uncle. Don't want to drop...",
+    "time" : 63
+  },
+  {
+    "final" : false,
+    "text" : "Those on your phone.",
+    "time" : 63.600000000000001
+  },
+  {
+    "final" : false,
+    "text" : "Those on your foot?",
+    "time" : 64.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "Those on your foot.",
+    "time" : 64.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your...",
+    "time" : 65.400000000000006
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for...",
+    "time" : 66
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island?",
+    "time" : 66.599999999999994
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes.",
+    "time" : 67.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm good.",
+    "time" : 67.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it.",
+    "time" : 68.400000000000006
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it egghead.",
+    "time" : 69
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead.",
+    "time" : 69.599999999999994
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, boy.",
+    "time" : 70.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino.",
+    "time" : 70.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino, I'm counting.",
+    "time" : 71.400000000000006
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino. I'm counting on you.",
+    "time" : 72
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino. I'm counting on you.",
+    "time" : 72.599999999999994
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino. I'm counting on you.",
+    "time" : 73.200000000000003
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino. I'm counting on you.",
+    "time" : 73.799999999999997
+  },
+  {
+    "final" : false,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino. I'm counting on you.",
+    "time" : 74.400000000000006
+  },
+  {
+    "final" : true,
+    "text" : "on your foot. So this is your plan for the island? Yes, I'm going to name it Egghead. Keep it up, Mausolino. I'm counting on you.",
+    "time" : 75
+  }
+]

@@ -1,0 +1,19 @@
+lista de termos
+
+  ok    substitui o termo no original
+  ok    o termo original sai do texto
+  ok    o termo mais longo ganha do mais curto (deu "província de Yamanashiで採れた野菜")
+  ok    nao sobra caractere solto do termo longo
+  ok    termo desligado nao e aplicado
+  ok    texto sem termo nenhum fica intacto
+  ok    conta so os termos ligados
+
+persistencia
+  ok    a lista sobrevive a reabertura (deu 5)
+  ok    os termos voltam funcionando
+
+lote de traducao
+  ok    nao se reenvia legenda como contexto
+  ok    o corte antes de traduzir segue a frase, nao o tamanho da legenda (150)
+
+lista de termos ok

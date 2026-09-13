@@ -1,0 +1,562 @@
+1
+00:00:13,509 --> 00:00:15,039
+<font color="#FFFFFF">— Bom dia.</font>
+
+2
+00:00:15,801 --> 00:00:17,332
+<font color="#FFFF54">— Bom dia.</font>
+
+3
+00:00:18,202 --> 00:00:21,521
+<font color="#FFFFFF">— Você é novo aqui? sim.</font>
+
+4
+00:00:21,961 --> 00:00:24,132
+<font color="#FFFF54">— Eu vou trabalhar a partir de hoje.</font>
+
+5
+00:00:24,762 --> 00:00:26,132
+<font color="#FFFF54">Sou tomoyuki satou.</font>
+
+6
+00:00:27,481 --> 00:00:32,371
+<font color="#FFFFFF">— Bom dia, meu nome é reika kamimura.
+prazer em conhecê-lo.</font>
+
+7
+00:00:32,921 --> 00:00:34,612
+<font color="#FFFF54">— Por favor, me diga o que você precisa.</font>
+
+8
+00:00:36,921 --> 00:00:42,371
+<font color="#FFFFFF">— Quantos anos você tem? vinte anos. sim.</font>
+
+9
+00:00:42,740 --> 00:00:45,390
+<font color="#FFFF54">— Você está falando sério? o senhor
+kamimura também?</font>
+
+10
+00:00:45,700 --> 00:00:47,670
+<font color="#FFFFFF">— Sim, eu tenho vinte anos.</font>
+
+11
+00:00:50,340 --> 00:00:52,270
+<font color="#FFFFFF">Posso falar com você de forma casual?</font>
+
+12
+00:00:52,820 --> 00:00:54,829
+<font color="#FFFF54">— Sim, claro.</font>
+
+13
+00:00:56,420 --> 00:01:02,509
+<font color="#FFFFFF">— E você pode me chamar de leika. senhor
+leika.</font>
+
+14
+00:01:03,380 --> 00:01:05,150
+<font color="#FFFFFF">Eu não preciso de um senhor.</font>
+
+15
+00:01:06,420 --> 00:01:09,981
+<font color="#FFFF54">— Então, rae-ka-san. sim.</font>
+
+16
+00:01:10,581 --> 00:01:12,031
+<font color="#FFFFFF">— Como devo chamá-lo?</font>
+
+17
+00:01:13,382 --> 00:01:15,712
+<font color="#FFFF54">— Então, vamos com yuuji.</font>
+
+18
+00:01:16,262 --> 00:01:18,432
+<font color="#FFFFFF">— Yoshinobu-kun. eu entendo.</font>
+
+19
+00:01:19,542 --> 00:01:22,912
+<font color="#FFFFFF">Se você tiver alguma dúvida,
+sinta-se à vontade para perguntar.</font>
+
+20
+00:01:24,021 --> 00:01:26,591
+<font color="#FFFF54">— Sim, obrigado.</font>
+
+21
+00:01:27,621 --> 00:01:30,031
+<font color="#FFFF54">Não, estou feliz por isso.</font>
+
+22
+00:01:30,968 --> 00:01:32,337
+<font color="#FFFF54">Ele é um senhor mais velho gentil.</font>
+
+23
+00:01:34,408 --> 00:01:35,408
+<font color="#FFFFFF">— Você está nervoso?</font>
+
+24
+00:01:37,207 --> 00:01:38,207
+<font color="#FFFFFF">Você está certo.</font>
+
+25
+00:01:39,927 --> 00:01:40,927
+<font color="#FFFFFF">Mas</font>
+
+26
+00:01:41,367 --> 00:01:45,057
+<font color="#FFFFFF">Não se preocupe,
+é um local de trabalho divertido.</font>
+
+27
+00:01:46,328 --> 00:01:47,328
+<font color="#FFFF54">— Foi bom.</font>
+
+28
+00:01:49,207 --> 00:01:50,418
+<font color="#FFFFFF">— Vamos nos esforçar.</font>
+
+29
+00:01:54,728 --> 00:01:57,567
+<font color="#FFFFFF">Você vai lá primeiro. sim.</font>
+
+30
+00:02:04,655 --> 00:02:06,265
+<font color="#FFFFFF">Sim, vou buscá-lo.</font>
+
+31
+00:02:11,134 --> 00:02:13,064
+<font color="#FFFFFF">Como você diz isso? você está
+atrapalhando.</font>
+
+32
+00:02:14,414 --> 00:02:21,414
+<font color="#FFFF54">— Desculpe, senhor raika,</font>
+
+33
+00:02:23,295 --> 00:02:24,504
+<font color="#FFFF54">o que devo fazer</font>
+
+34
+00:02:25,295 --> 00:02:29,680
+<font color="#FFFFFF">— desculpe, estou ocupado agora.</font>
+
+35
+00:02:30,310 --> 00:02:31,310
+<font color="#FFFFFF">Espere um minuto.</font>
+
+36
+00:02:42,710 --> 00:02:48,319
+<font color="#FFFFFF">Yuzuki-kun,
+pegue esta mesa número oito. Desculpe.</font>
+
+37
+00:02:48,949 --> 00:02:50,879
+<font color="#FFFF54">— Onde está a mesa oito?</font>
+
+38
+00:02:51,509 --> 00:02:59,893
+<font color="#FFFFFF">— Não. eu te expliquei isso antes.
+desculpe.</font>
+
+39
+00:02:59,893 --> 00:03:02,693
+<font color="#FFFFFF">Não precisamos disso. eu vou trazer isso
+comigo.</font>
+
+40
+00:03:09,883 --> 00:03:11,492
+<font color="#FFFFFF">Não está aqui.</font>
+
+41
+00:03:11,802 --> 00:03:12,932
+<font color="#FFFF54">— Não está aqui.</font>
+
+42
+00:03:13,705 --> 00:03:18,836
+<font color="#FFFFFF">— Você está um pouco baixo. fique mais
+forte</font>
+
+43
+00:03:21,146 --> 00:03:22,436
+<font color="#FFFF54">— bem-vindo.</font>
+
+44
+00:03:24,312 --> 00:03:26,322
+<font color="#FFFFFF">— Você precisa gritar mais alto da sua
+barriga</font>
+
+45
+00:03:27,752 --> 00:03:30,352
+<font color="#FFFF54">— você está aqui. sim.</font>
+
+46
+00:03:34,822 --> 00:03:43,711
+<font color="#FFFF54">Ah, estou cansado. é o mesmo. obrigado
+por seu trabalho duro.</font>
+
+47
+00:03:43,781 --> 00:03:44,912
+<font color="#FFFF54">Oh, lega.</font>
+
+48
+00:03:45,948 --> 00:03:47,317
+<font color="#FFFF54">Obrigado por seu trabalho árduo.</font>
+
+49
+00:03:48,268 --> 00:03:49,957
+<font color="#FFFFFF">— Como foi o seu primeiro dia?</font>
+
+50
+00:03:50,668 --> 00:03:52,198
+<font color="#FFFFFF">Deve ter sido difícil.</font>
+
+51
+00:03:54,268 --> 00:03:55,268
+<font color="#FFFF54">— Lega-san.</font>
+
+52
+00:03:56,187 --> 00:03:58,277
+<font color="#FFFF54">Desculpe por hoje.</font>
+
+53
+00:04:00,427 --> 00:04:02,277
+<font color="#FFFFFF">— O que você está fazendo?</font>
+
+54
+00:04:04,348 --> 00:04:06,758
+<font color="#FFFF54">— Você me incomodou, não é?</font>
+
+55
+00:04:08,427 --> 00:04:11,877
+<font color="#FFFFFF">— Não é verdade. você estava fazendo um
+ótimo trabalho.</font>
+
+56
+00:04:12,704 --> 00:04:16,314
+<font color="#FFFFFF">Foi muito útil ter Yuuji por perto.</font>
+
+57
+00:04:17,824 --> 00:04:18,824
+O que você quer dizer?
+
+58
+00:04:20,463 --> 00:04:28,744
+<font color="#FFFFFF">— Vamos tentar novamente amanhã. Então eu
+vou embora. Sim.</font>
+
+59
+00:04:29,055 --> 00:04:34,215
+<font color="#FFFF54">— Muito obrigado por seu trabalho árduo.
+obrigado, gerente.</font>
+
+60
+00:04:34,495 --> 00:04:36,425
+<font color="#FFFFFF">— Desculpe antecipadamente.</font>
+
+61
+00:04:39,615 --> 00:04:40,615
+<font color="#FFFF54">— Gerente da loja,</font>
+
+62
+00:04:41,615 --> 00:04:44,425
+<font color="#FFFF54">você tem duas rieka?</font>
+
+63
+00:04:55,649 --> 00:04:57,418
+<font color="#FFFFFF">— Vamos lá imediatamente.</font>
+
+64
+00:04:57,418 --> 00:04:58,418
+<font color="#FFFF54">— Bom dia.</font>
+
+65
+00:04:58,449 --> 00:04:59,819
+<font color="#FFFFFF">— Você é novo aqui?</font>
+
+66
+00:05:00,369 --> 00:05:04,536
+<font color="#FFFF54">— Sim, eu vou trabalhar hoje. sou
+yoshinori satou.</font>
+
+67
+00:05:05,326 --> 00:05:08,776
+<font color="#FFFFFF">— É um prazer conhecê-lo. por favor,
+conte comigo.</font>
+
+68
+00:05:09,326 --> 00:05:10,696
+<font color="#FFFF54">— Por favor, me diga o que você precisa.</font>
+
+69
+00:05:10,696 --> 00:05:12,776
+<font color="#FFFFFF">— Eh, quantos anos você tem agora?</font>
+
+70
+00:05:13,966 --> 00:05:15,415
+<font color="#FFFF54">— Agora tenho vinte anos.</font>
+
+71
+00:05:15,485 --> 00:05:17,175
+<font color="#FFFFFF">— O que você quer dizer? é o mesmo.</font>
+
+72
+00:05:17,855 --> 00:05:20,264
+<font color="#FFFF54">— Você está falando sério? o senhor
+kamimura também?</font>
+
+73
+00:05:20,495 --> 00:05:23,574
+<font color="#FFFFFF">— Sim, é um pássaro.</font>
+
+74
+00:05:23,694 --> 00:05:25,064
+<font color="#FFFFFF">Você pode usar um tom amigável?</font>
+
+75
+00:05:25,375 --> 00:05:27,824
+<font color="#FFFF54">— Sim, claro. parabéns.</font>
+
+76
+00:05:28,495 --> 00:05:33,625
+<font color="#FFFFFF">— Ah, e você pode me chamar de leka.
+senhor leka?</font>
+
+77
+00:05:33,694 --> 00:05:36,345
+<font color="#FFFFFF">Eu não preciso de um senhor.</font>
+
+78
+00:05:36,769 --> 00:05:38,858
+<font color="#FFFF54">— Então vamos lá, rekka.</font>
+
+79
+00:05:40,528 --> 00:05:42,459
+<font color="#FFFFFF">— E, como você chama isso?</font>
+
+80
+00:05:43,569 --> 00:05:45,499
+<font color="#FFFF54">— Então vamos com yuzuki.</font>
+
+81
+00:05:45,889 --> 00:05:48,139
+<font color="#FFFFFF">— Yuzuki-kun. estou feliz por você.</font>
+
+82
+00:05:48,848 --> 00:05:51,098
+<font color="#FFFFFF">Se você tiver alguma dúvida,
+não hesite em perguntar.</font>
+
+83
+00:05:51,728 --> 00:05:52,778
+<font color="#FFFF54">— Obrigado por isso.</font>
+
+84
+00:05:53,808 --> 00:05:56,699
+<font color="#FFFF54">Está tudo bem. você é um bom senhor.</font>
+
+85
+00:05:58,689 --> 00:06:02,125
+<font color="#FFFFFF">— Ena, você está nervoso com isso, não é?</font>
+
+86
+00:06:02,964 --> 00:06:07,134
+<font color="#FFFFFF">Mas não se preocupe com nada,
+é um trabalho muito divertido.</font>
+
+87
+00:06:08,165 --> 00:06:09,165
+<font color="#FFFF54">— Foi bom.</font>
+
+88
+00:06:09,204 --> 00:06:11,855
+<font color="#FFFFFF">— Parece que você está ocupado hoje,
+então vamos fazer nosso melhor.</font>
+
+89
+00:06:12,884 --> 00:06:14,095
+Você vai tentar um pouco, não é?
+
+90
+00:06:14,165 --> 00:06:17,884
+<font color="#FFFFFF">— Não, tudo bem, tudo bem,
+realmente. venha comigo. sim.</font>
+
+91
+00:06:17,884 --> 00:06:21,324
+<font color="#FFFFFF">Bem, vamos esperar um pouco. sim,
+você está antecipando isso. mais tarde.</font>
+
+92
+00:06:21,365 --> 00:06:25,375
+<font color="#54FFFF">— Desculpe, mas qual é o triângulo? não
+tenho certeza.</font>
+
+93
+00:06:30,752 --> 00:06:32,122
+<font color="#FFFFFF">— Sim, vou perguntar.</font>
+
+94
+00:06:37,231 --> 00:06:39,752
+<font color="#FFFFFF">Por favor, deixe-me em paz,
+estou atrapalhando. desculpe.</font>
+
+95
+00:06:41,872 --> 00:06:42,872
+<font color="#FFFFFF">Você está realmente atrapalhando.</font>
+
+96
+00:06:44,672 --> 00:06:46,288
+<font color="#54FF54">— Ei, rekka,</font>
+
+97
+00:06:47,238 --> 00:06:48,288
+<font color="#54FF54">O que devo fazer?</font>
+
+98
+00:06:48,519 --> 00:06:50,848
+<font color="#FFFFFF">— Desculpe, estou ocupado agora,
+espere um minuto.</font>
+
+99
+00:06:59,798 --> 00:07:02,608
+<font color="#FFFFFF">Yujikun, sim. este é o meu quarto.</font>
+
+100
+00:07:02,838 --> 00:07:05,569
+<font color="#54FF54">— Oh, como foi a mesa oito?</font>
+
+101
+00:07:05,569 --> 00:07:06,928
+<font color="#FFFFFF">— Mas você me disse isso primeiro.</font>
+
+102
+00:07:07,675 --> 00:07:09,795
+<font color="#FFFFFF">Você entende, não é?</font>
+
+103
+00:07:11,115 --> 00:07:12,245
+<font color="#FFFFFF">Bem,
+você pode simplesmente trazê-lo consigo.</font>
+
+104
+00:07:15,675 --> 00:07:16,966
+<font color="#FFFFFF">Bem-vindo.</font>
+
+105
+00:07:17,115 --> 00:07:18,406
+<font color="#54FF54">— Bem-vindo.</font>
+
+106
+00:07:18,555 --> 00:07:22,516
+<font color="#FFFFFF">— Você não está falando baixinho? você
+está realmente bem. sim.</font>
+
+107
+00:07:23,915 --> 00:07:25,045
+<font color="#54FF54">— Bem-vindo.</font>
+
+108
+00:07:25,677 --> 00:07:28,838
+<font color="#FFFFFF">— Você precisa gritar mais alto. sim.</font>
+
+109
+00:07:30,158 --> 00:07:31,367
+<font color="#54FF54">— Bem-vindo.</font>
+
+110
+00:07:31,367 --> 00:07:32,408
+<font color="#FFFFFF">— Sim, então.</font>
+
+111
+00:07:34,957 --> 00:07:35,957
+Sim.
+
+112
+00:07:39,975 --> 00:07:44,542
+Não, estou cansado. não, maxim,
+você não pode
+
+113
+00:07:44,542 --> 00:07:48,906
+fazer isso. obrigado por seu trabalho
+duro.
+
+114
+00:07:49,096 --> 00:07:51,346
+<font color="#54FF54">— Senhor. obrigado por seu trabalho árduo.</font>
+
+115
+00:07:51,816 --> 00:07:54,706
+<font color="#FFFFFF">— Você está cansado. Como foi hoje? Deve
+ter sido difícil.</font>
+
+116
+00:07:56,776 --> 00:07:57,776
+<font color="#54FF54">— Leka-san.</font>
+
+117
+00:07:58,615 --> 00:07:59,906
+<font color="#54FF54">Desculpe por hoje.</font>
+
+118
+00:08:01,495 --> 00:08:04,815
+<font color="#FFFFFF">— O que você está preocupado? não.</font>
+
+119
+00:08:05,411 --> 00:08:06,862
+<font color="#54FF54">— Você me deu uma surpresa, não é?</font>
+
+120
+00:08:07,331 --> 00:08:10,420
+Por que? não é verdade. você estava
+trabalhando muito
+
+121
+00:08:10,420 --> 00:08:13,742
+duro. você realmente me ajudou,
+haru yoshi-kun. obrigado.
+
+122
+00:08:16,052 --> 00:08:17,052
+Ei, você.
+
+123
+00:08:17,052 --> 00:08:18,052
+<font color="#FFFFFF">— Sim, sim.</font>
+
+124
+00:08:18,292 --> 00:08:21,581
+<font color="#FFFFFF">Vamos continuar trabalhando duro amanhã.
+Parece que está indo muito bem.</font>
+
+125
+00:08:22,132 --> 00:08:24,132
+<font color="#54FF54">— Você quer continuar assim? sim.</font>
+
+126
+00:08:24,132 --> 00:08:25,661
+<font color="#FFFFFF">— Então, desculpe-me antecipadamente.</font>
+
+127
+00:08:25,891 --> 00:08:27,891
+<font color="#54FF54">— Muito obrigado por seu trabalho árduo.
+tchau.</font>
+
+128
+00:08:27,891 --> 00:08:30,701
+<font color="#FFFFFF">— Obrigado pelo seu trabalho árduo,
+gerente. desculpe a interrupção.</font>
+
+129
+00:08:32,799 --> 00:08:33,799
+<font color="#54FF54">— Senhor gerente.</font>
+
+130
+00:08:34,720 --> 00:08:36,649
+<font color="#54FF54">Você tem dois lekas?</font>
+
+131
+00:08:50,149 --> 00:08:55,788
+Broto de feijãoomizunanatto província de
+Yamanashi
+

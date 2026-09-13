@@ -1,0 +1,26 @@
+gerar legenda de um video  12 de set. de 2026, 14:10:59
+video: ja-longo.mp4
+idiomas: ja -> pt
+motor: Whisper turbo
+gerando...
+  ok    grava o .srt ao lado do video (59s)
+legendas: 61
+  ok    o arquivo tem legendas
+  ok    formato SubRip
+  ok    nenhuma legenda termina antes de comecar
+  ok    legendas em ordem e sem sobreposicao
+  FALHA nenhuma legenda passa de duas linhas
+  ok    nenhuma legenda pisca
+  ok    sem alucinacao colada em fala real
+
+primeiras legendas:
+  00:00:17,449 → 00:00:21,102
+    Você é novo aqui? sim. eu vou trabalhar hoje. sou yujin satou. prazer em conhecê-lo.
+  00:00:21,102 → 00:00:24,449
+    Sou rei uemura. por favor, seja gentil comigo. por favor, seja gentil comigo.
+  00:00:34,929 → 00:00:37,185
+    Quantos anos você tem? 20 anos. E? É o mesmo! É verdade? O
+  00:00:37,185 → 00:00:39,557
+    mesmo para Uemura-san? Sim! Tenho 20 anos! E? Posso falar com
+
+1 falhas

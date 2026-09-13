@@ -1,0 +1,34 @@
+Motores de reconhecimento
+
+  ok    o limiar do primeiro token nao voltou ao padrao do WhisperKit
+  ok    o Parakeet oferece portugues
+  ok    o Parakeet nao oferece japones
+  ok    o Whisper nao limita idioma
+  ok    o seletor lista todas as familias disponiveis
+  ok    o reconhecimento da Apple nao mascara palavra nenhuma
+  ok    o Qwen 0.6B nao oferece ingles
+  ok    o Qwen 1.7B oferece ingles, que ele pontua
+  ok    o Qwen 0.6B continua oferecendo japones
+  ok    Qwen3-ASR 0.6B nao entra no ao vivo
+  ok    Qwen3-ASR 0.6B cai num motor que serve ao vivo
+  ok    Qwen3-ASR 0.6B oferece japones
+  ok    Qwen3-ASR 0.6B nao oferece tailandes
+  ok    Qwen3-ASR 1.7B nao entra no ao vivo
+  ok    Qwen3-ASR 1.7B cai num motor que serve ao vivo
+  ok    Qwen3-ASR 1.7B oferece japones
+  ok    Qwen3-ASR 1.7B nao oferece tailandes
+  ok    Apple ao vivo continua sendo ele mesmo
+  ok    Parakeet TDT v3 ao vivo continua sendo ele mesmo
+  ok    Whisper turbo ao vivo continua sendo ele mesmo
+  ok    so os termos ligados vao para o reconhecedor
+  ok    o motor guarda a lista que recebeu
+  ok    motor que nao usa a lista ignora sem reclamar
+  ok    uma falha no Neural Engine e recuperada na segunda tentativa
+  ok    duas falhas seguidas sobem o erro, sem terceira tentativa
+  ok    cancelamento nao e retentado
+  ok    Parakeet escolhido roda no portugues
+  ok    Whisper escolhido roda no portugues, sem virar Parakeet
+  ok    Parakeet com idioma que ele nao cobre cai no Whisper
+  ok    Apple escolhida vale para ingles
+
+PASSOU

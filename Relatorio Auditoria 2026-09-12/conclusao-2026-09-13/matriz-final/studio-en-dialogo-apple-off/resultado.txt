@@ -1,0 +1,109 @@
+teste da janela de legendas  13 de set. de 2026, 1:00:19
+reconhecimento: apple
+janela aberta
+superficie de video renderizada sem abortar
+  ok    o player carrega a midia (109.2s)
+video: en-dialogo.mp4
+  ok    o player e criado ao abrir o video
+duracao: 109.2s
+  ok    a duracao do video e lida
+  ok    da para gerar depois de escolher o video
+gerando...
+  [  0.5s] Reconhecendo a fala 47 de 109 s de áudio
+  [  1.0s] Traduzindo (aguardando) 1–40 de 43
+geracao em 11.6s
+legendas: 44
+  ok    a geracao produz legendas
+  ok    a interface anuncia a espera pela resposta do tradutor
+  ok    nenhuma legenda da janela passa de duas linhas (maior: 2)
+  ok    nenhuma legenda fica mais que 7s na tela (maior: 5.29s)
+  ok    o reconhecimento mostra progresso (chegou a 99%)
+  ok    gerar nao grava .srt sozinho
+  ok    nenhum .srt aparece ao lado do video sem exportar
+  ok    clicar na legenda 5 leva o video a 8.22s (foi para 8.24s)
+  ok    a legenda clicada fica marcada como atual
+  ok    avancar percorre as legendas em sequencia ([0, 1, 2, 3, 4, 5])
+  ok    sempre ha uma legenda ativa depois de avancar
+  ok    voltar do meio de uma fala vai para o comeco dela
+  (pulado: nao ha silencio entre as duas primeiras)
+
+retraduzir
+  ok    a janela registra o que reconheceu e o que traduziu
+  ok    o motor de reconhecimento aparece (Apple)
+  ok    o tradutor aparece (Apple Translation)
+  ok    com legenda gerada, da para retraduzir
+  ok    a lista nunca fica vazia durante a retraducao
+retraducao em 10.3s
+  ok    retraduzir devolve a mesma quantidade de legendas (44 de 44)
+  ok    com o mesmo tradutor, o texto e o mesmo da geracao inteira
+  ok    retraduzir invalida o .srt que havia sido exportado
+  ok    o rotulo continua dizendo quem traduziu
+  ok    e quem reconheceu nao mudou: o audio nao foi ouvido de novo
+  ok    a legenda anterior continua na tela enquanto retraduz
+  ok    cancelar a retraducao nao custa a traducao que ja estava boa
+  ok    e da para tentar de novo depois de cancelar
+  ok    carregar .srt traz as mesmas legendas
+  ok    legenda aberta de arquivo nao da para retraduzir: nao ha original
+  ok    marca que a legenda veio de arquivo
+  ok    navegacao funciona com legenda carregada
+  ok    regerar limpa as legendas antigas
+  ok    regerar limpa a legenda marcada
+  ok    regerar entra em trabalho
+  ok    cancelar deixa o estado em cancelado
+  ok    cancelar encerra o trabalho
+  ok    da para gerar de novo depois de cancelar
+  ok    o volume chega ao player
+  ok    mudo liga
+  ok    mexer no volume tira do mudo
+  ok    a legenda comeca em 60%
+  ok    Parakeet escolhido roda no portugues, que ele cobre
+  ok    Parakeet com idioma que ele nao cobre cai no Whisper
+  ok    Whisper escolhido vale para japones
+  ok    o seletor nao oferece japones no Parakeet
+  ok    o Whisper nao limita idioma
+  ok    Apple escolhida vale para qualquer idioma
+Apple: instalados ["pt", "en", "es", "fr", "de", "ja"], instalaveis ["it", "zh", "ko"]
+  ok    a Apple oferece japones
+  ok    a Apple nao oferece arabe
+  ok    instalado e sempre um dos oferecidos
+  ok    aumentar a legenda sobe 10%
+  ok    diminuir a legenda desce 10%
+  ok    a legenda tem tamanho minimo
+  ok    a legenda tem tamanho maximo
+  ok    arrastar a barra move o tempo na hora
+  ok    soltar a barra cai exatamente na legenda
+  ok    o video comeca visivel
+  ok    o video pode ser ocultado
+  ok    o teste roda com o video pausado
+  ok    clicar numa legenda move o video mesmo pausado
+  ok    a legenda clicada vira a ativa mesmo pausado
+  ok    o quadro exibido acompanha (12.08s vs 12.06s)
+  ok    a coluna de legendas redimensiona
+  ok    comeca pausado
+  ok    o clique no video inicia a reproducao
+  ok    o clique de novo pausa
+  ok    exportar registra onde a legenda foi gravada
+  ok    exportar grava o arquivo no destino escolhido
+  ok    o arquivo exportado tem formato SubRip
+  ok    o exportado tem uma entrada por legenda
+  ok    o nome sugerido traz o idioma (en-dialogo.pt.srt)
+layout gravado em /tmp/studio.png (1080x580)
+
+primeiras legendas:
+  00:00:00,000 → 00:00:01,740
+    
+    Entre, Egghead.
+  00:00:01,740 → 00:00:03,899
+    
+    O que diabos está acontecendo por lá?
+  00:00:03,899 → 00:00:06,059
+    
+    O que foi aquela transmissão?
+  00:00:06,059 → 00:00:08,220
+    
+    Eu preciso de um relatório de status imediatamente.
+  00:00:08,220 → 00:00:10,960
+    
+    Entre, porra! Novamente?
+
+PASSOU

@@ -1,0 +1,21 @@
+[whisperkit] Prewarming models...
+[whisperkit] Loading models...
+[whisperkit] Loaded models for whisper size: large-v3 in 1.08s
+[whisperkit] Decoding 0.00s - 28.10s
+[whisperkit] Decoding Temperature: 0.0
+[whisperkit] Decoding 0.00s - 8.47s
+[whisperkit] Decoding Temperature: 0.0
+[whisperkit] Decoding 0.00s - 30.00s
+[whisperkit] Decoding Temperature: 0.0
+[whisperkit] Decoding 0.00s - 30.00s
+[whisperkit] Decoding Temperature: 0.0
+[whisperkit] Decoding 27.00s - 28.10s
+[whisperkit] Decoding Temperature: 0.0
+[bruto] 0.00-30.00  
+[bruto] 30.00-60.00  
+[bruto] 63.30-65.66  そうだ! なんか文句あくか?
+[bruto] 66.16-67.32  いやそれ以上挑発するな!
+[bruto] 68.80-72.46  エッグヘッドの中では今、誰が生き残っている?
+[bruto] 73.24-73.40  あ?
+[asr] 13 segmentos, 13 mantidos
+SCAN whisper sortformer turns=27 voices=3 pieces=9 cues=4 asr=3.3676040172576904
