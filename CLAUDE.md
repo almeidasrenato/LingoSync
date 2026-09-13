@@ -1207,10 +1207,31 @@ conserto todo.
 
 `tradutor-verify alinhamento <video> apple <idioma>` falha se voltar.
 
-**Atenção à folga:** a legenda mais longa hoje bate em **7,00 s** contra o
-limite de 7,01 s do autoteste da janela. Passa, e passa sem folga nenhuma.
-Quem mexer em `hardCeiling`, em `leadIn` ou em `maximumDuration` mede isso de
-novo.
+#### A folga do teto: medida, e o número fica onde está
+
+Três constantes conspiram — `hardCeiling` (7,0), `leadIn` (0,25) e
+`maximumDuration` (7,0) — e a soma das duas primeiras passa da terceira. Quem
+segura é o `clamp`, que corta a legenda em `maximumDuration`. Medido no vídeo
+de 9 minutos: **4 legendas de 107 saem exatamente em 7,000 s**, ou seja,
+truncadas; em inglês, nenhuma.
+
+Fechar essa folga baixando o teto para 6,75 s (= 7,0 − 0,25) foi testado e
+**piora**:
+
+```
+                        cortes no meio da palavra
+                        teto 7,00    teto 6,75
+ja-longo sem locutor         5           6
+en-conversa ambos            0           1
+```
+
+O inglês estava zerado e passaria a ter um. Texto partido ao meio é pior que
+0,25 s a menos de tela numa legenda que já está no limite de leitura — e o que
+o `clamp` corta é a cauda, onde a legenda seguinte quase sempre já começa.
+
+Fica em 7,0, e `tradutor-verify motores` falha se `hardCeiling` passar de
+`maximumDuration`. Quem for mexer nos três números mede as duas colunas acima
+antes.
 
 ### O tempo real confirmava japonês em blocos de três frases
 
