@@ -854,10 +854,7 @@ struct SubtitleStudioView: View {
         // do teto de 34 pt — senão "aumentar" num vídeo largo não faria nada.
         let corpo = min(34, max(14, width * 0.026)) * model.subtitleScale
         return VStack(spacing: 4) {
-            ForEach(LineBreaker.wrap(
-                model.displayText(at: index),
-                maximum: 42
-            ), id: \.self) { line in
+            ForEach(model.displayLines(at: index), id: \.self) { line in
                 Text(line)
                     .font(.system(size: corpo, weight: .semibold))
                     // Branco continua sendo a cor do primeiro locutor e a de

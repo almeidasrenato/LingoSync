@@ -156,6 +156,27 @@ final class SubtitleStudioModel {
     /// para conferir antes de exportar via uma legenda diferente da que ia
     /// sair — e o travessão muda a largura da linha, que é onde a quebra de 42
     /// caracteres decide o corte.
+    /// Largura da linha, pelo idioma de destino.
+    ///
+    /// A janela tem de mostrar a legenda com a mesma largura com que ela vai
+    /// ser gravada: quem assiste para conferir antes de exportar precisa ver o
+    /// que vai sair. Com o 42 fixo e destino japonês, a janela mostrava em 42
+    /// e o arquivo saía em 20 — a mesma divergência que o travessão já causou
+    /// uma vez, e pelo mesmo motivo.
+    var charactersPerLine: Int { SubtitleFileBuilder.lineWidth(for: targetLanguage) }
+
+    /// A legenda repartida em linhas, como a janela mostra e como o arquivo
+    /// grava.
+    ///
+    /// Mora aqui, e não na view, de propósito: enquanto a view tinha a própria
+    /// largura, ela podia ficar para trás sem nada acusar — e ficou, com o 42
+    /// fixo depois que o arquivo passou a usar 20 em japonês. Sem largura na
+    /// view não há o que divergir, e o autoteste confere esta função, que é a
+    /// mesma que desenha.
+    func displayLines(at index: Int) -> [String] {
+        LineBreaker.wrap(displayText(at: index), maximum: charactersPerLine)
+    }
+
     func displayText(at index: Int) -> String {
         guard cues.indices.contains(index) else { return "" }
         let cue = cues[index]
@@ -172,7 +193,7 @@ final class SubtitleStudioModel {
         do {
             try SRTWriter.render(
                 cues, colorBySpeaker: diarizeSpeakers && colorBySpeaker,
-                charactersPerLine: SubtitleFileBuilder.lineWidth(for: targetLanguage)
+                charactersPerLine: charactersPerLine
             ).write(to: url, atomically: true, encoding: .utf8)
             savedSRT = url
         } catch {

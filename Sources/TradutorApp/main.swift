@@ -497,8 +497,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 ordenadas = false
             }
             expect(ordenadas, "legendas em ordem e sem sobreposicao")
+            // Pela largura do destino, nao por 42 fixo: com destino japones a
+            // legenda sai em 20 e conferir contra 42 nao acusaria nada.
+            let largura = SubtitleFileBuilder.lineWidth(for: pipeline.targetLanguage)
             expect(blocos.allSatisfy {
-                LineBreaker.wrap($0.translated, maximum: 42).count <= 2
+                LineBreaker.wrap($0.translated, maximum: largura).count <= 2
             }, "nenhuma legenda passa de duas linhas")
             expect(blocos.allSatisfy { $0.end - $0.start >= 0.6 },
                    "nenhuma legenda pisca")
@@ -707,10 +710,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // nao, e era aqui que a terceira linha passava — 4 dos 24 backups
             // da auditoria de 12/09/2026 tinham legenda de tres linhas.
             let renderizadas = model.cues.indices.map { model.displayText(at: $0) }
-            let maiorEmLinhas = renderizadas
-                .map { LineBreaker.wrap($0, maximum: 42).count }.max() ?? 0
+            let maiorEmLinhas = model.cues.indices
+                .map { model.displayLines(at: $0).count }.max() ?? 0
             expect(maiorEmLinhas <= 2,
                    "nenhuma legenda da janela passa de duas linhas (maior: \(maiorEmLinhas))")
+
+            // A janela e o arquivo quebram a linha no MESMO lugar.
+            //
+            // Sao dois caminhos diferentes — `displayText` + `LineBreaker` de
+            // um lado, `SRTWriter.render` do outro — e ja divergiram uma vez
+            // pelo travessao. Divergiram de novo quando a largura passou a
+            // depender do idioma de destino e a janela ficou com o 42 fixo:
+            // com destino japones o arquivo saia em 20 e a tela mostrava 42.
+            // A largura do arquivo vem da regra, nao da propriedade do
+            // modelo: assim o teste reprova tambem quando as duas deixarem de
+            // concordar, e nao so quando a quebra mudar.
+            let doArquivo = SRTWriter.render(
+                model.cues,
+                charactersPerLine: SubtitleFileBuilder.lineWidth(for: model.targetLanguage)
+            )
+            .components(separatedBy: "\n\n")
+            .filter { $0.contains("-->") }
+            .map { $0.components(separatedBy: "\n").dropFirst(2).joined(separator: "\n") }
+            // Pela mesma funcao que desenha a janela — nao uma copia da regra
+            // aqui, que e o que deixava um 42 fixo na view passar batido.
+            let daJanela = model.cues.indices.map {
+                model.displayLines(at: $0).joined(separator: "\n")
+            }
+            let divergentes = zip(daJanela, doArquivo).filter { $0 != $1 }.count
+            expect(divergentes == 0,
+                   "a janela quebra a linha igual ao arquivo (\(divergentes) divergem de \(min(daJanela.count, doArquivo.count)))")
             let maisLonga = model.cues.map { $0.end - $0.start }.max() ?? 0
             expect(maisLonga <= 7.01,
                    String(format: "nenhuma legenda fica mais que 7s na tela (maior: %.2fs)",
