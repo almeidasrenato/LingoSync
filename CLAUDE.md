@@ -47,6 +47,8 @@ As verificações vivem dentro dos próprios binários.
 ./.build/release/tradutor-verify deepl        # tradutores: blocos, link, leitura atrasada
 ./.build/release/tradutor-verify treslinhas <video>
                                               # varre a saída atrás de legenda de 3 linhas
+./.build/release/tradutor-verify modelos-de-voz <audio>...
+                                              # agrupamento x sortformer no mesmo audio
 ./.build/release/tradutor-verify vozes <audio> [limiares]
                                               # quantas vozes cada limiar devolve
 ./.build/release/tradutor-verify fronteiras <video> [idioma] [motor]
@@ -899,6 +901,43 @@ pela janela de legendas. Duas coisas que ela resolve:
 | `minimumSpeech` | **0,5 s** | o padrão de 1 s descarta a troca curta: 87 faixas e 133 s de fala contra 175 faixas e 201 s. Fim a fim, legendas marcadas de 83/133 para 115/125 |
 | `minimumVoiceTime` | **2 s** | baixar a fala mínima trouxe uma voz de 1 s numa conversa de duas pessoas. `pruneTinyVoices` a descarta, e o trecho fica **sem** locutor em vez de com o do vizinho |
 | `clusteringThreshold` | **0,70** | varrido de 0,50 a 0,90 com `tradutor-verify vozes`; único valor que preserva distinção nos quatro arquivos. Acima de 0,71 o recorte de 96 s colapsa para uma voz |
+
+#### Agrupamento contra Sortformer, remedido depois da fusão
+
+`tradutor-verify modelos-de-voz` roda os dois no mesmo áudio, duas vezes cada,
+e mostra o que a fusão por embedding faz com a saída de cada um:
+
+```
+                     vozes (2 execuções)   faixas   tempo   depois da fusão
+9 min japonês (2 pessoas)
+  agrupamento              3 e 3            180     3,5 s        3
+  sortformer               4 e 4            216     1,3 s        2   ✓
+97 s japonês
+  agrupamento              3 e 3             28     0,5 s        3
+  sortformer               3 e 3             26     0,3 s        3
+161 s inglês
+  agrupamento              3 e 3             43     0,8 s        3
+  sortformer               4 e 4             33     0,4 s        3
+161 s inglês (2)
+  agrupamento              2 e 2             37     0,6 s        2
+  sortformer               4 e 4             28     0,3 s        4
+```
+
+**A fusão desempata a favor do Sortformer.** Os dois erram o número de vozes
+no único vídeo com verdade conhecida — o de 9 minutos, que tem duas pessoas —
+mas erram para lados diferentes: o Sortformer **divide** (4) e o agrupamento
+**funde** (3, com duas pessoas na mesma voz). Dividir tem conserto, e é o que
+`mergeSameVoice` faz: 4 vira 2. Fundir não tem: a informação de que eram duas
+pessoas já se perdeu, e a fusão não muda nada ali (3 continua 3).
+
+Some-se a isso o custo — 2 a 3× mais rápido — e o Sortformer continua sendo o
+padrão, agora por um motivo a mais.
+
+**Onde ele ainda perde:** no segundo vídeo em inglês o agrupamento devolve 2 e
+o Sortformer 4, e a fusão não junta nenhum. Se ali houver mesmo duas pessoas,
+é caso para o limiar (0,50 é conservador de propósito) ou para reatribuir
+faixa a faixa em vez de fundir rótulos inteiros. Não está medido: o vídeo não
+tem verdade conhecida.
 
 Duas armadilhas registradas: `numClusters` **não** serve para dizer quantas
 vozes esperar (fixá-lo em 2 não muda nada — este caminho só olha o limiar), e o

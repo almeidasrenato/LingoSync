@@ -149,6 +149,9 @@ struct Verify {
                 language: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .japanese) : .japanese,
                 engine: arguments.count >= 5 ? (RecognitionEngine(rawValue: arguments[4]) ?? .qwen) : .qwen
             )
+        case "modelos-de-voz":
+            guard arguments.count >= 3 else { print("faltam os caminhos dos audios"); exit(1) }
+            await voiceModelGate(paths: Array(arguments.dropFirst(2)))
         case "vozes":
             guard arguments.count >= 3 else { print("falta o caminho do audio"); exit(1) }
             await voiceSweepGate(
@@ -2854,6 +2857,43 @@ struct Verify {
     ///
     /// Nao precisa de reconhecedor: quem identifica locutor e outro modelo,
     /// sobre o mesmo audio. O numero certo e o que voce sabe do arquivo.
+    /// Agrupamento contra Sortformer, com o mesmo instrumento e no mesmo
+    /// áudio: quantas vozes cada um acha, quanto custa, se repete, e o que
+    /// muda depois da fusão por embedding.
+    static func voiceModelGate(paths: [String]) async {
+        print("modelo · vozes (2 execuções) · faixas · tempo · vozes depois da fusão\n")
+        for path in paths {
+            guard let samples = load16kMono(path: path) else {
+                print("nao consegui ler \(path)"); continue
+            }
+            print(URL(fileURLWithPath: path).lastPathComponent)
+            for model in [SpeakerDiarizer.Model.clustering, .sortformer] {
+                var vozes: [Int] = []
+                var faixas = 0
+                var fundidas = 0
+                var segundos = 0.0
+                for execucao in 0..<2 {
+                    let inicio = Date()
+                    guard let turns = try? await SpeakerDiarizer.turns(in: samples, model: model)
+                    else { print("  \(model.rawValue): FALHOU"); break }
+                    segundos = max(segundos, Date().timeIntervalSince(inicio))
+                    vozes.append(Set(turns.map(\.speaker)).count)
+                    if execucao == 0 {
+                        faixas = turns.count
+                        let juntas = (try? await SpeakerDiarizer.mergeSameVoice(turns, in: samples)) ?? turns
+                        fundidas = Set(juntas.map(\.speaker)).count
+                    }
+                }
+                print(String(format: "  %-11@ %@ vozes · %3d faixas · %.1fs · %d depois da fusão",
+                             model.rawValue as NSString,
+                             vozes.map(String.init).joined(separator: " e ") as NSString,
+                             faixas, segundos, fundidas))
+            }
+            print("")
+        }
+        exit(0)
+    }
+
     static func voiceSweepGate(path: String, thresholds: [Float]) async {
         guard let samples = try? await SubtitleFileBuilder.extractAudio(
             from: URL(fileURLWithPath: path)
