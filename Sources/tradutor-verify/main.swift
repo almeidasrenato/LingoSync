@@ -167,6 +167,12 @@ struct Verify {
             )
         case "vivo":
             guard arguments.count >= 3 else { print("falta o caminho do audio"); exit(1) }
+            if arguments.count >= 4 {
+                await liveRecognitionGate(
+                    path: arguments[2],
+                    engine: RecognitionEngine(rawValue: arguments[3]) ?? .apple,
+                    language: arguments.count >= 5 ? (Language(rawValue: arguments[4]) ?? .japanese) : .japanese)
+            }
             liveSegmentationGate(path: arguments[2])
         default: print("comando desconhecido"); exit(1)
         }
@@ -2285,6 +2291,53 @@ struct Verify {
     /// VAD abrir e fechar. Fala curta e o caso de risco: `minimumDuration`
     /// descarta o trecho inteiro, e `framesToOpen` exige quadros seguidos
     /// acima do limiar para sequer abrir.
+    /// O caminho ao vivo, segmento a segmento, com e sem o nivelador.
+    ///
+    /// O gate irmão (`vivo` sem motor) só olha o recorte do VAD. Este
+    /// reconhece o que sai de cada segmento, que é o que chega às zonas — e
+    /// é a única forma de saber se levantar a fala baixa ao vivo compra
+    /// alguma coisa.
+    static func liveRecognitionGate(path: String, engine: RecognitionEngine, language: Language) async {
+        guard let samples = load16kMono(path: path) else {
+            print("nao consegui ler \(path)"); exit(1)
+        }
+        let transcriber = TranscriberFactory.make(for: language, engine: engine)
+        do { try await transcriber.prepare { _, _ in } } catch {
+            print("FALHA ao carregar: \(error.localizedDescription)"); exit(1)
+        }
+        print("caminho ao vivo · \(transcriber.engineName) · \(language.rawValue)\n")
+
+        for modo in ["desligado", "nivelado"] {
+            let segmenter = Segmenter()
+            var texto = ""
+            var contagem = 0
+            var index = 0
+            let block = 800  // 50 ms, o mesmo passo do laço do pipeline
+            var fechados: [[Float]] = []
+            while index < samples.count {
+                let end = min(index + block, samples.count)
+                fechados.append(contentsOf: segmenter.feed(Array(samples[index..<end])).map(\.samples))
+                index = end
+            }
+            if let last = segmenter.flush() { fechados.append(last.samples) }
+
+            for bruto in fechados {
+                // O nivelamento dos modos de vídeo, aplicado ao segmento que
+                // o VAD fechou — que é o que o tempo real manda ao motor.
+                let enviado = modo == "nivelado"
+                    ? SubtitleFileBuilder.levelQuietSpeech(bruto) : bruto
+                if let hipotese = try? await transcriber.transcribe(enviado) {
+                    texto += hipotese
+                    contagem += 1
+                }
+            }
+            let caracteres = texto.filter { !$0.isWhitespace }.count
+            print(String(format: "  %-10@ · %d segmentos · %d caracteres",
+                         modo as NSString, contagem, caracteres))
+        }
+        print("")
+    }
+
     static func liveSegmentationGate(path: String) {
         guard let samples = load16kMono(path: path) else {
             print("nao consegui ler \(path)")

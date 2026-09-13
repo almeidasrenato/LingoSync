@@ -51,7 +51,10 @@ As verificações vivem dentro dos próprios binários.
                                               # quantas vozes cada limiar devolve
 ./.build/release/tradutor-verify fronteiras <video> [idioma] [motor]
                                               # trechos com duas vozes, com e sem o conserto
-./.build/release/tradutor-verify vivo <audio> # o que o VAD do tempo real deixa passar
+./.build/release/tradutor-verify vivo <audio> [motor] [idioma]
+                                              # o que o VAD do tempo real deixa passar;
+                                              # com motor, reconhece segmento a segmento
+                                              # com e sem nivelamento
 ./.build/release/tradutor-verify repescagem <audio> [motor] [idioma] [motor2]
                                               # re-reconhece isolado o que a 1ª passada perdeu
 ./.build/release/tradutor-verify alinhamento <audio> [motor] [idioma]
@@ -1533,6 +1536,34 @@ diarização; captação entra na mesma lista.
 
 `TRADUTOR_SEM_NIVELAMENTO=1` desliga o nivelamento, para refazer qualquer
 linha da tabela acima sem recompilar.
+
+#### O tempo real não precisa disto, e agora está medido
+
+O nivelamento vale só para os modos de vídeo, e a pergunta óbvia era levá-lo
+para o ao vivo. `tradutor-verify vivo <audio> <motor>` responde: ele alimenta
+o `Segmenter` em blocos de 50 ms, como o laço do pipeline faz, e reconhece
+cada segmento que fecha — com e sem nivelamento.
+
+```
+                        desligado   nivelado
+vídeo de 9 min             1602       1608
+vídeo de 9 min, −30 dB     1576       1583
+vídeo com música, −30 dB    195        196
+```
+
+Diferença de 0,2% a 0,4%, que é ruído. Um nivelador com memória de sessão
+(ganho por segmento, alvo aprendido dos segmentos anteriores) foi escrito e
+medido junto: mesmo resultado, mesmo levantando 87 dos 115 segmentos.
+
+**O motivo é o desenho do caminho ao vivo.** O que o nivelamento resolve é
+fala alta e baixa **na mesma janela** — e ao vivo o detector de voz já fecha
+um segmento no silêncio antes disso. Cada segmento chega ao motor sozinho, e
+aí vale o que já estava medido: baixar um bloco inteiro não tira texto,
+porque o modelo normaliza a janela que decodifica. É a mesma conclusão que o
+gate `vivo` já dava pelo outro lado ("alcança 37 de 37 trechos de fala").
+
+Nada foi acrescentado ao caminho ao vivo. O nivelador de sessão foi removido;
+o que ficou é o gate, para refazer a medição se o desenho do tempo real mudar.
 
 #### Quem ganhou o quê: a conta por locutor
 

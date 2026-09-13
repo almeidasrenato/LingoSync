@@ -103,6 +103,10 @@ public final class Segmenter {
 
     public var isSpeaking: Bool { inSpeech }
 
+    /// O piso de ruído que o gate vem medindo. Quem for mexer no nível do
+    /// áudio precisa dele para não levantar o ruído junto.
+    public var noiseLevel: Float { noiseFloor }
+
     /// Alimenta o segmentador. Devolve os segmentos que fecharam nesta chamada.
     public func feed(_ samples: [Float]) -> [Segment] {
         pending.append(contentsOf: samples)
