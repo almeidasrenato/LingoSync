@@ -106,13 +106,14 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         defer { builder.finish() }
         builder.speakerModel = pipeline.speakerModel
 
+        let motor = translation ?? pipeline.translationEngine
         do {
             let translated = try await builder.generate(
                 from: url,
                 source: pipeline.sourceLanguage,
                 target: pipeline.targetLanguage,
                 engine: pipeline.recognitionEngine,
-                translation: translation ?? pipeline.translationEngine,
+                translation: motor,
                 diarize: pipeline.diarizeSpeakers
             ) { [weak self] step, fraction, detail, waiting in
                 Task { @MainActor in
@@ -127,9 +128,13 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
 
             if stopped { return }
             update(GenerationStep.saving.overall(0), "\(GenerationStep.saving.rawValue)…")
+            // Sem tradução o sufixo é o idioma falado: `video.ja.srt` com
+            // texto em português enganaria o player e quem procura o arquivo.
+            let escrito = motor.destination(
+                from: pipeline.sourceLanguage, to: pipeline.targetLanguage)
             let output = url
                 .deletingPathExtension()
-                .appendingPathExtension("\(pipeline.targetLanguage.rawValue).srt")
+                .appendingPathExtension("\(escrito.rawValue).srt")
             try SRTWriter.render(
                 translated, colorBySpeaker: pipeline.diarizeSpeakers && pipeline.colorBySpeaker,
                 charactersPerLine: builder.charactersPerLine

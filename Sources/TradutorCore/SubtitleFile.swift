@@ -188,7 +188,9 @@ public final class SubtitleFileBuilder {
 
     private let log = Logger(subsystem: "app.tradutor", category: "SubtitleFile")
 
-    public init() {}
+    public init(draft: [Cue] = []) {
+        self.draft = draft
+    }
 
     // MARK: - Passo a passo
 
@@ -700,12 +702,14 @@ public final class SubtitleFileBuilder {
         from source: Language,
         to target: Language,
         progress: @escaping @Sendable (GenerationStep, Double, String, Bool) -> Void,
-        onBatch: (@Sendable ([Cue]) -> Void)? = nil
+        onBatch: (@Sendable ([Cue]) -> Void)? = nil,
+        preserveCueTiming: Bool = false
     ) async throws -> [Cue] {
         guard !draft.isEmpty else { throw SubtitleFileError.noSpeech }
         return try await translateDraft(
             translation: translation, source: source, target: target,
-            progress: progress, onBatch: onBatch
+            progress: progress, onBatch: onBatch,
+            preserveCueTiming: preserveCueTiming
         )
     }
 
@@ -714,7 +718,8 @@ public final class SubtitleFileBuilder {
         source: Language,
         target: Language,
         progress: @escaping @Sendable (GenerationStep, Double, String, Bool) -> Void,
-        onBatch: (@Sendable ([Cue]) -> Void)?
+        onBatch: (@Sendable ([Cue]) -> Void)?,
+        preserveCueTiming: Bool = false
     ) async throws -> [Cue] {
         progress(.loadingTranslator, 0, "\(draft.count) legendas", false)
         // Um tradutor vivo por vez. O anterior é encerrado antes de o próximo
@@ -738,13 +743,16 @@ public final class SubtitleFileBuilder {
 
         progress(.translating, 0, "0 de \(draft.count)", false)
         failedBatches = 0
+        // Sem tradução o destino é o próprio idioma falado: é o que dá a
+        // largura de linha certa sem um caso especial aqui dentro.
         let translated = await translate(
             draft,
             using: translator,
             from: source,
-            to: target,
+            to: translation.destination(from: source, to: target),
             progress: { progress(.translating, $0.fraction, $0.label, $0.waiting) },
-            onBatch: onBatch
+            onBatch: onBatch,
+            preserveCueTiming: preserveCueTiming
         )
         try Task.checkCancellation()
         // Nenhum tradutor de reserva, a pedido: lote perdido derruba a
@@ -780,7 +788,8 @@ public final class SubtitleFileBuilder {
         from source: Language,
         to target: Language,
         progress: @Sendable (Progress) -> Void = { _ in },
-        onBatch: (@Sendable ([Cue]) -> Void)? = nil
+        onBatch: (@Sendable ([Cue]) -> Void)? = nil,
+        preserveCueTiming: Bool = false
     ) async -> [Cue] {
         var result = cues
         var done = 0
@@ -847,16 +856,22 @@ public final class SubtitleFileBuilder {
             // Só o que já foi traduzido: entregar as legendas ainda em branco
             // encheria a lista de linhas vazias que depois mudariam sozinhas.
             if let onBatch {
-                onBatch(Self.capitalizeSentences(enforceLineLimit(Array(result.prefix(done)))))
+                onBatch(finalize(Array(result.prefix(done)), preservingTiming: preserveCueTiming))
             }
 
             if Task.isCancelled {
                 note(lotesFalhos)
-                return Self.capitalizeSentences(enforceLineLimit(Array(result.prefix(done))))
+                return finalize(Array(result.prefix(done)), preservingTiming: preserveCueTiming)
             }
         }
         note(lotesFalhos)
-        return Self.capitalizeSentences(enforceLineLimit(result))
+        return finalize(result, preservingTiming: preserveCueTiming)
+    }
+
+    private func finalize(_ cues: [Cue], preservingTiming: Bool) -> [Cue] {
+        preservingTiming
+            ? Self.capitalizeSentences(cues)
+            : Self.capitalizeSentences(enforceLineLimit(cues))
     }
 
     /// Registra o que não foi traduzido, para a interface poder dizer.

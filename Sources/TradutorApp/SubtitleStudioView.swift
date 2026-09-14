@@ -178,6 +178,9 @@ struct SubtitleStudioView: View {
                 }
                 .labelsHidden()
                 .frame(width: 106)
+                // Sem tradução ninguém lê este seletor — apagado diz isso sem
+                // a barra mudar de largura no meio do trabalho.
+                .disabled(model.translationEngine == .transcriptionOnly)
 
                 // Quem traduz fica ao lado do idioma de destino, que e onde o
                 // resultado dele aparece. So vale para esta janela, como o
@@ -951,21 +954,50 @@ struct SubtitleStudioView: View {
         panel.message = "Arquivo .srt"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.loadSubtitles(from: url)
+        guard let track = chooseSubtitleTrack(
+            title: "O que este SRT contém?",
+            message: "Escolha o idioma usado no arquivo. Se for o original, o vídeo não será retranscrito; somente estas falas serão traduzidas."
+        ) else { return }
+        model.loadSubtitles(from: url, as: track)
     }
 
     private func exportSRT() {
         guard !model.cues.isEmpty else { return }
 
+        guard let track = chooseSubtitleTrack(
+            title: "O que deseja exportar?",
+            message: "Escolha entre as falas no idioma original e a tradução.",
+            originalAvailable: model.cues.contains { !$0.source.isEmpty }
+        ) else { return }
+
         let panel = NSSavePanel()
         panel.title = "Exportar legenda"
         panel.prompt = "Exportar"
         panel.allowedContentTypes = [UTType(filenameExtension: "srt") ?? .plainText]
-        panel.nameFieldStringValue = model.suggestedSRTName
+        panel.nameFieldStringValue = model.suggestedSRTName(for: track)
         panel.canCreateDirectories = true
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.export(to: url)
+        model.export(to: url, track: track)
+    }
+
+    private func chooseSubtitleTrack(
+        title: String, message: String, originalAvailable: Bool = true
+    ) -> SubtitleStudioModel.SubtitleTrack? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        let original = alert.addButton(
+            withTitle: SubtitleStudioModel.SubtitleTrack.original.displayName)
+        original.isEnabled = originalAvailable
+        alert.addButton(withTitle: SubtitleStudioModel.SubtitleTrack.translation.displayName)
+        alert.addButton(withTitle: "Cancelar")
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return .original
+        case .alertSecondButtonReturn: return .translation
+        default: return nil
+        }
     }
 
     private func pickVideo() {

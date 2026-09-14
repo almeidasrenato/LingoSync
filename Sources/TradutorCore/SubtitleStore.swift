@@ -37,6 +37,15 @@ public final class SubtitleStore {
     public var historyLimit = 60
 
     public private(set) var history: [SubtitleBlock] = []
+
+    /// Tudo que foi captado desde o início da sessão, sem o teto do
+    /// histórico.
+    ///
+    /// O que está na tela para de crescer em `historyLimit` porque rola e
+    /// precisa continuar leve; a exportação precisa da reunião inteira. São
+    /// os mesmos blocos, e texto não pesa — uma hora de fala não chega a um
+    /// megabyte.
+    public private(set) var transcript: [SubtitleBlock] = []
     public private(set) var current: SubtitleBlock?
     public private(set) var partial: String = ""
     public private(set) var isTranslating = false
@@ -52,6 +61,12 @@ public final class SubtitleStore {
         isTranslating = true
     }
 
+    /// A tradução acabou sem bloco novo — falhou, ou veio vazia. Sem isto o
+    /// painel fica com "traduzindo" para sempre.
+    public func endTranslating() {
+        isTranslating = false
+    }
+
     public func commit(_ block: SubtitleBlock) {
         if let current {
             history.append(current)
@@ -60,15 +75,71 @@ public final class SubtitleStore {
             }
         }
         current = block
+        transcript.append(block)
         partial = ""
         isTranslating = false
     }
 
     public func clear() {
         history.removeAll()
+        transcript.removeAll()
         current = nil
         partial = ""
         isTranslating = false
+    }
+}
+
+/// A captura ao vivo em texto, com o dia e a hora de cada fala.
+///
+/// Mora no core, e nao na view, para o gate poder conferir o formato: o que o
+/// usuario exporta e lido por ele depois, fora do app, e uma linha de cabecalho
+/// a menos ou um horario em formato outro so aparece la.
+public enum CaptureExport {
+
+    /// `dd/MM/aaaa HH:mm:ss`, fixo.
+    ///
+    /// Sem locale do sistema de proposito: o arquivo e lido por quem gravou,
+    /// e uma maquina em ingles gravaria `9/14/26` no meio de um relatorio em
+    /// portugues.
+    private static let stamp: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
+        return formatter
+    }()
+
+    /// - Parameter target: `nil` quando so houve transcricao. Assim o
+    ///   cabecalho nao promete uma traducao que nao existe, e os blocos saem
+    ///   com uma linha so.
+    public static func text(
+        _ blocks: [SubtitleBlock], from source: Language, to target: Language?
+    ) -> String {
+        let par = target.map { "\(source.displayName) → \($0.displayName)" } ?? source.displayName
+        var linhas = [
+            "Tradutor Instantâneo — captura",
+            par,
+            blocks.first.map { "Início: " + stamp.string(from: $0.at) } ?? "Nada foi captado.",
+            "",
+        ]
+        for block in blocks {
+            linhas.append("[\(stamp.string(from: block.at))]")
+            linhas.append(block.source)
+            // Igual ao original quer dizer que ninguem traduziu: repetir a
+            // linha so faria o arquivo dobrar de tamanho.
+            if !block.translated.isEmpty, block.translated != block.source {
+                linhas.append(block.translated)
+            }
+            linhas.append("")
+        }
+        return linhas.joined(separator: "\n")
+    }
+
+    /// Nome sugerido no seletor: `captura-2026-09-14-1532.txt`.
+    public static func suggestedName(at date: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "pt_BR")
+        formatter.dateFormat = "yyyy-MM-dd-HHmm"
+        return "captura-\(formatter.string(from: date)).txt"
     }
 }
 

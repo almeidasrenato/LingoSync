@@ -9,6 +9,20 @@ import TradutorCore
 @Observable
 final class SubtitleStudioModel {
 
+    enum SubtitleTrack: String, CaseIterable, Identifiable {
+        case original
+        case translation
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .original: "Idioma original"
+            case .translation: "Tradução"
+            }
+        }
+    }
+
     enum Stage: Equatable {
         case empty
         case ready                      // vídeo escolhido, legenda ainda não
@@ -99,10 +113,11 @@ final class SubtitleStudioModel {
 
     /// Dá para traduzir de novo sem reconhecer nada?
     ///
-    /// Legenda aberta de arquivo não dá: o `SRTParser` põe o texto em
-    /// `translated` e deixa `source` vazio — não há original para traduzir.
+    /// Uma legenda importada como original também mantém o rascunho, então
+    /// pode ser retraduzida sem reconhecer o vídeo novamente. Importação de
+    /// tradução não tem texto original e não cria esse rascunho.
     var canRetranslate: Bool {
-        !isWorking && !loadedFromFile && !(builder?.draft.isEmpty ?? true)
+        !isWorking && !(builder?.draft.isEmpty ?? true)
     }
 
     private(set) var player: AVPlayer?
@@ -148,12 +163,27 @@ final class SubtitleStudioModel {
 
     var videoName: String { videoURL?.lastPathComponent ?? "Nenhum vídeo escolhido" }
 
+    /// O idioma em que a legenda sai. Sem tradução é o próprio falado — ver
+    /// `TranslationEngine.destination`.
+    var writtenLanguage: Language {
+        translationEngine.destination(from: sourceLanguage, to: targetLanguage)
+    }
+
+    func subtitleLanguage(for track: SubtitleTrack) -> Language {
+        track == .original ? sourceLanguage : writtenLanguage
+    }
+
     /// Nome sugerido na hora de exportar: o do vídeo com o idioma no meio,
     /// que é a convenção que os players usam para achar a legenda sozinhos.
     var suggestedSRTName: String {
-        guard let videoURL else { return "legenda.\(targetLanguage.rawValue).srt" }
+        suggestedSRTName(for: .translation)
+    }
+
+    func suggestedSRTName(for track: SubtitleTrack) -> String {
+        let language = subtitleLanguage(for: track)
+        guard let videoURL else { return "legenda.\(language.rawValue).srt" }
         return videoURL.deletingPathExtension().lastPathComponent
-            + ".\(targetLanguage.rawValue).srt"
+            + ".\(language.rawValue).srt"
     }
 
     private(set) var exportError: String?
@@ -178,7 +208,7 @@ final class SubtitleStudioModel {
     /// que vai sair. Com o 42 fixo e destino japonês, a janela mostrava em 42
     /// e o arquivo saía em 20 — a mesma divergência que o travessão já causou
     /// uma vez, e pelo mesmo motivo.
-    var charactersPerLine: Int { SubtitleFileBuilder.lineWidth(for: targetLanguage) }
+    var charactersPerLine: Int { SubtitleFileBuilder.lineWidth(for: writtenLanguage) }
 
     /// A legenda repartida em linhas, como a janela mostra e como o arquivo
     /// grava.
@@ -204,11 +234,27 @@ final class SubtitleStudioModel {
 
     /// Grava as legendas onde o usuário escolher.
     func export(to url: URL) {
+        export(to: url, track: .translation)
+    }
+
+    func export(to url: URL, track: SubtitleTrack) {
         exportError = nil
         do {
+            let output = cues.map { cue in
+                Cue(
+                    index: cue.index,
+                    start: cue.start,
+                    end: cue.end,
+                    source: "",
+                    translated: track == .original
+                        ? (cue.source.isEmpty ? cue.translated : cue.source)
+                        : (cue.translated.isEmpty ? cue.source : cue.translated),
+                    speaker: cue.speaker
+                )
+            }
             try SRTWriter.render(
-                cues, colorBySpeaker: diarizeSpeakers && colorBySpeaker,
-                charactersPerLine: charactersPerLine
+                output, colorBySpeaker: diarizeSpeakers && colorBySpeaker,
+                charactersPerLine: SubtitleFileBuilder.lineWidth(for: subtitleLanguage(for: track))
             ).write(to: url, atomically: true, encoding: .utf8)
             savedSRT = url
         } catch {
@@ -607,13 +653,14 @@ final class SubtitleStudioModel {
                     to: self.targetLanguage,
                     progress: { [weak self] step, fraction, detail, waiting in
                         Task { @MainActor in self?.advance(step, fraction, detail, waiting) }
-                    }
+                    },
+                    preserveCueTiming: self.loadedFromFile
                 )
                 guard !Task.isCancelled else { return }
                 self.cues = translated
                 self.notice = builder.translationNotice
                 self.origin = Origin(
-                    recognition: builder.recognitionName ?? "",
+                    recognition: builder.recognitionName ?? (self.loadedFromFile ? "SRT" : ""),
                     translation: builder.translationName ?? ""
                 )
                 // O arquivo exportado antes não corresponde mais ao que está
@@ -653,7 +700,7 @@ final class SubtitleStudioModel {
     }
 
     /// Abre um `.srt` já pronto em vez de gerar.
-    func loadSubtitles(from url: URL) {
+    func loadSubtitles(from url: URL, as track: SubtitleTrack = .translation) {
         do {
             let parsed = try SRTParser.parse(contentsOf: url)
             guard !parsed.isEmpty else {
@@ -662,14 +709,26 @@ final class SubtitleStudioModel {
             }
             job?.cancel()
             job = nil
-            cues = parsed
+            builder?.finish()
+            builder = nil
+            cues = track == .original
+                ? parsed.map {
+                    Cue(index: $0.index, start: $0.start, end: $0.end,
+                         source: $0.translated, speaker: $0.speaker)
+                }
+                : parsed
             savedSRT = url
             loadedFromFile = true
-            // Legenda de arquivo não tem original: o rascunho que estava aqui
-            // não corresponde mais ao que está na tela.
             origin = nil
             activeIndex = index(at: currentTime)
             stage = .done
+
+            if track == .original {
+                // O SRT já traz os tempos e as falas; só a etapa de tradução
+                // precisa rodar. O rascunho fica disponível para retraduzir.
+                builder = SubtitleFileBuilder(draft: cues)
+                retranslate()
+            }
         } catch {
             stage = .failed(error.localizedDescription)
         }

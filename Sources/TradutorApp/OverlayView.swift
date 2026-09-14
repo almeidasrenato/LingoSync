@@ -1,5 +1,7 @@
+import AppKit
 import SwiftUI
 import TradutorCore
+import UniformTypeIdentifiers
 
 /// As tres zonas.
 ///
@@ -15,6 +17,9 @@ struct OverlayView: View {
 
     @Bindable var pipeline: Pipeline
     var onClose: () -> Void
+    var onOpacityChange: (Double) -> Void
+
+    @State private var windowOpacity = OverlayPanel.minimumOpacity
 
     private var subtitles: SubtitleStore { pipeline.subtitles }
     private let bottomAnchor = "fim-do-historico"
@@ -37,11 +42,15 @@ struct OverlayView: View {
                 Spacer(minLength: 0)
             default:
                 history
+                    .frame(minHeight: 0)
+                    .layoutPriority(-1)
                 pinned
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.black.opacity(0.82))
+        .background(.black)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -93,7 +102,9 @@ struct OverlayView: View {
 
     private var pinned: some View {
         VStack(alignment: .leading, spacing: 9) {
-            if subtitles.current != nil || !subtitles.partial.isEmpty || subtitles.isTranslating {
+            if subtitles.current != nil || !subtitles.partial.isEmpty
+                || subtitles.isTranslating || pipeline.translationError != nil
+                || pipeline.isPaused {
                 Rectangle()
                     .fill(.white.opacity(0.07))
                     .frame(height: 1)
@@ -129,7 +140,31 @@ struct OverlayView: View {
                 }
             }
 
-            if subtitles.history.isEmpty, subtitles.current == nil, subtitles.partial.isEmpty {
+            // Sem tradutor de reserva, bloco recusado some da tela — e
+            // silêncio do tradutor e silêncio do falante são a mesma imagem.
+            if let erro = pipeline.translationError {
+                HStack(spacing: 5) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9))
+                    Text(erro)
+                        .font(.system(size: 10))
+                        .lineLimit(2)
+                }
+                .foregroundStyle(Color.redZone.opacity(0.85))
+                .help(erro)
+            }
+
+            // Sem isto, painel pausado e painel em silêncio são a mesma tela.
+            if pipeline.isPaused {
+                HStack(spacing: 6) {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 9))
+                    Text("pausado")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.white.opacity(0.45))
+            } else if subtitles.history.isEmpty, subtitles.current == nil,
+                      subtitles.partial.isEmpty {
                 Text("Aguardando fala em \(pipeline.sourceLanguage.displayName)…")
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.35))
@@ -148,21 +183,35 @@ struct OverlayView: View {
         weight: Font.Weight = .medium,
         sourceSize: CGFloat = 10.5
     ) -> some View {
-        VStack(alignment: .leading, spacing: sourceSize < 9 ? 1 : 3) {
-            // Origem: pequena e sem destaque, so como ancora. No historico ela
-            // encolhe ainda mais — ali ela serve so para localizar o trecho,
-            // nao para ser lida.
-            Text(block.source)
-                .font(.system(size: sourceSize))
-                .foregroundStyle(.white.opacity(0.3 * opacity))
-                .lineLimit(1)
-                .truncationMode(.tail)
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: sourceSize < 9 ? 1 : 3) {
+                // Origem: pequena e sem destaque, so como ancora. No historico ela
+                // encolhe ainda mais — ali ela serve so para localizar o trecho,
+                // nao para ser lida.
+                //
+                // Sem traducao os dois textos sao o mesmo, e a ancora viraria eco:
+                // a mesma frase duas vezes, uma apagada em cima da outra.
+                if block.source != block.translated {
+                    Text(block.source)
+                        .font(.system(size: sourceSize))
+                        .foregroundStyle(.white.opacity(0.3 * opacity))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
 
-            ForEach(LineBreaker.wrap(block.translated), id: \.self) { line in
-                Text(line)
-                    .font(.system(size: size, weight: weight))
-                    .foregroundStyle(color)
-                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(LineBreaker.wrap(block.translated), id: \.self) { line in
+                    Text(line)
+                        .font(.system(size: size, weight: weight))
+                        .foregroundStyle(color)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            VStack(alignment: .trailing, spacing: 4) {
+                blockCopyButton(block.source, language: pipeline.sourceLanguage)
+                if block.source != block.translated {
+                    blockCopyButton(block.translated, language: pipeline.targetLanguage)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -173,7 +222,7 @@ struct OverlayView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Text("\(pipeline.sourceLanguage.displayName) → \(pipeline.targetLanguage.displayName)")
+            Text(pair)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.42))
 
@@ -183,15 +232,151 @@ struct OverlayView: View {
                     .foregroundStyle(.white.opacity(0.26))
             }
 
+            // Copiar, com o idioma escrito ao lado do ícone. Dois ícones de
+            // prancheta lado a lado seriam indistinguíveis; o código do idioma
+            // diz qual é qual sem precisar passar o mouse.
+            copyButton(pipeline.sourceLanguage, "Copiar o texto original") { $0.source }
+
+            if translating {
+                copyButton(pipeline.targetLanguage, "Copiar a tradução") { $0.translated }
+            }
+
+            Text(pipeline.engineNames)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.redZone)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .layoutPriority(1)
+                .help("Reconhecimento e tradução usados nesta captura")
+
+            HStack(spacing: 4) {
+                Image(systemName: "circle.lefthalf.filled")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.4))
+                Slider(value: $windowOpacity, in: OverlayPanel.minimumOpacity...1.0)
+                    .controlSize(.mini)
+                    .frame(width: 70)
+                    .help("Transparência da janela")
+            }
+            .onChange(of: windowOpacity) { _, value in
+                onOpacityChange(value)
+            }
+
             Spacer()
 
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.4))
+            // Pausar não solta a captura: retomar tem de ser instantâneo.
+            icon(pipeline.isPaused ? "play.fill" : "pause.fill",
+                 pipeline.isPaused ? "Retomar a transcrição" : "Pausar a transcrição") {
+                pipeline.togglePause()
             }
-            .buttonStyle(.plain)
-            .help("Parar a tradução")
+
+            // Exportar antes de limpar, na ordem em que se usam: quem vai
+            // apagar a tela costuma querer guardar antes.
+            icon("square.and.arrow.down", "Exportar a captura com data e hora") {
+                exportCapture()
+            }
+            .disabled(subtitles.transcript.isEmpty)
+
+            icon("trash", "Limpar o que foi captado") {
+                pipeline.subtitles.clear()
+            }
+            .disabled(subtitles.transcript.isEmpty && subtitles.current == nil)
+
+            icon("xmark", "Parar a tradução", bold: true, action: onClose)
+        }
+    }
+
+    /// Há tradução nesta sessão, ou só transcrição?
+    private var translating: Bool { pipeline.translationEngine != .transcriptionOnly }
+
+    /// Copia a sessão inteira, uma fala por linha.
+    ///
+    /// A sessão inteira, e não o bloco: o painel tem 60 blocos na tela e um
+    /// par de ícones em cada um viraria muro de botões. Quem quer um trecho só
+    /// recorta do que foi colado.
+    private func copyButton(
+        _ language: Language, _ help: String, _ field: @escaping (SubtitleBlock) -> String
+    ) -> some View {
+        Button {
+            let texto = subtitles.transcript
+                .map(field)
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+            copyToPasteboard(texto)
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 8.5, weight: .medium))
+                Text(language.rawValue.uppercased())
+                    .font(.system(size: 8.5, weight: .semibold))
+            }
+            .foregroundStyle(.white.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+        .disabled(subtitles.transcript.isEmpty)
+        .help(help)
+    }
+
+    private func blockCopyButton(_ text: String, language: Language) -> some View {
+        Button {
+            copyToPasteboard(text)
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 8))
+                Text(language.rawValue.uppercased())
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .foregroundStyle(.white.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+        .disabled(text.isEmpty)
+        .help("Copiar esta fala em \(language.displayName)")
+    }
+
+    private func copyToPasteboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    /// O par de idiomas, ou só o falado quando não há tradução.
+    private var pair: String {
+        let source = pipeline.sourceLanguage.displayName
+        guard translating else { return source + " · só transcrição" }
+        return "\(source) → \(pipeline.targetLanguage.displayName)"
+    }
+
+    private func icon(
+        _ name: String, _ help: String, bold: Bool = false, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: name)
+                .font(.system(size: 9, weight: bold ? .bold : .medium))
+                .foregroundStyle(.white.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    /// Grava a sessão inteira num `.txt`, com o dia e a hora de cada fala.
+    ///
+    /// `begin`, e não `runModal`: o modal segura o laço principal, e é nele
+    /// que a captura roda — o áudio que chegasse durante a escolha do arquivo
+    /// encheria o buffer sem ninguém consumindo.
+    private func exportCapture() {
+        let target: Language? = pipeline.translationEngine == .transcriptionOnly
+            ? nil : pipeline.targetLanguage
+        let texto = CaptureExport.text(
+            subtitles.transcript, from: pipeline.sourceLanguage, to: target
+        )
+        let panel = NSSavePanel()
+        panel.title = "Exportar a captura"
+        panel.nameFieldStringValue = CaptureExport.suggestedName()
+        panel.allowedContentTypes = [.plainText]
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            try? texto.write(to: url, atomically: true, encoding: .utf8)
         }
     }
 

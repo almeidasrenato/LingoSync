@@ -51,6 +51,25 @@ public struct AudioProcess: Identifiable, Sendable {
 
     public var isSystemWide: Bool { id == Self.systemWideID }
 
+    /// Identificador da opcao "o microfone".
+    public static let microphoneID = "__microfone__"
+
+    /// Captura pela entrada, nao pela saida.
+    ///
+    /// Entra na mesma lista dos aplicativos porque para o usuario a pergunta e
+    /// uma so — "de onde vem o audio?" — e um segundo seletor ao lado dela
+    /// seria um controle a mais para responder a mesma coisa. Qual microfone,
+    /// ai sim, e outra pergunta, e so aparece quando esta e respondida.
+    public static let microphone = AudioProcess(
+        id: microphoneID,
+        name: "Microfone",
+        objectIDs: [],
+        pids: [],
+        isPlaying: false
+    )
+
+    public var isMicrophone: Bool { id == Self.microphoneID }
+
     public init(
         id: String,
         name: String,
@@ -98,6 +117,11 @@ public enum AudioProcessList {
             let runningBundleID: String?
             let executable: String?
             let isPlaying: Bool
+            /// `.regular` tem ícone no Dock, `.accessory` mora na barra de
+            /// menus, `.prohibited` não pode nem ser ativado — é agente de
+            /// sistema, não aplicativo.
+            let policy: NSApplication.ActivationPolicy?
+            let bundlePath: String?
         }
 
         let raws: [Raw] = objectIDs.compactMap { objectID in
@@ -119,7 +143,9 @@ public enum AudioProcessList {
                 runningName: running?.localizedName,
                 runningBundleID: running?.bundleIdentifier,
                 executable: processName(for: pid),
-                isPlaying: playing != 0
+                isPlaying: playing != 0,
+                policy: running?.activationPolicy,
+                bundlePath: running?.bundleURL?.path
             )
         }
 
@@ -132,6 +158,7 @@ public enum AudioProcessList {
             groups[key, default: []].append(raw)
         }
 
+        let own = Bundle.main.bundleIdentifier
         let processes: [AudioProcess] = order.compactMap { key in
             guard let members = groups[key] else { return nil }
 
@@ -140,19 +167,48 @@ public enum AudioProcessList {
             // nenhum membro do grupo conhece o nome bom, entao ele e buscado
             // pelo bundle ID do dono.
             let exact = members.first { $0.runningBundleID == key || $0.bundleID == key }
-            let name = exact?.runningName
+            // Sem `?? key` no fim: a lista so mostra quem tem nome de
+            // aplicativo. Os fallbacks antigos enchiam o seletor de
+            // `com.apple.WebKit.GPU`, `pid:57939` e `exec:coreaudiod` — linhas
+            // que o usuario nao reconhece e nao tem por que escolher. O que
+            // sobra desses processos continua alcancavel por "Todo o audio do
+            // sistema", que e a escolha honesta para eles.
+            guard let name = exact?.runningName
                 ?? displayName(forBundleID: key)
                 ?? members.compactMap(\.runningName).first
-                ?? members.compactMap(\.bundleID).first
-                ?? members.compactMap(\.executable).first
-                ?? key
+            else { return nil }
+
+            // Capturar a si mesmo nao faz sentido, e o app aparecia na lista
+            // por causa do proprio aggregate device do tap.
+            guard key != own else { return nil }
+
+            let playing = members.contains(where: \.isPlaying)
+            // Agente de sistema fica de fora. Duas peneiras, as duas medidas
+            // em 14/09/2026 numa maquina comum, que devolvia nove entradas:
+            //
+            //   `.prohibited`          universalaccessd, SiriNCService,
+            //                          QuickLookUIService — nem ativar da
+            //   `/System/Library/`     loginwindow, PowerChime, Central de
+            //                          Controle — sao `.accessory`, entao a
+            //                          politica sozinha nao os pega
+            //
+            // Politica sozinha nao bastava e caminho sozinho tambem nao: o
+            // Vorssaint e `.accessory` em `/Applications` e tem de ficar.
+            // Sobraram tres nomes, todos escolhiveis. O que estiver tocando som
+            // AGORA passa de qualquer jeito — se sai audio dali, pode ser o que
+            // o usuario quer.
+            let visible = members.contains { raw in
+                raw.policy != nil && raw.policy != .prohibited
+                    && !(raw.bundlePath?.hasPrefix("/System/Library/") ?? true)
+            }
+            guard playing || visible else { return nil }
 
             return AudioProcess(
                 id: key,
                 name: name,
                 objectIDs: members.map(\.objectID),
                 pids: members.map(\.pid),
-                isPlaying: members.contains(where: \.isPlaying)
+                isPlaying: playing
             )
         }
 

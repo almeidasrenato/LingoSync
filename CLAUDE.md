@@ -1,7 +1,7 @@
 # Tradutor Instantâneo
 
-App macOS que captura o áudio de um aplicativo, transcreve e traduz em tempo
-real, e gera legendas `.srt` de arquivos de vídeo. Tudo local, sem API paga,
+App macOS que captura o áudio de um aplicativo ou do microfone, transcreve e
+traduz em tempo real, e gera legendas `.srt` de arquivos de vídeo. Tudo local, sem API paga,
 sem chave, sem conta — exceto os tradutores de rede, que são opção do usuário.
 
 Alvo: Apple Silicon, macOS 15+. Medido num **MacBook Air M5, 16 GB**.
@@ -43,6 +43,7 @@ Sem áudio no argumento, não carregam modelo e rodam em milissegundos.
 | `deepl` | blocos, link, leitura atrasada |
 | `webapi` | Google: repartição por bytes de URL, código, escape |
 | `vivo <audio>` | o que o VAD do tempo real deixa passar |
+| `captura` | só transcrever, exportação, lista de captura e de microfones |
 
 Com áudio ou vídeo:
 
@@ -102,6 +103,7 @@ open build/Tradutor.app --args --selftest-live ja pt              # → /tmp/tra
 open build/Tradutor.app --args --selftest-studio video.mp4 ja pt  # → /tmp/tradutor-studio.txt, /tmp/studio.png
 open build/Tradutor.app --args --selftest-job video.mp4 ja pt     # → /tmp/tradutor-job.txt
 open -n build/Tradutor.app --args --selftest-janelas              # → /tmp/tradutor-janelas.txt
+open -n build/Tradutor.app --args --selftest-microfone 4          # → /tmp/tradutor-microfone.txt
 ```
 
 Bandeiras: `--motor <parakeet|whisper|qwen|qwenLarge>`, `--tradutor
@@ -150,6 +152,7 @@ arriscada e precisa compilar e rodar em segundos.
 
 ```
 áudio do app ──▶ Core Audio process tap (todos os processos do app)
+   ou o mic  ──▶ AVAudioEngine na entrada escolhida
              ──▶ 16 kHz mono + VAD de dois limiares
              ──▶ trecho em andamento, re-reconhecido a cada 0,6 s
                    ├──▶ prefixo que ainda oscila ──▶ zona vermelha
@@ -168,6 +171,89 @@ vídeo ──▶ faixa do idioma escolhido ──▶ áudio 16 kHz ──▶ niv
       ──▶ reparte em legendas de 2 linhas × 42 chars (20 se o destino é CJK)
       ──▶ .srt
 ```
+
+### O microfone é uma fonte como as outras
+
+`AudioProcess.microphone` entra na mesma lista dos aplicativos, e escolhê-lo
+troca o `ProcessTap` por um `MicrophoneTap`. Para o usuário a pergunta é uma só
+— "de onde vem o áudio?" —, e um segundo controle ao lado dela responderia a
+mesma coisa duas vezes. **Qual** microfone, aí sim, é outra pergunta, e o
+seletor só aparece depois que a primeira foi respondida.
+
+- **`AVAudioEngine`, não o HAL cru.** Entrada é o caso que o framework do
+  sistema resolve bem; o `ProcessTap` só é CoreAudio puro porque não existe API
+  alta para tap de processo. São 30 linhas contra as 300 daquele arquivo.
+- **O padrão é "padrão do sistema", e é um `nil`, não um ID gravado.** Gravar o
+  ID deixaria o app apontando para o fone anterior depois que o usuário trocasse
+  de fone no meio da reunião.
+- **O dispositivo tem de ser escolhido ANTES de ler o formato**: trocar de
+  entrada troca a taxa de amostragem, e um tap instalado com o formato do
+  dispositivo anterior é recusado em tempo de execução.
+- **Permissão negada falha igual à de gravação de tela**: o engine roda, o tap
+  dispara na cadência certa e todos os quadros vêm zerados. Por isso
+  `--selftest-microfone` mede **pico e RMS** — sala silenciosa tem ruído de
+  fundo, permissão negada tem zero exato.
+- **O aggregate device do próprio tap aparece como entrada** enquanto a captura
+  de aplicativo está ligada. `AudioInputList` o descarta pelo nome; oferecê-lo
+  seria capturar a si mesmo.
+
+### A lista de captura só mostra o que dá para escolher
+
+O seletor devolvia nove entradas numa máquina comum, entre elas
+`com.apple.WebKit.GPU`, `pid:57939` e `exec:coreaudiod` — nomes que o usuário
+não reconhece e não tem por que escolher. Três peneiras, medidas em 14/09/2026:
+
+```
+sem nome de aplicativo   com.apple.WebKit.GPU, pid:57939, exec:...
+`.prohibited`            universalaccessd, SiriNCService, QuickLookUIService
+`/System/Library/`       loginwindow, PowerChime, Central de Controle
+                                                        9 entradas → 3
+```
+
+**Nenhuma das duas últimas basta sozinha**: os três de `/System/Library/` são
+`.accessory`, que a política não pega; e há aplicativo legítimo `.accessory` em
+`/Applications` que o caminho sozinho derrubaria. **O que estiver tocando som
+agora passa de qualquer jeito** — se sai áudio dali, pode ser o que o usuário
+quer. O resto continua alcançável por "Todo o áudio do sistema".
+
+O app também some da própria lista: ele aparecia ali por causa do seu aggregate
+device.
+
+### Os controles do painel ao vivo
+
+No cabeçalho, da esquerda para a direita: o par de idiomas, os dois botões de
+copiar, e à direita pausar, exportar, limpar e ✕. Exportar antes de limpar, na
+ordem em que se usam — quem vai apagar a tela costuma querer guardar antes.
+
+- **Pausar não solta a captura.** O tap, o aggregate device e os modelos ficam
+  de pé; o áudio é lido do anel e jogado fora. Parar e religar custaria uma
+  volta inteira pelo Core Audio, e o que se quer ao pausar é voltar no instante
+  do clique. **O anel continua sendo esvaziado**: deixar de ler faria os
+  primeiros segundos depois da retomada serem áudio de minutos atrás.
+- **O trecho em andamento é descartado ao pausar**, não guardado. Retomar dez
+  minutos depois e ver sair a meia frase de antes da pausa seria pior que
+  perdê-la. O que já foi confirmado fica na tela.
+- **"pausado" aparece escrito.** Sem isso, painel pausado e painel em silêncio
+  são a mesma tela.
+- **Os botões de copiar levam o código do idioma ao lado do ícone** (`⧉ JA`,
+  `⧉ PT`). Dois ícones de prancheta lado a lado seriam indistinguíveis sem
+  passar o mouse. Copiam a **sessão inteira**, uma fala por linha: um par de
+  botões em cada um dos 60 blocos viraria muro de botões, e quem quer um trecho
+  só recorta do que foi colado.
+
+- **O histórico da tela e o registro da sessão são duas listas.** O que rola na
+  tela para em `historyLimit` (60) porque rola; a exportação precisa da reunião
+  inteira, e `SubtitleStore.transcript` cresce sem teto. São os mesmos blocos, e
+  texto não pesa — uma hora de fala não chega a um megabyte.
+- **`NSSavePanel.begin`, não `runModal`.** O modal segura o laço principal, que é
+  onde a captura roda: o áudio que chegasse durante a escolha do arquivo encheria
+  o anel sem ninguém consumindo.
+- **A hora sai em `dd/MM/aaaa HH:mm:ss` com locale fixo em pt_BR**: o arquivo é
+  lido por quem gravou, e uma máquina em inglês gravaria `9/14/26` no meio de um
+  relatório em português. `SubtitleBlock.at` já existia; ninguém o mostrava.
+- **Sem tradução, a fala não sai duas vezes** — nem no arquivo nem na tela: o
+  bloco tem `source == translated`, e tanto `CaptureExport` quanto a âncora
+  apagada do painel comparam os dois antes de escrever.
 
 ### A lista de falas, o divisor e as setas
 
@@ -480,10 +566,59 @@ quase todos abaixo de 0,5 s.
 
 ## Tradução
 
-Cinco motores: **Apple** (padrão, local), **DeepL**, **Google** (rede) e
-**Hunyuan-MT** (local, fora do processo). Ao vivo é **sempre a Apple**
-(`supportsLive`) — uma ida à rede por bloco não cabe num trecho re-reconhecido
-a cada 0,6 s.
+Quatro tradutores — **Apple** (padrão, local), **DeepL**, **Google** (rede) e
+**Hunyuan-MT** (local, fora do processo) — mais **Só transcrever**, que não
+traduz nada. **Todos valem ao vivo e em vídeo.**
+
+### Ao vivo passou a aceitar qualquer motor
+
+Pedido em 14/09/2026. Antes o caminho ao vivo trocava a escolha pela Apple,
+calado, porque uma ida à rede por bloco não cabe num trecho re-reconhecido a
+cada 0,6 s. É o mesmo defeito de "Falhou, falhou": **escolha do usuário não se
+troca em silêncio**. Quem escolheu DeepL pela qualidade recebia Apple sem saber.
+
+O custo não sumiu, só passou a ser dito antes. `TranslationEngine.liveCostNote`
+é o que o painel mostra sob os seletores:
+
+```
+Apple, só transcrever   instantâneo, local        (liveCostNote nil)
+Google                  ~1 s por bloco
+DeepL                   2 a 3 s por bloco, e o desafio anti-robô quando insiste
+Hunyuan                 4,5 GB residentes, disputando GPU com o reconhecedor
+```
+
+Duas consequências que não são de interface:
+
+- **Só o motor instantâneo fica carregado** (`isInstantaneous`). O app abre
+  carregando os modelos para o primeiro ⌥⌘T não esperar pelo disco; sem essa
+  distinção, escolher o Hunyuan uma vez faria toda abertura residir 4,5 GB, e
+  escolher o DeepL abriria uma `WKWebView` ociosa. Os outros nascem quando
+  alguém manda traduzir.
+- **E morrem quando a captura para.** A janela do DeepL e o servidor do Hunyuan
+  não se fecham sozinhos, e este app fica aberto o dia todo na barra de menus.
+  A Apple fica: não custa nada parada, e soltá-la apagaria o "modelos
+  carregados" do painel sem motivo.
+
+Sem tradutor de reserva aqui também: bloco recusado sobe como erro e o painel
+mostra a faixa vermelha. Calado, tradutor em silêncio e falante em silêncio são
+a mesma tela.
+
+### Só transcrever é um tradutor, não um desvio
+
+`IdentityTranslator` devolve o texto como veio, e `TranslationEngine
+.transcriptionOnly` o escolhe. Foi assim, e não com um `if` em cada caminho,
+porque são **três** caminhos — painel ao vivo, janela de legendas e item de
+menu — e eles já divergiram uma vez quando cada um tinha sua cópia dos passos.
+
+O que muda junto com o motor é o **destino**: sem tradução a legenda sai no
+idioma falado. `TranslationEngine.destination` é a regra única, e dela saem a
+largura da linha (japonês em 20 caracteres, não 42), o sufixo do arquivo
+(`video.ja.srt`, não `.pt.srt`) e o rótulo do painel. O autoteste do item de
+menu montava o nome esperado com o idioma **escolhido** e esperava para sempre
+por um `.pt.srt` que ninguém ia gravar.
+
+O caso não se chama `none`: `TranslationEngine?` existe (`SubtitleJob
+.translation`) e ali `.none` já quer dizer `nil`.
 
 ### Testados e removidos
 
@@ -826,8 +961,11 @@ Quatro decisões:
 - **Um tradutor vivo por vez**: a janela do DeepL fecha sozinha no fim (20 a
   30 ms depois do último bloco) e o Hunyuan devolve os 4,5 GB. Antes ninguém
   chamava `reset()` e os dois ficavam vivos até o app fechar.
-- **Legenda aberta de arquivo não dá para retraduzir**: o `SRTParser` põe o
-  texto em `translated` e deixa `source` vazio.
+- **Ao importar um `.srt`, a janela pergunta se ele contém o original ou a
+  tradução**. Original vira rascunho em `source` e passa só pela tradução,
+  preservando os timecodes; tradução é exibida diretamente.
+- **A exportação também pergunta a faixa**: original usa o idioma falado no
+  nome do arquivo, tradução usa o destino.
 - **Igualdade estrita só vale para tradutor determinístico** — o DeepL mudou 5
   de 20 numa terceira passada. E **cancelar e retomar no mesmo instante** deixa
   o lote anterior em voo: 19,6 s contra 10,4 s.

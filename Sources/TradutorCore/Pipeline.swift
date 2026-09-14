@@ -34,8 +34,9 @@ public final class Pipeline {
         didSet { UserDefaults.standard.set(recognitionEngine.rawValue, forKey: "motorDeReconhecimento") }
     }
 
-    /// Quem traduz nos modos de vídeo. Ao vivo é sempre a Apple — ver
-    /// `TranslationEngine.supportsLive`.
+    /// Quem traduz, ao vivo e em vídeo. **Todos valem nos dois**, a pedido:
+    /// antes o ao vivo trocava a escolha pela Apple por causa do custo, e quem
+    /// escolheu DeepL recebia outra coisa sem saber. Ver `liveCostNote`.
     public var translationEngine: TranslationEngine = TranslatorFactory.preferred {
         didSet { UserDefaults.standard.set(translationEngine.rawValue, forKey: "motorDeTraducao") }
     }
@@ -66,14 +67,41 @@ public final class Pipeline {
     public private(set) var availableProcesses: [AudioProcess] = []
     public var selectedProcess: AudioProcess?
 
+    /// Microfones que a máquina tem agora.
+    public private(set) var availableInputs: [AudioInputDevice] = []
+
+    /// Qual microfone usar. `nil` é o padrão do sistema — e continua sendo a
+    /// escolha certa quando o usuário troca de fone no meio da reunião, porque
+    /// o padrão acompanha e um ID gravado não.
+    public var selectedInputDevice: AudioInputDevice?
+
+    /// Pausa temporária: a captura continua de pé, o áudio é descartado.
+    ///
+    /// Parar e religar custaria o tap, o aggregate device e uma volta pelo
+    /// Core Audio; o que o usuário quer ao pausar é voltar no instante em que
+    /// clicar de novo.
+    public private(set) var isPaused = false
+
 
     /// Medicoes reais da maquina, mostradas nas preferencias. O plano diz para
     /// medir em vez de confiar na estimativa; isto e o que mede.
     public private(set) var lastTranscribeMs: Int = 0
     public private(set) var lastTranslateMs: Int = 0
-    public private(set) var engineNames: String = ""
+    /// Nomes dos motores que estão carregados, ou que serão usados ao iniciar.
+    /// O fallback evita que o cabeçalho fique vazio durante o carregamento.
+    public var engineNames: String {
+        let recognition = transcriber?.engineName
+            ?? TranscriberFactory.make(
+                for: sourceLanguage, engine: recognitionEngine.forLive
+            ).engineName
+        let translation = translationEngine == .transcriptionOnly
+            ? translationEngine.displayName
+            : translator?.engineName ?? translationEngine.displayName
+        return "\(recognition)  ·  \(translation)"
+    }
 
     private var tap: ProcessTap?
+    private var microphone: MicrophoneTap?
     private var ring: RingBuffer?
     private var resampler: Resampler?
     private var segmenter: Segmenter?
@@ -84,6 +112,10 @@ public final class Pipeline {
     private var engines: [TranscriberKind: Transcriber] = [:]
     private var transcriber: Transcriber?
     private var translator: (any Translator)?
+    /// Com que motor o `translator` foi feito. Sem isto, trocar a escolha
+    /// para "só transcrever" no meio da sessão não mudava nada: o tradutor
+    /// só era criado quando ainda não existia nenhum.
+    private var loadedTranslator: TranslationEngine?
     /// Ultimo texto reconhecido, para descontar a sobreposicao do proximo.
     private var previousSource = ""
     private var tracker = StablePrefixTracker()
@@ -116,11 +148,21 @@ public final class Pipeline {
     private let maximumBacklog = 12
     public private(set) var droppedSegments = 0
 
+    /// O que a última tradução disse ao falhar, ou `nil`.
+    ///
+    /// Sem tradutor de reserva — a mesma regra do vídeo —, um bloco que o
+    /// DeepL recuse some da tela. Calado, isso parece silêncio do falante.
+    public private(set) var translationError: String?
+
     public init() {}
 
     /// Recarrega a lista de aplicativos, preservando a escolha atual.
     public func refreshProcesses() {
-        availableProcesses = [.systemWide] + ((try? AudioProcessList.all()) ?? [])
+        availableInputs = AudioInputList.all()
+        if let selected = selectedInputDevice, !availableInputs.contains(selected) {
+            selectedInputDevice = nil
+        }
+        availableProcesses = [.systemWide, .microphone] + ((try? AudioProcessList.all()) ?? [])
         // A selecao so cai quando o aplicativo escolhido sumiu de verdade.
         if let current = selectedProcess, !availableProcesses.contains(current) {
             selectedProcess = nil
@@ -157,24 +199,47 @@ public final class Pipeline {
         }
 
         let ring = RingBuffer()
-        let tap = ProcessTap(process: process)
-        do {
-            try tap.start { samples in ring.write(samples) }
-        } catch {
-            state = .failed(error.localizedDescription)
-            return
+        let rate: Double
+        if process.isMicrophone {
+            guard await MicrophoneTap.requestAccess() else {
+                state = .failed(
+                    "O Tradutor precisa de acesso ao microfone. "
+                    + "Ajustes do Sistema › Privacidade e Segurança › Microfone."
+                )
+                return
+            }
+            let mic = MicrophoneTap(device: selectedInputDevice)
+            do {
+                try mic.start { samples in ring.write(samples) }
+            } catch {
+                state = .failed(error.localizedDescription)
+                return
+            }
+            rate = mic.sampleRate ?? 48_000
+            self.microphone = mic
+        } else {
+            let tap = ProcessTap(process: process)
+            do {
+                try tap.start { samples in ring.write(samples) }
+            } catch {
+                state = .failed(error.localizedDescription)
+                return
+            }
+            rate = tap.format?.mSampleRate ?? 48_000
+            self.tap = tap
         }
 
-        let rate = tap.format?.mSampleRate ?? 48_000
         do {
             resampler = try Resampler(inputSampleRate: rate)
         } catch {
-            tap.stop()
+            tap?.stop()
+            microphone?.stop()
+            tap = nil
+            microphone = nil
             state = .failed(error.localizedDescription)
             return
         }
 
-        self.tap = tap
         self.ring = ring
         self.segmenter = Segmenter()
         translator?.reset()
@@ -186,10 +251,26 @@ public final class Pipeline {
         state = .running
 
         droppedSegments = 0
+        isPaused = false
         queue.removeAll()
         pumpTask = Task { [weak self] in await self?.pump() }
         worker = Task { [weak self] in await self?.drainQueue() }
         log.info("pipeline rodando em \(process.name, privacy: .public)")
+    }
+
+    /// Pausa e retoma sem soltar a captura.
+    ///
+    /// O trecho em andamento é **descartado** ao pausar, não guardado: retomar
+    /// dez minutos depois e ver sair a meia frase de antes da pausa seria pior
+    /// que perdê-la. O que já foi confirmado fica na tela.
+    public func togglePause() {
+        guard isRunning else { return }
+        isPaused.toggle()
+        guard isPaused else { return }
+        _ = segmenter?.flush()
+        tracker.reset()
+        _ = phrases.flush()
+        subtitles.setPartial("")
     }
 
     /// Para a captura. Os modelos continuam carregados de proposito: religar
@@ -202,6 +283,18 @@ public final class Pipeline {
         queue.removeAll()
         tap?.stop()
         tap = nil
+        microphone?.stop()
+        microphone = nil
+        isPaused = false
+        // A janela do DeepL e o servidor do Hunyuan não se fecham sozinhos, e
+        // este app fica aberto o dia todo na barra de menus. A Apple fica —
+        // ela não custa nada parada, e soltá-la apagaria o "modelos
+        // carregados" do painel sem motivo.
+        if let loaded = loadedTranslator, !loaded.isInstantaneous {
+            translator?.reset()
+            translator = nil
+            loadedTranslator = nil
+        }
         ring = nil
         resampler = nil
         segmenter = nil
@@ -214,11 +307,13 @@ public final class Pipeline {
     /// Carrega os modelos sem iniciar captura. Chamado na abertura do app,
     /// para que o primeiro ⌥⌘T nao espere pelo disco.
     public func preload() async {
-        try? await loadModelsIfNeeded()
+        // Tradutor de rede ou de modelo residente fica de fora: ele só nasce
+        // quando alguém manda traduzir. Ver `TranslationEngine.isInstantaneous`.
+        try? await loadModelsIfNeeded(includingTranslator: translationEngine.isInstantaneous)
         if case .loading = state { state = .idle }
     }
 
-    private func loadModelsIfNeeded() async throws {
+    private func loadModelsIfNeeded(includingTranslator: Bool = true) async throws {
         // O motor depende da escolha e do idioma de origem: nos modelos,
         // portugues usa Parakeet e japones usa Whisper. Trocar entre dois
         // idiomas do mesmo motor nao recarrega nada.
@@ -239,19 +334,17 @@ public final class Pipeline {
         transcriber = engine
         loadedFor = sourceLanguage
 
-        if translator == nil {
-            // Explícito, e não a preferência: ao vivo é a Apple sempre. O
-            // DeepL custa uma carga de página por bloco, e aqui o trecho em
-            // andamento é re-reconhecido a cada 0,6 s.
-            let engine = TranslatorFactory.make(.apple)
+        let wanted = translationEngine
+        if includingTranslator, translator == nil || loadedTranslator != wanted {
+            translator?.reset()
+            let engine = TranslatorFactory.make(wanted)
             try await engine.prepare { [weak self] fraction, label in
                 Task { @MainActor in self?.state = .loading(label, 0.5 + fraction * 0.5) }
             }
             translator = engine
+            loadedTranslator = wanted
         }
-        engineNames = [transcriber?.engineName, translator?.engineName]
-            .compactMap { $0 }
-            .joined(separator: "  ·  ")
+        translationError = nil
     }
 
     // MARK: - Laco
@@ -274,6 +367,13 @@ public final class Pipeline {
             guard let ring, let resampler, let segmenter else { continue }
 
             let count = ring.read(into: &scratch, maximum: scratch.count)
+            // Pausado, o anel continua sendo esvaziado e o que sai é jogado
+            // fora. Deixar de ler encheria o anel e, ao retomar, os primeiros
+            // segundos seriam áudio de minutos atrás.
+            if isPaused {
+                lastRehearsal = Date()
+                continue
+            }
             if count > 0 {
                 if let converted = try? resampler.resample(Array(scratch[0..<count])) {
                     // Uma pausa real e o unico corte de audio que continua
@@ -386,8 +486,11 @@ public final class Pipeline {
             )
         } catch {
             log.error("traducao falhou: \(error.localizedDescription, privacy: .public)")
+            translationError = error.localizedDescription
+            subtitles.endTranslating()
             return
         }
+        translationError = nil
         lastTranslateMs = Int(Date().timeIntervalSince(startTranslate) * 1000)
 
         for (sentence, translated) in zip(sentences, translations)

@@ -92,6 +92,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             )
         }
 
+        // Confere que o microfone capta de verdade:
+        //   open -n build/Tradutor.app --args --selftest-microfone [segundos]
+        if let index = CommandLine.arguments.firstIndex(of: "--selftest-microfone") {
+            let segundos = CommandLine.arguments.count > index + 1
+                ? Double(CommandLine.arguments[index + 1]) ?? 3 : 3
+            runMicrophoneSelfTest(seconds: segundos)
+        }
+
         // Confere que mais de uma janela de legendas coexiste, sem video
         // nenhum:  open -n build/Tradutor.app --args --selftest-janelas
         if CommandLine.arguments.contains("--selftest-janelas") {
@@ -234,6 +242,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
 
+        popover.performClose(nil)
         showPanel()
         Task { await pipeline.start(on: target) }
         statusItem.button?.image = NSImage(
@@ -473,9 +482,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }()
             write("tradutor: \(motorDeTraducao.displayName)")
 
+            // O sufixo e o idioma ESCRITO, nao o escolhido: com "so
+            // transcrever" a legenda sai em japones e o teste esperava um
+            // `.pt.srt` que ninguem ia gravar.
+            let escrito = motorDeTraducao.destination(from: source, to: target)
             let destino = URL(fileURLWithPath: path)
                 .deletingPathExtension()
-                .appendingPathExtension("\(target.rawValue).srt")
+                .appendingPathExtension("\(escrito.rawValue).srt")
             try? FileManager.default.removeItem(at: destino)
 
             let inicio = Date()
@@ -520,7 +533,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(ordenadas, "legendas em ordem e sem sobreposicao")
             // Pela largura do destino, nao por 42 fixo: com destino japones a
             // legenda sai em 20 e conferir contra 42 nao acusaria nada.
-            let largura = SubtitleFileBuilder.lineWidth(for: pipeline.targetLanguage)
+            let largura = SubtitleFileBuilder.lineWidth(for: escrito)
             expect(blocos.allSatisfy {
                 LineBreaker.wrap($0.translated, maximum: largura).count <= 2
             }, "nenhuma legenda passa de duas linhas")
@@ -597,6 +610,82 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// Roda o caminho da janela de legendas de ponta a ponta: abre o video,
     /// gera, e exercita a navegacao por fala.
+    /// Capta do microfone e diz o que chegou.
+    ///
+    /// Existe porque permissão de microfone falha do mesmo jeito que a de
+    /// gravação de tela: negada, o `AVAudioEngine` roda, o tap dispara na
+    /// cadência certa e **todos os quadros vêm zerados**. Sem medir o nível não
+    /// há como distinguir isso de uma sala silenciosa.
+    private func runMicrophoneSelfTest(seconds: Double) {
+        let report = "/tmp/tradutor-microfone.txt"
+        var lines: [String] = ["microfone  \(Date().formatted(date: .abbreviated, time: .standard))"]
+        var failures = 0
+        func write(_ text: String) {
+            lines.append(text)
+            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
+        }
+        func expect(_ condition: Bool, _ label: String) {
+            write(condition ? "  ok    \(label)" : "  FALHA \(label)")
+            if !condition { failures += 1 }
+        }
+
+        Task { @MainActor in
+            let entradas = AudioInputList.all()
+            write("entradas: \(entradas.map(\.name).joined(separator: ", "))")
+            write("padrão: \(AudioInputList.systemDefault?.name ?? "nenhum")")
+            expect(!entradas.isEmpty, "a máquina tem pelo menos uma entrada")
+
+            guard await MicrophoneTap.requestAccess() else {
+                write("FALHA: acesso ao microfone negado")
+                try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
+                exit(1)
+            }
+
+            // Sem dispositivo: o padrão do sistema, que é o padrão do app.
+            let tap = MicrophoneTap()
+            let ring = RingBuffer()
+            do {
+                try tap.start { samples in ring.write(samples) }
+            } catch {
+                write("FALHA ao abrir: \(error.localizedDescription)")
+                exit(1)
+            }
+            write("taxa: \(Int(tap.sampleRate ?? 0)) Hz")
+
+            try? await Task.sleep(for: .seconds(seconds))
+            tap.stop()
+
+            var buffer = [Float](repeating: 0, count: 1 << 20)
+            var total = 0
+            var pico: Float = 0
+            var soma: Double = 0
+            while true {
+                let lidas = ring.read(into: &buffer, maximum: buffer.count)
+                if lidas == 0 { break }
+                for index in 0..<lidas {
+                    let valor = abs(buffer[index])
+                    if valor > pico { pico = valor }
+                    soma += Double(valor) * Double(valor)
+                    total += 1
+                }
+            }
+            let rms = total > 0 ? (soma / Double(total)).squareRoot() : 0
+            write(String(format: "amostras: %d · pico %.5f · RMS %.5f", total, pico, rms))
+
+            let esperadas = Int((tap.sampleRate ?? 48_000) * seconds * 0.5)
+            expect(total > esperadas, "chegou áudio suficiente (\(total) amostras)")
+            // Zero exato em todos os quadros é a assinatura da permissão
+            // negada, não de silêncio: mesmo sala quieta tem ruído de fundo.
+            expect(pico > 0, "os quadros não vêm zerados — a permissão está de pé")
+            if pico > 0, rms < 0.0005 {
+                write("  aviso: nível muito baixo (\(String(format: "%.5f", rms))) — fale perto do microfone")
+            }
+
+            write(failures == 0 ? "\nPASSOU" : "\n\(failures) falha(s)")
+            exit(failures == 0 ? 0 : 1)
+        }
+    }
+
     private func runStudioSelfTest(path rawPath: String, source: Language, target: Language) {
         let path = resolvedTestPath(rawPath)
         let report = "/tmp/tradutor-studio.txt"
@@ -796,7 +885,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // duas deixarem de concordar.
             let doArquivo = SRTWriter.render(
                 model.cues,
-                charactersPerLine: SubtitleFileBuilder.lineWidth(for: model.targetLanguage)
+                charactersPerLine: SubtitleFileBuilder.lineWidth(for: model.writtenLanguage)
             )
             .components(separatedBy: "\n\n")
             .filter { $0.contains("-->") }
@@ -1101,6 +1190,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(model.activeIndex == 2, "navegacao funciona com legenda carregada")
             try? FileManager.default.removeItem(at: srtTemporario)
 
+            // Importar o idioma original traduz somente as falas do SRT e
+            // mantém os tempos, sem reconhecer o vídeo outra vez.
+            let originalImport = FileManager.default.temporaryDirectory
+                .appendingPathComponent("original-\(UUID().uuidString).srt")
+            let importedText = ("Hello from SRT. " + String(repeating: "This timing must remain unchanged. ", count: 4))
+                .trimmingCharacters(in: .whitespaces)
+            let originalSRT = "1\n00:00:01,250 --> 00:00:03,750\n\(importedText)\n"
+            try? originalSRT.write(to: originalImport, atomically: true, encoding: .utf8)
+            let motorAntesDoImport = model.translationEngine
+            model.translationEngine = .transcriptionOnly
+            model.loadSubtitles(from: originalImport, as: .original)
+            let prazoImport = Date().addingTimeInterval(5)
+            while model.isWorking && Date() < prazoImport {
+                try? await Task.sleep(for: .milliseconds(20))
+            }
+            expect(model.stage == .done, "importar SRT original termina a traducao")
+            expect(model.cues.first?.source == importedText,
+                   "o texto original do SRT fica preservado")
+            expect(model.cues.first?.translated == importedText,
+                   "a traducao usa somente o texto importado")
+            expect(model.cues.count == 1,
+                   "traduzir o SRT não cria novas legendas")
+            expect(abs((model.cues.first?.start ?? 0) - 1.25) < 0.001
+                   && abs((model.cues.first?.end ?? 0) - 3.75) < 0.001,
+                   "importar SRT original preserva os timecodes")
+            expect(model.canRetranslate, "SRT original fica disponivel para retraduzir")
+
+            let originalExport = FileManager.default.temporaryDirectory
+                .appendingPathComponent("original-export-\(UUID().uuidString).srt")
+            model.export(to: originalExport, track: .original)
+            let originalExportText = (try? String(contentsOf: originalExport, encoding: .utf8)) ?? ""
+            expect(originalExportText.contains("Hello from SRT."),
+                   "exportacao original escreve o idioma falado")
+            expect(model.suggestedSRTName(for: .original).hasSuffix(".\(model.sourceLanguage.rawValue).srt"),
+                   "nome da exportacao original usa o idioma falado")
+            try? FileManager.default.removeItem(at: originalExport)
+            model.translationEngine = motorAntesDoImport
+            try? FileManager.default.removeItem(at: originalImport)
+
             // Regerar tem que limpar o que estava la.
             model.generate()
             try? await Task.sleep(for: .milliseconds(400))
@@ -1241,7 +1369,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(conteudo.contains(" --> "), "o arquivo exportado tem formato SubRip")
             expect(conteudo.split(separator: "\n\n").count == model.cues.count,
                    "o exportado tem uma entrada por legenda")
-            expect(model.suggestedSRTName.hasSuffix(".\(target.rawValue).srt"),
+            expect(model.suggestedSRTName.hasSuffix(".\(model.writtenLanguage.rawValue).srt"),
                    "o nome sugerido traz o idioma (\(model.suggestedSRTName))")
             try? FileManager.default.removeItem(at: destino)
 

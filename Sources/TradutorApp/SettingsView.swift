@@ -106,7 +106,10 @@ struct SettingsView: View {
                         }
                     }
                     .labelsHidden()
-                    .disabled(pipeline.isRunning)
+                    // Sem tradução o destino não é usado por ninguém —
+                    // apagado diz isso; escondido faria a linha saltar.
+                    .disabled(pipeline.isRunning
+                              || pipeline.translationEngine == .transcriptionOnly)
                 }
             }
 
@@ -155,13 +158,20 @@ struct SettingsView: View {
     private var translationNote: String? {
         let engine = pipeline.translationEngine
         guard engine != .apple else { return nil }
-        if !engine.supports(pipeline.sourceLanguage, pipeline.targetLanguage) {
-            return "\(engine.displayName) nao cobre "
-                + "\(pipeline.sourceLanguage.displayName) → "
-                + "\(pipeline.targetLanguage.displayName) · a traducao usa a Apple"
+        if engine == .transcriptionOnly {
+            return "Só o texto reconhecido, em \(pipeline.sourceLanguage.displayName)"
+                + " · vale ao vivo e nos vídeos"
         }
-        return "\(engine.displayName) so vale para videos · ao vivo usa Apple"
-            + (engine.leavesTheMachine ? " · o texto sai da maquina" : " · local")
+        // Ao vivo agora passa qualquer motor. O que custa precisa dizer
+        // quanto custa aqui, senão o usuário descobre pelo atraso na tela.
+        if let custo = engine.liveCostNote {
+            let cobertura = engine.supports(pipeline.sourceLanguage, pipeline.targetLanguage)
+                ? "" : " · não cobre este par de idiomas"
+            return "\(engine.displayName) ao vivo: \(custo)"
+                + (engine.leavesTheMachine ? " · o texto sai da máquina" : "")
+                + cobertura
+        }
+        return nil
     }
 
     // MARK: Ao vivo
@@ -177,11 +187,11 @@ struct SettingsView: View {
                             .font(.system(size: 10))
                     }
                     .buttonStyle(.borderless)
-                    .help("Atualizar a lista de aplicativos")
+                    .help("Atualizar a lista de aplicativos e de microfones")
                 }
 
                 Picker("", selection: $pipeline.selectedProcess) {
-                    Text("Escolha um aplicativo").tag(AudioProcess?.none)
+                    Text("Escolha a fonte").tag(AudioProcess?.none)
                     ForEach(pipeline.availableProcesses) { process in
                         // Quem esta tocando som aparece marcado: e quase sempre
                         // o que o usuario quer, e evita escolher o app errado.
@@ -192,7 +202,25 @@ struct SettingsView: View {
                 .labelsHidden()
                 .disabled(pipeline.isRunning)
 
-                if let selected = pipeline.selectedProcess, !selected.isSystemWide {
+                // Qual microfone só é pergunta depois que "Microfone" é a
+                // resposta da primeira. Padrão do sistema na frente, e é ele
+                // que continua valendo quando o usuário troca de fone no meio
+                // da reunião — um ID gravado ficaria apontando para o anterior.
+                if pipeline.selectedProcess?.isMicrophone == true {
+                    Picker("", selection: $pipeline.selectedInputDevice) {
+                        Text("Padrão do sistema"
+                             + (AudioInputList.systemDefault.map { " (\($0.name))" } ?? ""))
+                            .tag(AudioInputDevice?.none)
+                        ForEach(pipeline.availableInputs) { device in
+                            Text(device.name).tag(AudioInputDevice?.some(device))
+                        }
+                    }
+                    .labelsHidden()
+                    .disabled(pipeline.isRunning)
+                }
+
+                if let selected = pipeline.selectedProcess,
+                   !selected.isSystemWide, !selected.isMicrophone {
                     // Confirmacao visivel de que a escolha pegou, e de quantos
                     // processos ela cobre — o Chrome, por exemplo, toca audio
                     // num helper, nao no processo principal.

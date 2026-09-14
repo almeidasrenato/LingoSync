@@ -23,7 +23,7 @@ struct EnginePicker: View {
     }
 }
 
-/// Quem traduz. Só vale para vídeo: ao vivo é sempre a Apple.
+/// Quem traduz. Vale para vídeo e para o ao vivo.
 struct TranslationEnginePicker: View {
 
     @Binding var selection: TranslationEngine
@@ -45,7 +45,9 @@ struct TranslationEnginePicker: View {
               japonês, medido. Google é o mais rápido e chega perto dele. \
               Os dois mandam o texto para fora da máquina e precisam de \
               internet. Hunyuan-MT é local como a Apple e roda fora do \
-              processo, quando instalado. Ao vivo é sempre a Apple.
+              processo, quando instalado. "Só transcrever" pula a tradução e \
+              deixa o texto no idioma falado. Todos valem ao vivo também — os \
+              de rede custam segundos por bloco, e a nota abaixo diz quanto.
               """)
     }
 }

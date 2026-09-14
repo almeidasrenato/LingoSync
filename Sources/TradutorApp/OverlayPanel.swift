@@ -13,6 +13,7 @@ final class OverlayPanel: NSPanel {
     /// Nome sob o qual o AppKit guarda posicao e tamanho entre execucoes.
     private static let frameAutosaveName = "TradutorOverlayFrame"
 
+    static let minimumOpacity = 0.82
     static let defaultSize = NSSize(width: 620, height: 300)
     static let minimumSize = NSSize(width: 380, height: 160)
 
@@ -26,6 +27,7 @@ final class OverlayPanel: NSPanel {
         )
 
         level = .floating
+        alphaValue = Self.minimumOpacity
         collectionBehavior = [
             .canJoinAllSpaces,      // segue o usuario entre desktops
             .stationary,            // nao desliza no Mission Control
@@ -46,7 +48,11 @@ final class OverlayPanel: NSPanel {
         contentMaxSize = NSSize(width: 1400, height: 900)
 
         let hosting = NSHostingView(
-            rootView: OverlayView(pipeline: pipeline, onClose: onClose)
+            rootView: OverlayView(
+                pipeline: pipeline,
+                onClose: onClose,
+                onOpacityChange: { [weak self] value in self?.alphaValue = value }
+            )
         )
         hosting.sizingOptions = []
         hosting.autoresizingMask = [.width, .height]

@@ -1,3 +1,4 @@
+import AppKit
 import AudioCapture
 import AVFoundation
 import Foundation
@@ -37,6 +38,7 @@ struct Verify {
               tradutor-verify lotes         mede qual tamanho de lote compensa
               tradutor-verify sobreposicao  mede se o contexto reenviado melhora a traducao
               tradutor-verify motores       limiar do Whisper e separacao dos motores
+              tradutor-verify captura       so transcrever, e a exportacao da captura
               tradutor-verify locutores     identificacao de quem fala, sem modelo
               tradutor-verify deepl         reparticao em blocos e link do site, sem rede
               tradutor-verify prefixo-ab <video> [origem] [destino] [motor]
@@ -131,6 +133,7 @@ struct Verify {
         case "lotes": await batchSizeGate()
         case "sobreposicao": await overlapGate()
         case "motores": await engineGate()
+        case "captura": await captureGate()
         case "locutores": speakerGate()
         case "deepl": deepLGate()
         case "webapi": await webAPIGate()
@@ -2612,16 +2615,142 @@ struct Verify {
             expect(false, "o erro que sai é o do bloco, não \(error)")
         }
 
-        // Os dois mandam texto para fora e nenhum serve ao vivo.
+        // Manda texto para fora, e ao vivo tem de avisar o preço.
         for motor in [TranslationEngine.google] {
             expect(motor.leavesTheMachine, "\(motor.displayName) manda o texto para fora")
-            expect(!motor.supportsLive, "\(motor.displayName) não serve ao vivo")
+            expect(motor.liveCostNote != nil, "\(motor.displayName) avisa o custo ao vivo")
             expect(motor.isAvailable, "\(motor.displayName) está disponível")
             expect(motor.costPerSecondOfVideo > 0, "\(motor.displayName) tem custo estimado")
             expect(motor.supports(.japanese, .portuguese), "\(motor.displayName) cobre ja → pt")
         }
 
         print(failures == 0 ? "\ntudo certo" : "\n\(failures) falha(s)")
+        exit(failures == 0 ? 0 : 1)
+    }
+
+    /// So transcrever (sem traduzir) e a exportacao do painel ao vivo.
+    @MainActor
+    static func captureGate() async {
+        var failures = 0
+        func expect(_ condition: Bool, _ label: String) {
+            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
+            if !condition { failures += 1 }
+        }
+
+        print("So transcrever, e a captura exportada\n")
+
+        // O tradutor identidade devolve o que recebeu — inclusive a contagem,
+        // que e o que o `translate` do builder confere antes de aceitar o lote.
+        let identidade = IdentityTranslator()
+        let entrada = ["Bom dia.", "こんにちは。", ""]
+        let saida = (try? await identidade.translate(entrada, from: .japanese, to: .portuguese)) ?? []
+        expect(saida == entrada, "o tradutor identidade devolve o texto como veio")
+
+        // O destino real: sem traducao a legenda sai no idioma falado, e e
+        // disso que dependem a largura da linha e o sufixo do arquivo.
+        expect(TranslationEngine.transcriptionOnly.destination(from: .japanese, to: .portuguese)
+               == .japanese, "so transcrever escreve no idioma falado")
+        expect(TranslationEngine.apple.destination(from: .japanese, to: .portuguese)
+               == .portuguese, "com traducao o destino continua sendo o escolhido")
+        expect(SubtitleFileBuilder.lineWidth(
+            for: TranslationEngine.transcriptionOnly.destination(from: .japanese, to: .portuguese))
+            == 20, "transcricao em japones usa a linha estreita")
+        expect(TranslationEngine.transcriptionOnly.liveCostNote == nil,
+               "so transcrever nao custa nada ao vivo")
+        expect(!TranslationEngine.transcriptionOnly.leavesTheMachine,
+               "sem traducao nada sai da maquina")
+        expect(TranslationEngine.transcriptionOnly.isAvailable,
+               "so transcrever existe em qualquer maquina")
+
+        // O historico da tela tem teto porque rola; a exportacao nao pode ter,
+        // senao uma reuniao longa sai pela metade e sem nada acusar.
+        let store = SubtitleStore()
+        store.historyLimit = 3
+        for numero in 1...10 {
+            store.commit(SubtitleBlock(source: "fala \(numero)", translated: "linha \(numero)"))
+        }
+        expect(store.history.count == 3, "o historico da tela para no teto")
+        expect(store.transcript.count == 10, "a exportacao guarda a sessao inteira")
+        store.clear()
+        expect(store.transcript.isEmpty && store.history.isEmpty && store.current == nil,
+               "limpar apaga tela e registro")
+
+        // O formato exportado: uma marca de dia e hora por fala.
+        let instante = Date(timeIntervalSince1970: 1_757_880_000)
+        let comTraducao = CaptureExport.text(
+            [SubtitleBlock(source: "こんにちは。", translated: "Olá.", at: instante)],
+            from: .japanese, to: .portuguese)
+        expect(comTraducao.contains("Japonês → Português"), "o cabecalho diz o par")
+        expect(comTraducao.contains("こんにちは。") && comTraducao.contains("Olá."),
+               "original e traducao saem os dois")
+        expect(comTraducao.range(of: #"\[\d\d/\d\d/\d{4} \d\d:\d\d:\d\d\]"#,
+                                 options: .regularExpression) != nil,
+               "cada fala leva dia e hora")
+
+        let soTexto = CaptureExport.text(
+            [SubtitleBlock(source: "こんにちは。", translated: "こんにちは。", at: instante)],
+            from: .japanese, to: nil)
+        expect(!soTexto.contains("→"), "sem traducao o cabecalho nao promete um destino")
+        expect(soTexto.components(separatedBy: "こんにちは。").count - 1 == 1,
+               "sem traducao a fala nao aparece duas vezes")
+        expect(CaptureExport.suggestedName(at: instante).hasSuffix(".txt"),
+               "o nome sugerido e um .txt")
+        store.beginTranslating()
+        store.endTranslating()
+        expect(!store.isTranslating, "traducao que falha tira o \"traduzindo\" da tela")
+
+        // Ao vivo passa qualquer motor, mas quem custa tem de dizer quanto.
+        for motor in TranslationEngine.allCases where motor.leavesTheMachine {
+            expect(motor.liveCostNote != nil,
+                   "\(motor.displayName) avisa o que custa ao vivo")
+            expect(!motor.isInstantaneous,
+                   "\(motor.displayName) nao fica carregado entre sessoes")
+        }
+        expect(!TranslationEngine.hunyuan.isInstantaneous,
+               "o Hunyuan nao e carregado na abertura do app")
+        expect(TranslationEngine.apple.isInstantaneous
+               && TranslationEngine.transcriptionOnly.isInstantaneous,
+               "Apple e so-transcrever ficam carregados, que e de graca")
+
+        // A lista de captura: so nome de aplicativo, nunca bundle ID nem pid.
+        //
+        // O usuario via `com.apple.WebKit.GPU`, `pid:57939` e o proprio app no
+        // seletor — linhas que ele nao reconhece e nao tem por que escolher.
+        let apps = (try? AudioProcessList.all()) ?? []
+        print("  (\(apps.count) aplicativos: \(apps.map(\.name).joined(separator: ", ")))")
+        expect(!apps.contains { $0.name.hasPrefix("com.") || $0.name.hasPrefix("org.") },
+               "nenhum bundle ID passa por nome")
+        expect(!apps.contains { $0.name.hasPrefix("pid:") || $0.name.hasPrefix("exec:") },
+               "nenhuma chave interna passa por nome")
+        expect(!apps.contains { $0.name.trimmingCharacters(in: .whitespaces).isEmpty },
+               "nenhum nome vazio")
+        // Agente de sistema so entra se estiver tocando som agora.
+        expect(apps.allSatisfy { app in
+            app.isPlaying || app.pids.contains { pid in
+                guard let running = NSRunningApplication(processIdentifier: pid),
+                      let caminho = running.bundleURL?.path else { return false }
+                return running.activationPolicy != .prohibited
+                    && !caminho.hasPrefix("/System/Library/")
+            }
+        }, "so aplicativo escolhivel entra na lista")
+        expect(AudioProcess.microphone.isMicrophone
+               && !AudioProcess.microphone.isSystemWide,
+               "o microfone e uma escolha propria, nao o tap global")
+        expect(!AudioProcess.systemWide.isMicrophone,
+               "e o tap global nao e o microfone")
+
+        // Entradas: so o que capta de verdade, e com nome legivel.
+        let entradas = AudioInputList.all()
+        print("  (\(entradas.count) entradas: \(entradas.map(\.name).joined(separator: ", ")))")
+        expect(entradas.allSatisfy { !$0.name.isEmpty }, "toda entrada tem nome")
+        expect(!entradas.contains { $0.name.hasPrefix("Tradutor") },
+               "o aggregate device do proprio tap nao e oferecido como microfone")
+        if let padrao = AudioInputList.systemDefault {
+            expect(entradas.contains(padrao), "o padrao do sistema esta na lista")
+        }
+
+        print("")
+        print(failures == 0 ? "tudo certo" : "\(failures) falha(s)")
         exit(failures == 0 ? 0 : 1)
     }
 
@@ -2725,10 +2854,10 @@ struct Verify {
         expect(!DeepLWeb.supportedLanguages.contains(.thai),
                "a lista de idiomas nao inventa cobertura")
 
-        // Ao vivo nunca e o DeepL: uma carga de pagina por bloco nao cabe em
-        // um trecho re-reconhecido a cada 0,6 s.
-        expect(TranslationEngine.deepl.supportsLive == false, "DeepL nao serve ao vivo")
-        expect(TranslationEngine.apple.supportsLive, "Apple serve ao vivo")
+        // Ao vivo vale qualquer motor, a pedido — mas quem custa tem de
+        // dizer quanto custa, senao o usuario descobre pelo atraso.
+        expect(TranslationEngine.deepl.liveCostNote != nil, "DeepL avisa o atraso ao vivo")
+        expect(TranslationEngine.apple.liveCostNote == nil, "a Apple nao tem o que avisar")
 
         // A estimativa da janela tem de sair do motor escolhido, e nao de uma
         // constante. Medidos, Apple e DeepL ficam perto — o que nao pode e a
@@ -2748,7 +2877,7 @@ struct Verify {
         // Os outros motores de traducao. Ficam aqui porque este e o gate da
         // traducao; o Hunyuan nao tem teste proprio porque tudo nele depende
         // de um ambiente Python de 4,5 GB que nao existe em toda maquina.
-        expect(TranslationEngine.hunyuan.supportsLive == false, "Hunyuan nao serve ao vivo")
+        expect(TranslationEngine.hunyuan.liveCostNote != nil, "o Hunyuan avisa o custo ao vivo")
         expect(TranslationEngine.deepl.leavesTheMachine, "o DeepL manda o texto para fora")
         expect(!TranslationEngine.apple.leavesTheMachine
                && !TranslationEngine.hunyuan.leavesTheMachine,

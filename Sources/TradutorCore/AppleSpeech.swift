@@ -115,6 +115,7 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> [SpeechTranscriber.Result] {
         guard let locale else { throw TranscriberError.notPrepared }
+        guard !samples.isEmpty else { return [] }
 
         let module = SpeechTranscriber(
             locale: locale,
@@ -128,6 +129,11 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
         let analyzer = SpeechAnalyzer(modules: [module])
         let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module])
             ?? Self.sourceFormat
+        // O SpeechAnalyzer pode escolher um formato diferente do áudio do
+        // app (por exemplo, Float32 intercalado para pt-BR). Prepará-lo antes
+        // de enviar o primeiro buffer evita que a primeira fala ative uma
+        // inferência com o módulo ainda sem formato.
+        try await analyzer.prepareToAnalyze(in: format)
         let buffers = try Self.convert(samples, to: format)
         let duration = Double(samples.count) / 16_000
 
@@ -143,7 +149,9 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
         }
 
         let input = AsyncStream<AnalyzerInput> { continuation in
-            for buffer in buffers { continuation.yield(AnalyzerInput(buffer: buffer)) }
+            for buffer in buffers where buffer.frameLength > 0 {
+                continuation.yield(AnalyzerInput(buffer: buffer))
+            }
             continuation.finish()
         }
         do {
@@ -337,7 +345,10 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
             else { throw AppleSpeechError.audioFormat }
             input.frameLength = AVAudioFrameCount(count)
             samples.withUnsafeBufferPointer { source in
-                input.floatChannelData![0].update(from: source.baseAddress! + start, count: count)
+                guard let base = source.baseAddress,
+                      let destination = input.floatChannelData?[0]
+                else { return }
+                destination.update(from: base + start, count: count)
             }
 
             guard let converter else {
@@ -362,7 +373,7 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
                 return input
             }
             if let failure { throw failure }
-            output.append(converted)
+            if converted.frameLength > 0 { output.append(converted) }
             start = end
         }
         return output

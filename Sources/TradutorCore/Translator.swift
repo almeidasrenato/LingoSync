@@ -79,8 +79,8 @@ public enum TranslatorFactory {
 
     /// O que o usuário escolheu, ou a Apple.
     ///
-    /// Vale só para os modos de vídeo. Ao vivo a escolha é ignorada de
-    /// propósito — ver `TranslationEngine.supportsLive`.
+    /// Vale para o ao vivo e para o vídeo: a escolha do usuário não é trocada
+    /// em lugar nenhum.
     /// A preferência gravada, desde que ela ainda exista nesta máquina.
     ///
     /// O ambiente do Hunyuan pode ser apagado depois de escolhido — são 4,5 GB
@@ -103,6 +103,7 @@ public enum TranslatorFactory {
         case .deepl: DeepLWebTranslator()
         case .google: GoogleWebTranslator()
         case .hunyuan: HunyuanTranslator()
+        case .transcriptionOnly: IdentityTranslator()
         }
     }
 }
@@ -120,6 +121,12 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// Hunyuan-MT-7B (Tencent), local, fora do processo. Só existe quando
     /// `Scripts/hunyuan-setup.sh` tiver rodado — ver `HunyuanTranslator`.
     case hunyuan
+    /// Só o texto reconhecido, sem traduzir. Vale nos três caminhos: painel
+    /// ao vivo, janela de legendas e item de menu.
+    ///
+    /// Não se chama `none` de propósito: `TranslationEngine?` existe (ver
+    /// `SubtitleJob.translation`) e ali `.none` já quer dizer `nil`.
+    case transcriptionOnly = "transcricao"
 
     public var id: String { rawValue }
 
@@ -129,6 +136,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         case .deepl: "DeepL (site)"
         case .google: "Google (site)"
         case .hunyuan: "Hunyuan-MT 7B"
+        case .transcriptionOnly: "Só transcrever"
         }
     }
 
@@ -139,17 +147,42 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// geração de dez minutos.
     public var isAvailable: Bool {
         switch self {
-        case .apple, .deepl, .google: true
+        case .apple, .deepl, .google, .transcriptionOnly: true
         case .hunyuan: HunyuanTranslator.isInstalled
         }
     }
 
-    /// Se serve para a tradução ao vivo.
+    /// O que esperar deste motor ao vivo, ou `nil` quando ele é instantâneo.
     ///
-    /// O DeepL é uma carga de página por bloco, de segundos. O tempo real
-    /// re-reconhece o trecho em andamento a cada 0,6 s e traduz o que fecha —
-    /// não cabe, e o painel diria a verdade errada. Ao vivo é sempre a Apple.
-    public var supportsLive: Bool { self == .apple }
+    /// Todos os motores valem ao vivo desde 14/09/2026, a pedido. Antes o
+    /// caminho ao vivo trocava a escolha pela Apple, calado, porque o custo não
+    /// cabia num trecho re-reconhecido a cada 0,6 s — e quem escolheu DeepL
+    /// pela qualidade recebia Apple sem perceber. É a mesma lição de "Falhou,
+    /// falhou": escolha do usuário não se troca em silêncio.
+    ///
+    /// O que muda é o atraso, e ele é grande o bastante para ser dito antes:
+    ///
+    /// ```
+    /// Apple       instantâneo, local
+    /// Google      ~1 s por bloco
+    /// DeepL       2 a 3 s por bloco, e desafio anti-robô quando insiste
+    /// Hunyuan     4,5 GB residentes, disputando GPU com o reconhecedor
+    /// ```
+    /// Motor que não custa nada parado nem por bloco. É o que o app mantém
+    /// carregado entre sessões e prepara na abertura; os outros nascem quando
+    /// alguém manda traduzir e morrem quando a captura para — o Hunyuan carrega
+    /// 7 B de pesos no `prepare` e o DeepL abre uma `WKWebView`, e este app fica
+    /// aberto o dia todo na barra de menus.
+    public var isInstantaneous: Bool { liveCostNote == nil }
+
+    public var liveCostNote: String? {
+        switch self {
+        case .apple, .transcriptionOnly: nil
+        case .google: "cada bloco vai à rede · ~1 s de atraso"
+        case .deepl: "cada bloco carrega o site · 2 a 3 s de atraso"
+        case .hunyuan: "modelo de 4,5 GB residente · disputa a GPU com o reconhecimento"
+        }
+    }
 
     /// Se o texto sai da máquina.
     ///
@@ -159,14 +192,14 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     public var leavesTheMachine: Bool {
         switch self {
         case .deepl, .google: true
-        case .apple, .hunyuan: false
+        case .apple, .hunyuan, .transcriptionOnly: false
         }
     }
 
     /// Idiomas cobertos, ou `nil` para todos os do app.
     public var supportedLanguages: [Language]? {
         switch self {
-        case .apple: nil
+        case .apple, .transcriptionOnly: nil
         // O cartão do modelo lista 33 idiomas, e os 18 do app estão entre
         // eles. Só japonês → português foi medido aqui.
         case .hunyuan: nil
@@ -203,14 +236,56 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         // Medido em 13/09/2026, 110 falas do vídeo de 9 minutos: 1,3 s,
         // contra 11,0 s do DeepL e 36,4 s da Apple.
         case .google: 0.01
+        // Sem tradução sobra o reconhecimento, e ele varia demais entre
+        // motores para um número só: medido em 540 s, a Apple gastou 10,2 s
+        // (0,019) e o Whisper 11,8 s em 97 s (0,12). O 0,05 fica no meio,
+        // como estimativa — não como medição de um motor.
+        case .transcriptionOnly: 0.05
         }
+    }
+
+    /// Para onde a legenda vai de fato.
+    ///
+    /// Sem tradução o destino é o próprio idioma falado. Uma regra só, aqui,
+    /// porque dela dependem a largura da linha (CJK cabe em 20 caracteres), o
+    /// sufixo do arquivo gravado e o rótulo da janela — três lugares que
+    /// divergiriam se cada um decidisse por conta.
+    public func destination(from source: Language, to target: Language) -> Language {
+        self == .transcriptionOnly ? source : target
     }
 
     /// Se o par escolhido passa por este motor.
     public func supports(_ source: Language, _ target: Language) -> Bool {
         switch self {
-        case .apple, .hunyuan, .google: true
+        case .apple, .hunyuan, .google, .transcriptionOnly: true
         case .deepl: DeepLWeb.supports(source, target)
         }
+    }
+}
+
+/// Não traduz nada: devolve o texto como veio.
+///
+/// É o que faz "só transcrever" ser uma escolha de tradutor em vez de um
+/// desvio em cada um dos três caminhos (painel ao vivo, janela de legendas e
+/// item de menu). Sem ele, cada um precisaria do seu `if`, e foi assim que a
+/// geração da janela e a do menu divergiram uma vez.
+public final class IdentityTranslator: Translator, @unchecked Sendable {
+
+    public let engineName = "Sem tradução"
+
+    public init() {}
+
+    public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
+        progress(1.0, "sem tradução")
+    }
+
+    public func reset() {}
+
+    public func translate(_ text: String, from: Language, to: Language) async throws -> String {
+        text
+    }
+
+    public func translate(_ texts: [String], from: Language, to: Language) async throws -> [String] {
+        texts
     }
 }
