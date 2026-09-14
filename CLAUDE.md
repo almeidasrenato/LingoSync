@@ -1895,6 +1895,80 @@ Custa fragmentação: 110 legendas viram 116 no vídeo de 9 minutos. O silêncio
 mínimo é `SpeechEnergy.subtitlePause` (0,8 s); com 0,6 s a contaminação piora
 nos dois vídeos com mais gente. `TRADUTOR_SEM_PAUSAS=1` desliga.
 
+#### Nos outros motores é neutro, e isso está medido
+
+O corte por silêncio tem duas metades: a do `phrases` só existe na Apple, e a
+do `makeCues` vale para todos. Medido com o silêncio ligado e desligado:
+
+```
+                          fala sem legenda na tela
+Whisper, 9 min japonês      116,3 s → 116,3 s
+Qwen, 97 s japonês           14,4 s →  14,4 s
+Parakeet, 161 s inglês       10,7 s →  10,6 s
+```
+
+Idêntico. Faz sentido: Whisper corta pelo detector de voz dele, Qwen entrega
+uma fala por bloco e o Parakeet um trecho por palavra — nenhum deles produz o
+trecho de seis segundos com duas pessoas dentro que a Apple produz. O conserto
+é da Apple na prática, e não atrapalha os demais.
+
+#### Áudio muito baixo: um caso real, e o que cada motor faz com ele
+
+`Videos Exemplo/Video perca de fala japones.mp4` — 78 s, três pessoas, ruído
+de vento, e **RMS global de 0,005**, contra 0,10 a 0,17 dos outros vídeos.
+Fica logo acima do limiar de `boostQuietAudio` (0,003), então nenhum ganho é
+aplicado. Uma fala do fim não aparecia na legenda.
+
+```
+Apple      pega o começo e o meio; para em 70,98 s
+Whisper    loteria: numa execução só o começo, noutra só o fim, nunca os dois
+Qwen       o mais completo; pega a fala do fim (71,25–72,24 s) que a Apple perde
+```
+
+As três execuções do Whisper no mesmo arquivo devolveram conjuntos diferentes
+de falas — é o comportamento já registrado em "O limiar que fazia a legenda
+mudar a cada execução", aqui no extremo.
+
+A fala perdida **não é caso de corte**: a Apple não a reconhece de forma
+nenhuma, nem isolada nem com contexto. Para este material o motor é o Qwen.
+
+**Diarização:** o Sortformer devolve 2 vozes onde há 3, e não muda com
+limpeza de áudio. O agrupamento devolve 3 depois da fusão — acerta. É o
+segundo caso medido em que o agrupamento ganha, e os dois são material com
+mais vozes ou mais ruído.
+
+#### Subtração espectral: medida e reprovada
+
+O fundo deste vídeo **é** estacionário — comparando o espectro do ruído em
+três terços do arquivo, a diferença fica entre 0,06 e 0,12, bem abaixo do 0,15
+que separaria ruído de ambiente vivo. Ou seja, é o caso em que subtração
+espectral se aplica. Implementada em vDSP (janela de 512, hop 256, fundo pela
+mediana dos quadros entre o percentil 20 e 45), com três intensidades:
+
+```
+                    falas reconhecidas pela Apple
+original                    5
+subtração suave             4   (perde "すいません", acerta "私のこと")
+subtração média             4
+subtração forte             2
+```
+
+Quanto mais limpa, menos texto. E na diarização não muda nada: o Sortformer
+continua vendo 2 vozes. O reconhecedor moderno já foi treinado com ruído, e a
+distorção que a subtração introduz custa mais do que o ruído que ela tira.
+
+Duas armadilhas do arnês, que quase produziram conclusão errada:
+
+- **Silêncio digital não é fundo.** O arquivo tem 10,7% de amostras
+  exatamente zero, e estimar o ruído pelos "quadros mais quietos" dava fundo
+  zero — a subtração não subtraía nada e as três intensidades davam o mesmo
+  resultado.
+- **`AVAudioFile` só corrige o cabeçalho quando é liberado.** Sem um escopo
+  que force isso, o RIFF saía dizendo 4088 bytes: o `AVAssetReader` lia um
+  arquivo quase vazio e o reconhecedor devolvia nada. O teste de identidade
+  (subtração com fator zero) foi o que revelou — áudio idêntico ao original,
+  bit a bit, e mesmo assim "nenhuma fala reconhecida".
+
 #### A primeira tentativa, com a métrica errada
 
 Isto já tinha sido medido e descartado uma vez, contando "trechos com pausa
