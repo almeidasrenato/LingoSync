@@ -2936,6 +2936,50 @@ struct Verify {
             guard let pessoa = mapa[escolha[marca.numero] ?? ""] else { return false }
             return marca.quem.contains(pessoa)
         }.count
+        // A métrica que importa mais que acertar quantas pessoas há: quantas
+        // legendas saem com fala de mais de uma pessoa dentro. Errar o número
+        // de vozes deixa a cor estranha; juntar duas falas numa legenda
+        // estraga a leitura e a tradução.
+        //
+        // Os pontos de troca que o gabarito conhece de verdade: onde uma
+        // legenda de uma pessoa termina e a seguinte, de outra, começa. Uma
+        // legenda gerada que passe por cima de um desses pontos está juntando
+        // duas pessoas.
+        //
+        // Repartir em partes iguais o intervalo marcado com várias pessoas foi
+        // tentado antes e não serve: o gabarito não diz onde a voz troca lá
+        // dentro, e a divisão inventada punia justamente o corte mais fino —
+        // legenda mais curta encosta em mais faixas imaginárias. Aqui esses
+        // intervalos entram só pelas bordas, que são firmes.
+        var trocas: [Double] = []
+        for (anterior, seguinte) in zip(marcas, marcas.dropFirst())
+        where Set(anterior.quem) != Set(seguinte.quem) {
+            trocas.append((anterior.fim + seguinte.inicio) / 2)
+        }
+        func contaminadas(_ cues: [Cue]) -> Int {
+            cues.filter { cue in
+                trocas.contains { troca in cue.start + 0.2 < troca && troca < cue.end - 0.2 }
+            }.count
+        }
+
+        let transcriber = TranscriberFactory.make(for: .japanese, engine: .apple)
+        if (try? await transcriber.prepare { _, _ in }) != nil {
+            let builder = SubtitleFileBuilder()
+            let duracao = Double(samples.count) / 16_000
+            print("")
+            print("legendas que passam por cima de uma troca de pessoa conhecida:")
+            for comFronteiras in [false, true] {
+                transcriber.speakerBoundaries = comFronteiras
+                    ? SpeakerDiarizer.boundaries(of: turns) : []
+                guard let pieces = try? await transcriber.transcribeTimed(samples, progress: { _ in })
+                else { continue }
+                let marcados = SpeakerDiarizer.assign(pieces, to: turns)
+                let cues = builder.makeCues(from: marcados, mediaDuration: duracao)
+                print(String(format: "  %@fronteiras de voz: %d de %d legendas",
+                             comFronteiras ? "com " : "sem ", contaminadas(cues), cues.count))
+            }
+        }
+
         let rotulos = Set(escolha.values)
         print(String(format: "%@%@: %d rótulos · acerto %d de %d (%.0f%%)",
                      model.rawValue as NSString,
