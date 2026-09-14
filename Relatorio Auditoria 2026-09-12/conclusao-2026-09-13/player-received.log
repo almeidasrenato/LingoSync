@@ -1,3 +1,0 @@
-RACE sameURL=false expected=109 actual=540.0 FALHA
-RACE sameURL=true expected=109 actual=540.0 FALHA
-STOP expected=0 actual=540.0 FALHA
