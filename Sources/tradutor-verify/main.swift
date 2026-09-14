@@ -2995,10 +2995,11 @@ struct Verify {
             let variantes: [(String, [TimeInterval])] = [
                 ("sem fronteiras", []),
                 ("cruas         ", SpeakerDiarizer.boundaries(of: turns, shift: 0)),
+                ("adianta 0,25 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.25)),
+                ("adianta 0,40 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.40)),
                 ("adianta 0,50 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.50)),
+                ("adianta 0,60 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.60)),
                 ("adianta 0,75 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.75)),
-                ("adianta 1,00 s", SpeakerDiarizer.boundaries(of: turns, shift: 1.00)),
-                ("adianta 1,25 s", SpeakerDiarizer.boundaries(of: turns, shift: 1.25)),
             ]
             for (nome, fronteiras) in variantes {
                 transcriber.speakerBoundaries = fronteiras

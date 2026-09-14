@@ -124,6 +124,10 @@ public enum SpeakerDiarizer {
         var config = DiarizerConfig.default
         config.clusteringThreshold = threshold ?? clusteringThreshold
         config.minSpeechDuration = minimumSpeech ?? Self.minimumSpeech
+        config.chunkOverlap = chunkOverlap
+        // Sonda de medição, para refazer a varredura sem recompilar.
+        if let valor = ProcessInfo.processInfo.environment["TRADUTOR_CLUSTER_OVERLAP"],
+           let numero = Float(valor) { config.chunkOverlap = numero }
         let manager = DiarizerManager(config: config)
         manager.initialize(models: models)
 
@@ -363,12 +367,36 @@ public enum SpeakerDiarizer {
         return Set(instantes.map { max(0, $0 - shift) }).sorted()
     }
 
+    /// Sobreposição entre os blocos de 10 s que o agrupamento processa.
+    ///
+    /// O padrão do FluidAudio é zero, e aí a mesma pessoa pode receber
+    /// rótulos diferentes de um bloco para o outro. Medido contra os três
+    /// gabaritos humanos, acerto de identidade por legenda:
+    ///
+    ///     sobreposição        0 s    2 s    5 s
+    ///     9 min, 2 pessoas    88%    91%    91%
+    ///     japonês, 10 vozes   72%    78%    72%
+    ///     inglês, 5 pessoas   61%    61%    57%
+    ///
+    /// Dois segundos ganham ou empatam nos três; cinco pioram o inglês e
+    /// dobram o tempo (2,7 s para 5,3 s no vídeo de 9 minutos, com 180 faixas
+    /// virando 346). Vale para quem escolhe o agrupamento no seletor — o
+    /// padrão do app continua sendo o Sortformer, que ganha no caso comum.
+    public static let chunkOverlap: Float = 2
+
     /// Quanto as fronteiras de voz são adiantadas, em segundos.
     ///
-    /// Varrido contra os dois gabaritos humanos: de 0,50 a 1,00 o resultado é
-    /// o mesmo e é o melhor; em 1,25 o vídeo em inglês volta a piorar (4 de 43
-    /// contra 2). Fica no meio da faixa que funciona.
-    public static let boundaryLead: TimeInterval = 0.75
+    /// Varrido contra os três gabaritos humanos, contando as legendas que
+    /// juntam a fala de duas pessoas:
+    ///
+    ///     adiantamento      cruas  0,25  0,40  0,50  0,60  0,75
+    ///     9 min, 2 pessoas      6     6     2     1     1     3
+    ///     inglês, 5 pessoas    12     9     3     2     2     2
+    ///     japonês, 10 pessoas   4     2     2     2     2     2
+    ///
+    /// 0,50 e 0,60 empatam e ganham nos três. Acima disso o vídeo de duas
+    /// pessoas — o caso comum — volta a piorar.
+    public static let boundaryLead: TimeInterval = 0.50
 
     /// Tira as vozes que somam quase nada.
     ///

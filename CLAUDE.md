@@ -904,6 +904,34 @@ pela janela de legendas. Duas coisas que ela resolve:
 | `minimumVoiceTime` | **2 s** | baixar a fala mínima trouxe uma voz de 1 s numa conversa de duas pessoas. `pruneTinyVoices` a descarta, e o trecho fica **sem** locutor em vez de com o do vizinho |
 | `clusteringThreshold` | **0,70** | varrido de 0,50 a 0,90 com `tradutor-verify vozes`; único valor que preserva distinção nos quatro arquivos. Acima de 0,71 o recorte de 96 s colapsa para uma voz |
 
+#### Qual modelo é melhor, pontuado contra três gabaritos humanos
+
+Três trechos marcados à mão, em `Videos Exemplo/*.quem-fala*.txt`. Acerto de
+identidade por legenda, pelo mapeamento de maioria entre rótulo e pessoa:
+
+```
+                        sortformer   agrupamento   agrupamento
+                                       (0,70)      (melhor limiar)
+9 min, 2 pessoas            97%          88%          88%  (0,45 e 0,55)
+161 s inglês, 5 pessoas     70%          59%          61%  (0,45)
+97 s japonês, 10 pessoas    50%          56%          78%  (0,45)
+```
+
+**O Sortformer ganha nos dois casos normais e perde onde há muita gente.** O
+motivo é o teto de quatro vozes da exportação CoreML: com dez pessoas ele não
+tem como representá-las, e nenhum ajuste nosso resolve. O agrupamento não tem
+teto, mas o limiar decide tudo e não existe valor bom para os dois extremos —
+0,45 acerta o vídeo de dez pessoas e devolve doze vozes no de duas.
+
+No caso comum, **o limiar não é o gargalo do agrupamento**: 0,45, 0,55 e 0,70
+dão os mesmos 88% no vídeo de duas pessoas. O que melhorou ali foi outro
+parâmetro — ver `chunkOverlap`.
+
+O padrão continua Sortformer, agora com três razões medidas: ganha no caso
+comum, é 2 a 3× mais rápido, e o erro dele (dividir uma pessoa em vários
+rótulos) tem conserto pela fusão, enquanto o do agrupamento (fundir duas numa)
+não tem.
+
 #### As fronteiras de voz chegavam tarde, e isso estragava a legenda
 
 Com dois gabaritos humanos deu para medir o que importa de verdade — quantas
