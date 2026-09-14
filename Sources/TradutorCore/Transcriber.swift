@@ -460,7 +460,82 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         log.info("Whisper turbo pronto para \(self.language.rawValue, privacy: .public)")
     }
 
+    /// Repete a passada quando ela sai pobre, e fica com a melhor.
+    ///
+    /// O WhisperKit re-decodifica a janela com temperatura acima de zero
+    /// quando um dos três limiares dispara, e aí o amostrador **sorteia** o
+    /// token. Em áudio difícil isso vira loteria: medido num vídeo de 78 s
+    /// com fala baixa e vento, três execuções do mesmo arquivo deram 4, 14 e
+    /// 9 trechos — uma pegou só o começo, outra só o fim.
+    ///
+    /// Não dá para tirar o sorteio: `temperatureFallbackCount = 0` foi medido
+    /// e derruba a captação (30 trechos para 9), e o `Float.random` do
+    /// WhisperKit não aceita semente. O que dá é **notar que a passada saiu
+    /// ruim e tentar de novo**, ficando com a que cobriu mais fala.
+    ///
+    /// Em áudio normal a primeira passada já passa do piso e nada se repete —
+    /// o custo só aparece onde o problema existe.
     public func transcribeTimed(
+        _ samples: [Float],
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> [TimedText] {
+        let regioes = SpeechEnergy.regions(samples, minimumPause: 0.5)
+
+        var melhor: [TimedText] = []
+        var melhorCobertura = -1.0
+        for tentativa in 1...Self.maximumAttempts {
+            try Task.checkCancellation()
+            let saida = try await transcribeOnce(samples) { fracao in
+                // A barra não pode voltar: cada tentativa ocupa a sua fatia.
+                let fatia = 1 / Double(Self.maximumAttempts)
+                progress(min(1, (Double(tentativa - 1) + fracao) * fatia))
+            }
+            let cobertura = Self.reached(regioes, by: saida)
+            if cobertura > melhorCobertura {
+                melhorCobertura = cobertura
+                melhor = saida
+            }
+            if ProcessInfo.processInfo.environment["ASR_DEBUG"] != nil {
+                FileHandle.standardError.write(Data(String(
+                    format: "[passada %d] cobertura %.0f%% · %d trechos · %d caracteres\n",
+                    tentativa, cobertura * 100, saida.count,
+                    saida.reduce(0) { $0 + $1.text.count }).utf8))
+            }
+            if cobertura >= Self.coverageFloor { break }
+            log.info("passada \(tentativa, privacy: .public) cobriu \(Int(cobertura * 100), privacy: .public)% da fala; repetindo")
+        }
+        progress(1)
+        return melhor
+    }
+
+    /// Fração dos trechos de fala que precisa ter recebido **algum** texto
+    /// para a passada ser aceita de primeira.
+    ///
+    /// A medida é alcance, não cobertura de tempo: contar segundos cobertos
+    /// pune quem corta fino, e o Whisper corta fino de propósito — no vídeo
+    /// de 9 minutos ele cobre 51% do tempo com a legenda inteira certa, e
+    /// repetir ali seria triplicar o tempo à toa.
+    public static let coverageFloor = 0.75
+
+    /// Teto de tentativas. Três porque a terceira já raspa o que a primeira
+    /// deixou: medido no vídeo difícil, 4 · 14 · 9 trechos nas três.
+    public static let maximumAttempts = 3
+
+    /// Fração dos trechos de fala que algum texto alcançou.
+    ///
+    /// É a medida certa de "passada pobre": contar caracteres premiaria a
+    /// execução que repete a mesma frase — que é justamente o defeito que a
+    /// retentativa com temperatura produz — e contar segundos cobertos
+    /// puniria quem corta fino.
+    public static func reached(_ regions: [ClosedRange<Double>], by pieces: [TimedText]) -> Double {
+        guard !regions.isEmpty else { return 1 }
+        let alcancados = regions.filter { region in
+            pieces.contains { $0.end > region.lowerBound && $0.start < region.upperBound }
+        }
+        return Double(alcancados.count) / Double(regions.count)
+    }
+
+    private func transcribeOnce(
         _ samples: [Float],
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> [TimedText] {

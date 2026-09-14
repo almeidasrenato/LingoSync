@@ -3260,6 +3260,30 @@ struct Verify {
             expect(motor.forLive == motor, "\(motor.displayName) ao vivo continua sendo ele mesmo")
         }
 
+        // A repeticao do Whisper quando a passada sai pobre. O criterio e
+        // ALCANCE — quantos trechos de fala receberam algum texto —, e nao
+        // tempo coberto: o Whisper corta fino de proposito, e contar segundos
+        // faria o video de 9 minutos repetir tres vezes a toa (52% de tempo
+        // coberto contra 96% de alcance).
+        let fala = [0.0...1.0, 2.0...3.0, 4.0...5.0, 6.0...7.0]
+        expect(WhisperTranscriber.reached(fala, by: []) == 0,
+               "passada vazia nao alcanca nada")
+        expect(WhisperTranscriber.reached([], by: []) == 1,
+               "sem trecho de fala, nao ha o que alcancar")
+        expect(WhisperTranscriber.reached(fala, by: [
+            .init(text: "a", start: 0.2, end: 0.5), .init(text: "b", start: 4.1, end: 4.9),
+        ]) == 0.5, "dois de quatro trechos alcancados sao 50%")
+        expect(WhisperTranscriber.reached(fala, by: [
+            .init(text: "x", start: 1.2, end: 1.8),
+        ]) == 0, "texto que cai no silencio nao alcanca trecho nenhum")
+        expect(WhisperTranscriber.reached(fala, by: [
+            .init(text: "tudo", start: 0, end: 7),
+        ]) == 1, "um trecho longo alcanca todos")
+        expect(WhisperTranscriber.maximumAttempts >= 2 && WhisperTranscriber.maximumAttempts <= 4,
+               "o teto de tentativas fica entre 2 e 4")
+        expect(WhisperTranscriber.coverageFloor > 0.5 && WhisperTranscriber.coverageFloor < 1,
+               "o piso de alcance fica entre 50% e 100%")
+
         // A retentativa do Neural Engine: uma falha e recuperada, duas sobem,
         // e cancelamento nao e retentado.
         struct Falhou: Error {}

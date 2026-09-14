@@ -285,6 +285,60 @@ também acaba com o sorteio e foi medido: cai para 9 trechos** — as retentativ
 aleatórias recuperavam texto de verdade; o certo é não precisar delas.
 `tradutor-verify motores` falha se o número voltar.
 
+### A loteria do Whisper: repetir quando a passada sai pobre
+
+O limiar de −3,0 acima reduziu o sorteio, não o eliminou. Num vídeo de 78 s
+com fala baixa e vento (`Videos Exemplo/Video perca de fala japones.mp4`),
+três execuções do mesmo arquivo deram 4, 14 e 9 trechos — uma pegou só o
+começo, outra só o fim. Com `ASR_DEBUG` dá para ver por quê: **14
+re-decodificações, por três gatilhos diferentes**.
+
+```
+compressionRatioThreshold    6   (repetição degenerada)
+firstTokenLogProbThreshold   4   (confiança do primeiro token)
+logProbThreshold             4   (confiança média)
+```
+
+Baixar mais o primeiro limiar — o único que o app controla — resolveria menos
+de um terço. Zerar as retentativas já foi medido e derruba a captação. E o
+`Float.random` do WhisperKit não aceita semente.
+
+O que sobra é **notar que a passada saiu ruim e tentar de novo**:
+`transcribeTimed` repete até três vezes e fica com a que alcançou mais fala.
+Comparação pareada, a primeira passada de cada execução contra a melhor das
+três dela:
+
+```
+execução    1ª passada   melhor das 3
+1              23%           23%
+2              20%           41%
+3              30%           32%
+```
+
+E no texto final, cinco execuções: 150 · 64 · 63 · 161 · 54 caracteres, contra
+17 · 97 · 70 de uma passada só. A média sobe de 61 para 98 e o pior caso
+triplica. A variação continua — todas as passadas são ruins nesse áudio —, mas
+o piso sobe.
+
+**O critério é alcance, não tempo coberto.** Contar segundos de fala cobertos
+pune quem corta fino, e o Whisper corta fino de propósito: no vídeo de 9
+minutos ele cobre 51% do tempo com a legenda inteira certa. Por alcance —
+quantos trechos de fala receberam **algum** texto — o mesmo vídeo dá 96%.
+
+Por isso **áudio normal não paga nada**: a primeira passada já passa do piso
+de 75% e nada se repete.
+
+```
+vídeo de 9 min japonês    96%   uma passada · 26 s
+97 s japonês com música   79%   uma passada ·  6 s
+161 s inglês             100%   uma passada ·  8 s
+78 s difícil          20 a 30%  três passadas
+```
+
+Contar caracteres em vez de alcance seria pior ainda: premiaria justamente a
+execução que repete a mesma frase, que é o defeito que a retentativa com
+temperatura produz.
+
 Detalhes que custaram investigação:
 
 - O botão + ao lado do idioma de origem instala o modelo da Apple pelo
