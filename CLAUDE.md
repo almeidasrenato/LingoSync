@@ -904,6 +904,50 @@ pela janela de legendas. Duas coisas que ela resolve:
 | `minimumVoiceTime` | **2 s** | baixar a fala mínima trouxe uma voz de 1 s numa conversa de duas pessoas. `pruneTinyVoices` a descarta, e o trecho fica **sem** locutor em vez de com o do vizinho |
 | `clusteringThreshold` | **0,70** | varrido de 0,50 a 0,90 com `tradutor-verify vozes`; único valor que preserva distinção nos quatro arquivos. Acima de 0,71 o recorte de 96 s colapsa para uma voz |
 
+#### As fronteiras de voz chegavam tarde, e isso estragava a legenda
+
+Com dois gabaritos humanos deu para medir o que importa de verdade — quantas
+legendas juntam a fala de duas pessoas — e a resposta contrariou o que estava
+registrado aqui:
+
+```
+vídeo em inglês (5 pessoas)      legendas que juntam duas pessoas   locutor certo
+  sem fronteiras de voz                    2 de 43                    31 de 43
+  fronteiras cruas                        12 de 43                    33 de 43
+  fronteiras adiantadas 0,75 s             2 de 43                    31 de 43
+
+vídeo japonês com música (10 pessoas)
+  sem fronteiras de voz                    1 de 19                     8 de 18
+  fronteiras cruas                         4 de 22                    10 de 21
+  fronteiras adiantadas 0,75 s             2 de 22                    10 de 21
+```
+
+**A causa é um atraso sistemático.** Listando as legendas estragadas, o padrão
+salta: a troca real acontece em 12,06 s e o corte cai em 13,06; 21,84 e 23,28;
+24,84 e 25,84; 49,20 e 50,14. Sempre cerca de um segundo tarde — o bastante
+para a primeira palavra de quem entra ficar na legenda de quem sai:
+
+```
+  "Oh, shut it already. What"        ← "What" é da outra pessoa
+  "happened to everyone else?"
+  "...I'll have them give you a report. You'd"
+  "better not be doing a sloppy job. Saint"
+```
+
+`SpeakerDiarizer.boundaryLead` adianta as fronteiras em 0,75 s. Varrido contra
+os dois gabaritos: de 0,50 a 1,00 o resultado é o mesmo e é o melhor; em 1,25 o
+inglês volta a piorar. O adiantamento recupera o recorte de quem não usa
+fronteira nenhuma **e** mantém o rótulo de locutor melhor que sem elas.
+
+Duas outras suspeitas foram medidas no caminho e não pagaram: descartar
+fronteira vinda de faixa curta (uma fronteira a menos em 29, resultado
+idêntico) e encaixar cada fronteira no vale de energia mais próximo (idem).
+
+**E a medição que justificava as fronteiras era circular.** Ela contava
+"trechos com duas vozes" usando a própria diarização como juiz do corte que a
+diarização produzia — 23 de 132 contra 1 de 251. Com gabarito humano, o sinal
+inverte. Toda métrica de locutor daqui para frente é contra gabarito.
+
 #### O primeiro gabarito humano, e o que ele derrubou
 
 `Videos Exemplo/video exemplo 2 (Conversa mais complexa).quem-fala.txt` tem a

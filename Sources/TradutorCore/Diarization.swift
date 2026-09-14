@@ -331,7 +331,23 @@ public enum SpeakerDiarizer {
 
     /// Os instantes em que a voz troca, para quem monta trecho a partir de
     /// palavras não juntar duas pessoas. Ver `Transcriber.speakerBoundaries`.
-    public static func boundaries(of turns: [Turn]) -> [TimeInterval] {
+    /// - Parameter shift: quanto adiantar cada fronteira. O modelo marca a
+    ///   troca **depois** de ela ter acontecido, e com regularidade: medido
+    ///   contra gabarito humano, os cortes caíam ~1 s tarde, o bastante para
+    ///   a primeira palavra de quem entrou ficar na legenda de quem saiu —
+    ///   "Oh, shut it already. What" / "happened to everyone else?".
+    ///
+    ///   Com as fronteiras cruas, 12 de 43 legendas do vídeo em inglês
+    ///   juntavam duas pessoas; adiantando, 2 de 43, que é o mesmo de não
+    ///   usar fronteira nenhuma — e o rótulo de locutor continua melhor que
+    ///   sem elas (10 de 21 contra 8 de 18 no vídeo japonês).
+    ///
+    ///   Duas outras suspeitas foram medidas e não pagaram: descartar
+    ///   fronteira de faixa curta (uma fronteira a menos, resultado idêntico)
+    ///   e encaixar a fronteira no vale de energia mais próximo (idem).
+    public static func boundaries(
+        of turns: [Turn], shift: TimeInterval = boundaryLead
+    ) -> [TimeInterval] {
         var instantes: Set<TimeInterval> = []
         for (index, turn) in turns.enumerated() {
             // Só onde há troca de verdade: duas faixas seguidas da mesma
@@ -343,8 +359,16 @@ public enum SpeakerDiarizer {
                 instantes.insert(turn.end)
             }
         }
-        return instantes.sorted()
+        guard shift != 0 else { return instantes.sorted() }
+        return Set(instantes.map { max(0, $0 - shift) }).sorted()
     }
+
+    /// Quanto as fronteiras de voz são adiantadas, em segundos.
+    ///
+    /// Varrido contra os dois gabaritos humanos: de 0,50 a 1,00 o resultado é
+    /// o mesmo e é o melhor; em 1,25 o vídeo em inglês volta a piorar (4 de 43
+    /// contra 2). Fica no meio da faixa que funciona.
+    public static let boundaryLead: TimeInterval = 0.75
 
     /// Tira as vozes que somam quase nada.
     ///

@@ -2740,7 +2740,9 @@ struct Verify {
             SpeakerDiarizer.Turn(speaker: "speaker_0", start: 10.5, end: 20),
             SpeakerDiarizer.Turn(speaker: "speaker_1", start: 21, end: 30),
         ]
-        let limites = SpeakerDiarizer.boundaries(of: faixas)
+        // Sem adiantar: aqui o que se testa é QUAIS instantes viram fronteira.
+        // O adiantamento tem verificação própria mais abaixo.
+        let limites = SpeakerDiarizer.boundaries(of: faixas, shift: 0)
         expect(limites.contains(0) && limites.contains(21) && limites.contains(30),
                "o começo de cada voz e o fim da ultima sao fronteira")
         expect(!limites.contains(10.5),
@@ -2828,6 +2830,28 @@ struct Verify {
         expect(!SRTWriter.render([
             Cue(index: 1, start: 0, end: 1, source: "", translated: "Bom dia.", speaker: "Locutor 1")
         ]).contains("<font"), "sem pedir cor, nenhuma tag entra no arquivo")
+
+        print("")
+        print("fronteiras de voz adiantadas\n")
+        // O modelo marca a troca depois de ela acontecer, e o corte atrasado
+        // leva a primeira palavra de quem entrou para a legenda de quem saiu.
+        // Medido contra gabarito humano: 12 de 43 legendas juntavam duas
+        // pessoas com as fronteiras cruas, 2 de 43 adiantando.
+        let duasVozes: [SpeakerDiarizer.Turn] = [
+            .init(speaker: "A", start: 0, end: 10),
+            .init(speaker: "B", start: 10, end: 20),
+        ]
+        let cruas = SpeakerDiarizer.boundaries(of: duasVozes, shift: 0)
+        let adiantadas = SpeakerDiarizer.boundaries(of: duasVozes)
+        expect(cruas == [0, 10, 20], "sem adiantar, a fronteira é o instante do modelo")
+        expect(adiantadas == [0, 10 - SpeakerDiarizer.boundaryLead, 20 - SpeakerDiarizer.boundaryLead],
+               "adiantar desloca todas menos a que ficaria antes do zero")
+        expect(SpeakerDiarizer.boundaryLead >= 0.5 && SpeakerDiarizer.boundaryLead <= 1.0,
+               "o adiantamento fica na faixa medida (0,50 a 1,00 s)")
+        expect(SpeakerDiarizer.boundaries(of: [
+            .init(speaker: "A", start: 0, end: 5), .init(speaker: "A", start: 5, end: 9),
+        ]) == [0, 9 - SpeakerDiarizer.boundaryLead],
+               "duas faixas da mesma pessoa nao abrem fronteira no meio")
         // O leitor do proprio app tem de ler de volta o que ele escreveu.
         let devolta = SRTParser.parse(coloridas)
         expect(devolta.count == 2 && devolta[0].translated == "— Bom dia.",
@@ -2962,21 +2986,62 @@ struct Verify {
             }.count
         }
 
-        let transcriber = TranscriberFactory.make(for: .japanese, engine: .apple)
+        let transcriber = TranscriberFactory.make(for: Language(rawValue: ProcessInfo.processInfo.environment["TRADUTOR_IDIOMA"] ?? "ja") ?? .japanese, engine: .apple)
         if (try? await transcriber.prepare { _, _ in }) != nil {
             let builder = SubtitleFileBuilder()
             let duracao = Double(samples.count) / 16_000
             print("")
             print("legendas que passam por cima de uma troca de pessoa conhecida:")
-            for comFronteiras in [false, true] {
-                transcriber.speakerBoundaries = comFronteiras
-                    ? SpeakerDiarizer.boundaries(of: turns) : []
+            let variantes: [(String, [TimeInterval])] = [
+                ("sem fronteiras", []),
+                ("cruas         ", SpeakerDiarizer.boundaries(of: turns, shift: 0)),
+                ("adianta 0,50 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.50)),
+                ("adianta 0,75 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.75)),
+                ("adianta 1,00 s", SpeakerDiarizer.boundaries(of: turns, shift: 1.00)),
+                ("adianta 1,25 s", SpeakerDiarizer.boundaries(of: turns, shift: 1.25)),
+            ]
+            for (nome, fronteiras) in variantes {
+                transcriber.speakerBoundaries = fronteiras
                 guard let pieces = try? await transcriber.transcribeTimed(samples, progress: { _ in })
                 else { continue }
                 let marcados = SpeakerDiarizer.assign(pieces, to: turns)
-                let cues = builder.makeCues(from: marcados, mediaDuration: duracao)
-                print(String(format: "  %@fronteiras de voz: %d de %d legendas",
-                             comFronteiras ? "com " : "sem ", contaminadas(cues), cues.count))
+                let cues = SpeakerDiarizer.renumber(marcados).isEmpty
+                    ? builder.makeCues(from: marcados, mediaDuration: duracao)
+                    : builder.makeCues(from: marcados, mediaDuration: duracao)
+                // O outro lado da moeda: sem cortar na troca, o trecho com
+                // duas pessoas recebe um rótulo só. Isto conta quantas
+                // legendas saem com o locutor certo, pelo mesmo mapeamento
+                // por maioria usado acima.
+                var votosLegenda: [String: [String: Int]] = [:]
+                for cue in cues {
+                    guard let dono = cue.speaker else { continue }
+                    let pessoas = marcas.filter {
+                        min(cue.end, $0.fim) - max(cue.start, $0.inicio) > 0.15
+                    }.flatMap(\.quem)
+                    guard let pessoa = pessoas.first else { continue }
+                    votosLegenda[dono, default: [:]][pessoa, default: 0] += 1
+                }
+                let mapaLegenda = votosLegenda.compactMapValues { $0.max { $0.value < $1.value }?.key }
+                let comDono = cues.filter { $0.speaker != nil }.count
+                let certos = cues.filter { cue in
+                    guard let dono = cue.speaker, let pessoa = mapaLegenda[dono] else { return false }
+                    return marcas.contains {
+                        min(cue.end, $0.fim) - max(cue.start, $0.inicio) > 0.15 && $0.quem.contains(pessoa)
+                    }
+                }.count
+                print(String(format: "  %@ (%3d fronteiras): %2d de %d cruzam troca · locutor certo em %d de %d",
+                             nome as NSString, fronteiras.count, contaminadas(cues), cues.count,
+                             certos, comDono))
+                if ProcessInfo.processInfo.environment["TRADUTOR_MOSTRA_CRUZAMENTO"] != nil {
+                    for cue in cues {
+                        let cruzou = trocas.filter { cue.start + 0.2 < $0 && $0 < cue.end - 0.2 }
+                        guard !cruzou.isEmpty else { continue }
+                        print(String(format: "      %6.2f–%6.2f  troca em %@  [%@]  %@",
+                                     cue.start, cue.end,
+                                     cruzou.map { String(format: "%.2f", $0) }.joined(separator: ",") as NSString,
+                                     (cue.speaker ?? "—") as NSString, cue.source as NSString))
+                    }
+                }
             }
         }
 
