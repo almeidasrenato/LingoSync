@@ -4,14 +4,10 @@ import OSLog
 
 /// Quem fala em cada trecho.
 ///
-/// É outro modelo, não um recurso do reconhecedor: o `DiarizerManager` do
-/// FluidAudio (segmentação + embedding de voz + agrupamento) roda sobre o
-/// mesmo áudio de 16 kHz e devolve faixas de tempo com um identificador de
-/// locutor. Por isso serve a qualquer reconhecedor que marque tempo — o que
-/// hoje são todos.
-///
-/// Só nos modos de vídeo. Ao vivo não há como: o agrupamento precisa do áudio
-/// inteiro para decidir que a voz do minuto 8 é a mesma do minuto 1.
+/// Outro modelo, não recurso do reconhecedor: o FluidAudio roda sobre o mesmo
+/// áudio de 16 kHz e devolve faixas com identificador de locutor. Serve a
+/// qualquer reconhecedor que marque tempo. Só em vídeo — o agrupamento precisa
+/// do áudio inteiro para saber que a voz do minuto 8 é a do minuto 1.
 public enum SpeakerDiarizer {
 
     private static let log = Logger(subsystem: "app.tradutor", category: "Locutores")
@@ -61,32 +57,25 @@ public enum SpeakerDiarizer {
     /// fundo — segurar o executor cooperativo travaria a interface.
     /// Distância máxima entre duas vozes para serem a mesma pessoa.
     ///
-    /// O `DiarizerManager` multiplica isto por 1,2 e usa como distância
-    /// cosseno máxima até um locutor conhecido: acima dela, nasce um locutor
-    /// novo. Ou seja, **mais alto junta mais**.
-    ///
-    /// `numClusters` da configuração parece ser a saída para dizer quantas
-    /// vozes esperar, e não é: medido, fixá-lo em 2 numa conversa de duas
-    /// pessoas devolveu os mesmos três locutores. Este caminho agrupa em
-    /// execução pelo `SpeakerManager`, que só olha o limiar.
-    ///
-    /// O valor aqui saiu de `tradutor-verify vozes`; ver o comentário da
-    /// varredura no CLAUDE.md antes de mexer.
+    /// O `DiarizerManager` multiplica por 1,2 e usa como distância cosseno
+    /// máxima até um locutor conhecido — **mais alto junta mais**.
+    /// `numClusters` **não** serve para dizer quantas vozes esperar: fixá-lo
+    /// em 2 numa conversa de duas pessoas devolveu os mesmos três locutores,
+    /// porque este caminho só olha o limiar. Valor de `tradutor-verify
+    /// vozes`; ver o CLAUDE.md antes de mexer.
     public static var clusteringThreshold: Float = 0.7
 
     /// Fala mínima para uma faixa existir.
     ///
-    /// O padrão do FluidAudio é 1 s, e num diálogo rápido isso descarta a
-    /// troca curta. Medido no vídeo de 9 minutos, com o limiar em 0,70:
+    /// O padrão de 1 s descarta a troca curta. Medido no vídeo de 9 minutos:
     ///
     ///     1,0s (padrão): 2 vozes,  87 faixas, 133 s de fala
-    ///     0,5s:          3 vozes, 176 faixas, 202 s   (+52%)
-    ///     0,3s:          3 vozes, 215 faixas, 217 s   (+63%)
+    ///     0,5s:          3 vozes, 176 faixas, 202 s
+    ///     0,3s:          3 vozes, 215 faixas, 217 s
     ///
-    /// A terceira voz que aparece em 0,5 s tem **1 segundo** no total — é
-    /// resto, não pessoa, e `pruneTinyVoices` a descarta. Ficou em 0,5 s: o
-    /// 0,3 s acrescenta pouco e multiplica faixa de 300 ms, que não chega a
-    /// virar legenda.
+    /// A terceira voz de 0,5 s tem 1 segundo no total — resto, não pessoa, e
+    /// `pruneTinyVoices` a descarta. 0,3 s acrescenta pouco e multiplica faixa
+    /// de 300 ms, que não vira legenda.
     public static var minimumSpeech: Float = 0.5
 
     /// Voz com menos que isto no total é resto de agrupamento, não pessoa.
@@ -216,17 +205,11 @@ public enum SpeakerDiarizer {
 
     /// Junta os identificadores que são a mesma voz.
     ///
-    /// O Sortformer parte uma pessoa em mais de um identificador: num diálogo
-    /// de duas pessoas ele devolveu **quatro** no vídeo de 9 minutos, com o
-    /// terceiro e o quarto aparecendo depois dos 380 s. Isso vira travessão
-    /// onde ninguém trocou de turno e cor nova no meio da conversa, e ainda
-    /// impede dizer quanto uma pessoa falou.
-    ///
-    /// O modelo de identificação não diz se dois rótulos são a mesma pessoa —
-    /// quem diz é o **embedding de voz**, que é outro modelo (o mesmo que o
-    /// caminho de agrupamento já usa, 13 MB). Aqui ele é aplicado uma vez por
-    /// identificador, sobre o áudio que aquele identificador cobre, e dois
-    /// deles são fundidos quando as vozes ficam perto.
+    /// O Sortformer parte uma pessoa em mais de um identificador — quatro num
+    /// diálogo de duas —, o que dá travessão onde ninguém trocou de turno e
+    /// cor nova no meio da conversa. Quem diz se dois rótulos são a mesma
+    /// pessoa é o **embedding de voz**, outro modelo (o mesmo do caminho de
+    /// agrupamento, 13 MB), aplicado uma vez por identificador.
     public static func mergeSameVoice(
         _ turns: [Turn], in samples: [Float], threshold: Float = sameVoiceThreshold
     ) async throws -> [Turn] {
@@ -336,19 +319,11 @@ public enum SpeakerDiarizer {
     /// Os instantes em que a voz troca, para quem monta trecho a partir de
     /// palavras não juntar duas pessoas. Ver `Transcriber.speakerBoundaries`.
     /// - Parameter shift: quanto adiantar cada fronteira. O modelo marca a
-    ///   troca **depois** de ela ter acontecido, e com regularidade: medido
-    ///   contra gabarito humano, os cortes caíam ~1 s tarde, o bastante para
-    ///   a primeira palavra de quem entrou ficar na legenda de quem saiu —
-    ///   "Oh, shut it already. What" / "happened to everyone else?".
-    ///
-    ///   Com as fronteiras cruas, 12 de 43 legendas do vídeo em inglês
-    ///   juntavam duas pessoas; adiantando, 2 de 43, que é o mesmo de não
-    ///   usar fronteira nenhuma — e o rótulo de locutor continua melhor que
-    ///   sem elas (10 de 21 contra 8 de 18 no vídeo japonês).
-    ///
-    ///   Duas outras suspeitas foram medidas e não pagaram: descartar
-    ///   fronteira de faixa curta (uma fronteira a menos, resultado idêntico)
-    ///   e encaixar a fronteira no vale de energia mais próximo (idem).
+    ///   troca ~1 s **depois** dela, o bastante para a primeira palavra de
+    ///   quem entrou ficar na legenda de quem saiu. Cruas, 12 de 43 legendas
+    ///   juntavam duas pessoas; adiantando, 2 de 43. Duas suspeitas medidas e
+    ///   descartadas: descartar fronteira de faixa curta e encaixá-la no vale
+    ///   de energia mais próximo — resultado idêntico nas duas.
     public static func boundaries(
         of turns: [Turn], shift: TimeInterval = boundaryLead
     ) -> [TimeInterval] {
@@ -367,21 +342,18 @@ public enum SpeakerDiarizer {
         return Set(instantes.map { max(0, $0 - shift) }).sorted()
     }
 
-    /// Sobreposição entre os blocos de 10 s que o agrupamento processa.
+    /// Sobreposição entre os blocos de 10 s do agrupamento.
     ///
-    /// O padrão do FluidAudio é zero, e aí a mesma pessoa pode receber
-    /// rótulos diferentes de um bloco para o outro. Medido contra os três
-    /// gabaritos humanos, acerto de identidade por legenda:
+    /// Com o padrão zero, a mesma pessoa muda de rótulo entre blocos. Acerto
+    /// de identidade contra os três gabaritos:
     ///
     ///     sobreposição        0 s    2 s    5 s
     ///     9 min, 2 pessoas    88%    91%    91%
     ///     japonês, 10 vozes   72%    78%    72%
     ///     inglês, 5 pessoas   61%    61%    57%
     ///
-    /// Dois segundos ganham ou empatam nos três; cinco pioram o inglês e
-    /// dobram o tempo (2,7 s para 5,3 s no vídeo de 9 minutos, com 180 faixas
-    /// virando 346). Vale para quem escolhe o agrupamento no seletor — o
-    /// padrão do app continua sendo o Sortformer, que ganha no caso comum.
+    /// 5 s piora o inglês e dobra o tempo. Vale só para quem escolhe o
+    /// agrupamento; o padrão do app é o Sortformer.
     public static let chunkOverlap: Float = 2
 
     /// Quanto as fronteiras de voz são adiantadas, em segundos.
@@ -413,16 +385,13 @@ public enum SpeakerDiarizer {
     /// Marca cada trecho reconhecido com quem estava falando.
     ///
     /// Critério: a **voz** que mais se sobrepõe ao trecho, somando as faixas
-    /// dela. Sobreposição parcial é a regra, não a exceção — o reconhecedor
-    /// corta na pontuação e a identificação corta na troca de voz, e os dois
-    /// cortes não coincidem.
-    /// Trecho sem faixa nenhuma fica sem locutor, que é diferente de errar o
-    /// locutor.
+    /// dela — o reconhecedor corta na pontuação e a identificação na troca de
+    /// voz, e os dois cortes não coincidem. Trecho sem faixa fica sem locutor,
+    /// que é diferente de errar o locutor.
     ///
-    /// Somar por voz, e não escolher a maior faixa isolada, é o que resolve o
-    /// trecho largo com ida e volta dentro: 0–3 s e 7–10 s da voz A contra
-    /// 3–7 s da voz B são 6 s contra 4 s, e a faixa isolada mais longa é a de
-    /// B. Trecho largo é justamente o que a Apple produz.
+    /// Somar por voz, e não pegar a maior faixa isolada, resolve o trecho
+    /// largo com ida e volta dentro: A em 0–3 s e 7–10 s soma 6 s e perdia
+    /// para os 4 s de B. Trecho largo é o que a Apple produz.
     public static func assign(_ pieces: [TimedText], to turns: [Turn]) -> [TimedText] {
         guard !turns.isEmpty else { return pieces }
         return pieces.map { piece in

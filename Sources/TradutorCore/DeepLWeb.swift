@@ -5,36 +5,25 @@ import WebKit
 
 /// Tradução pelo site do DeepL, sem API e sem chave.
 ///
-/// Por que existe: medido em 12/09/2026 sobre dois vídeos japoneses (66 falas),
-/// o DeepL ganha do tradutor do sistema em gênero, nome próprio e registro —
-/// ver "DeepL e Google ganham da Apple em japonês" no CLAUDE.md. O que ele
-/// custa é a premissa do app: o texto sai da máquina. Por isso é opção, e o
-/// padrão continua sendo a Apple.
+/// Ganha da Apple em japonês — gênero, nome próprio e registro; ver o
+/// CLAUDE.md. Custa a premissa do app: o texto sai da máquina. Por isso é
+/// opção, e o padrão continua sendo a Apple.
 ///
-/// **Como o texto entra.** Uma carga de página para o primeiro bloco, e
-/// limpar-e-colar para todos os seguintes.
+/// **Como o texto entra:** uma carga de página no primeiro bloco, e
+/// limpar-e-colar nos seguintes (2,2 a 3,0 s por ciclo, contra ~8 s de carga).
 ///
-/// O campo do site é um `contenteditable` com editor próprio.
-/// `execCommand('insertText')` nele não produz uma única requisição — e foi
-/// isso que, por um tempo, fez este arquivo recarregar a página a cada bloco.
-/// O que o editor aceita é um **evento de cola**: `ClipboardEvent('paste')`
-/// com um `DataTransfer`, que é o mesmo caminho de quem aperta ⌘V. Para
-/// esvaziar existe o botão do próprio site,
-/// `translator-source-clear-button`. Medido em 12/09/2026, dois ciclos
-/// seguidos de limpar-colar-ler: 2,2 s e 3,0 s, contagem exata nos dois.
-///
-/// Por que isso importa mais que os segundos: **recarregar a página a cada
-/// bloco é o que parece robô.** O armazenamento é `nonPersistent`, então cada
-/// carga chegava sem cookie nenhum, como um visitante novo — e depois de
-/// algumas seguidas vinha o desafio da Cloudflare. Colar mantém uma sessão só.
-///
-/// A primeira carga continua existindo porque é ela que fixa o par de idiomas,
-/// pelo formato de link do próprio site, `#<origem>/<destino>/<texto>`. Cada
-/// linha do texto vira um `<p>`, e é daí que sai a contagem preservada.
-///
-/// **O detalhe que custa uma tarde:** trocar só o fragmento não recarrega
-/// nada — a página é uma SPA e ignora o fragmento novo. Por isso a carga leva
-/// um parâmetro de consulta descartável.
+/// - O campo é um `contenteditable` com editor próprio, e
+///   `execCommand('insertText')` **não** dispara requisição nenhuma. O que ele
+///   aceita é `ClipboardEvent('paste')` com um `DataTransfer`, o caminho do
+///   ⌘V. Para esvaziar existe `translator-source-clear-button`.
+/// - **Recarregar a cada bloco é o que parece robô**: o armazenamento é
+///   `nonPersistent`, então cada carga chega sem cookie, e depois de algumas
+///   vinha o desafio da Cloudflare. Colar mantém uma sessão só.
+/// - A primeira carga fica porque fixa o par de idiomas pelo link do site,
+///   `#<origem>/<destino>/<texto>` — cada linha vira um `<p>`, e daí sai a
+///   contagem preservada.
+/// - **Trocar só o fragmento não recarrega nada** (SPA). Por isso a carga leva
+///   um parâmetro de consulta descartável.
 public enum DeepLWeb {
 
     /// O site gratuito recusa acima de 1500 caracteres por vez. 1400 deixa
@@ -84,23 +73,18 @@ public enum DeepLWeb {
 
     /// Esta leitura pode ser aceita como a tradução **deste** bloco?
     ///
-    /// O que ela existe para impedir tem nome e tempo medido: entre o texto
-    /// novo entrar no campo de origem e o site limpar o campo de destino
-    /// passam-se ~600 ms em que a tradução do bloco **anterior** continua na
-    /// tela — completa, estável, diferente da origem e plausível. Uma leitura
-    /// nessa janela escreve a legenda do bloco passado no bloco atual, com
-    /// timecode válido e arquivo sem erro nenhum.
-    ///
-    /// Medido no site em 12/09/2026, trocando o idioma de destino:
+    /// Entre o texto novo entrar e o site limpar o destino passam-se ~600 ms
+    /// em que a tradução do bloco **anterior** continua na tela — completa,
+    /// estável e plausível. Ler nessa janela escreve a legenda do bloco
+    /// passado no atual, com timecode válido e arquivo sem erro. Medido:
     ///
     ///     t+0ms     3 parágrafos · volume presente  ← tradução anterior
     ///     t+617ms   1 parágrafo "\n" · volume ausente ← traduzindo
     ///     t+1129ms  3 parágrafos · volume presente  ← tradução nova
     ///
-    /// Daí as três condições: o botão de volume do destino de volta (o site
-    /// diz que terminou), ter visto o site trabalhando desde que o texto foi
-    /// enviado, e — para o caso de a passagem pelo "trabalhando" ser rápida
-    /// demais para a leitura pegar — o texto ser diferente do bloco anterior.
+    /// Daí as três condições: volume de volta, ter visto o site trabalhando
+    /// desde o envio, e — quando a passagem é rápida demais para a leitura
+    /// pegar — o texto ser diferente do bloco anterior.
     public static func aceitavel(
         destino: [String], falante: Bool, viuTrabalhar: Bool, anterior: [String]?
     ) -> Bool {
@@ -187,46 +171,32 @@ public final class DeepLWebTranslator: Translator, @unchecked Sendable {
 
     public let engineName = "DeepL (site)"
 
-    /// Mesmo lote da Apple, por um motivo diferente: 40 falas de legenda dão
-    /// perto de um bloco de 1400 caracteres, ou seja, uma carga de página.
+    /// Mesmo lote da Apple, por motivo diferente: 40 falas dão perto de um
+    /// bloco de 1400 caracteres, ou seja, uma carga de página.
     ///
-    /// **Encher mais a carga foi testado e desfeito.** A ideia era boa no
-    /// papel — mais texto por ida é mais contexto, que é de onde o DeepL tira
-    /// gênero e pronome, e ainda seriam menos idas. Com 120, o primeiro bloco
-    /// passou a levar ~100 falas em vez de ~40, e o site **parou de preservar
-    /// as linhas**: devolveu tudo num parágrafo só.
-    ///
-    /// Medido em 12/09/2026, vídeo de 9 minutos, japonês → português:
+    /// **Encher mais foi testado e desfeito.** Mais texto por ida seria mais
+    /// contexto, mas com 120 o site **parou de preservar as linhas**:
     ///
     ///     40 por lote:  "devolveu 41 para 40", "19 para 20"  → repartia uma vez
     ///     120 por lote: "devolveu 1 para 103"                → 1 parágrafo
     ///
-    /// E um parágrafo só não tem como ser alinhado às legendas: o bloco cai na
-    /// repartição binária — 103 → 51 → 25 → 12 → 6 → 3 —, cada nível uma
-    /// página, e a geração foi de 23 s para 162 s. Contagem de linhas
-    /// preservada vale mais que contexto: é dela que depende a legenda cair no
-    /// tempo certo.
+    /// Um parágrafo só cai na repartição binária (103 → 51 → 25 → 12 → 6 → 3),
+    /// cada nível uma página: 23 s viraram 162 s. Contagem de linhas vale mais
+    /// que contexto.
     public var preferredBatchSize: Int { 40 }
 
     private let driver = DeepLDriver()
     private let log = Logger(subsystem: "app.tradutor", category: "DeepL")
 
-    /// Rede de segurança: bloco que o site não entregar cai aqui.
+    /// **Não há rede de segurança**, a pedido: bloco que o site não entregar
+    /// derruba a tradução inteira, com o erro na tela e um botão de tentar de
+    /// novo.
     ///
-    /// Deixar a geração inteira morrer porque um bloco deu tempo esgotado
-    /// seria pior que uma legenda mista — num vídeo de 18 minutos são dez
-    /// minutos de trabalho perdidos. A troca fica no log e no nome do motor.
-    private let backup = AppleTranslator()
-
-    /// Quantos blocos precisaram da Apple nesta execução.
-    public private(set) var fallbackCount = 0
-
-    public var completionNotice: String? {
-        guard fallbackCount > 0 else { return nil }
-        return fallbackCount == 1
-            ? "1 bloco foi traduzido pela Apple: o DeepL não respondeu."
-            : "\(fallbackCount) blocos foram traduzidos pela Apple: o DeepL não respondeu."
-    }
+    /// Antes o bloco caía para a Apple e a legenda saía misturada, com um
+    /// aviso de uma linha que passa despercebido — quem escolheu o DeepL
+    /// escolheu pela qualidade dele, e recebia outra coisa sem perceber. O
+    /// trabalho do reconhecimento não se perde: tentar de novo refaz só a
+    /// tradução, a partir do mesmo rascunho.
 
     public init() {}
 
@@ -242,7 +212,6 @@ public final class DeepLWebTranslator: Translator, @unchecked Sendable {
     }
 
     public func reset() {
-        fallbackCount = 0
         let driver = self.driver
         Task { @MainActor in driver.close() }
     }
@@ -255,11 +224,10 @@ public final class DeepLWebTranslator: Translator, @unchecked Sendable {
     public func translate(
         _ texts: [String], from source: Language, to target: Language
     ) async throws -> [String] {
-        // Par que o site não cobre não é erro: é a Apple fazendo o trabalho,
-        // como o menu avisa. Falhar aqui derrubaria a geração inteira por uma
-        // escolha de idioma que o usuário já vê anotada na tela.
+        // Par que o site não cobre também para aqui: trocar de tradutor
+        // caladamente é o que não se quer mais.
         guard DeepLWeb.supports(source, target) else {
-            return try await backup.translate(texts, from: source, to: target)
+            throw DeepLWebError.pairNotSupported(source, target)
         }
 
         let trimmed = texts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -279,9 +247,8 @@ public final class DeepLWebTranslator: Translator, @unchecked Sendable {
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                log.error("DeepL falhou em \(rotulo, privacy: .public): \(error.localizedDescription, privacy: .public) — caindo para a Apple")
-                fallbackCount += 1
-                traduzidas = try await backup.translate(falas, from: source, to: target)
+                log.error("DeepL falhou em \(rotulo, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                throw error
             }
             for (posicao, texto) in zip(bloco, traduzidas) {
                 saida[cheias[posicao].offset] = texto
@@ -304,20 +271,29 @@ public enum DeepLWebError: LocalizedError {
         case let .timedOut(bloco):
             "O DeepL não respondeu a tempo (\(bloco)). Pode ser limite de uso do site."
         case .challenged:
-            "O site do DeepL pediu confirmação de que você é humano. "
-                + "A tradução continua pela Apple."
+            "O site do DeepL pediu confirmação de que você é humano."
         }
     }
 }
 
-// MARK: - A janela que mostra o trabalho
+// MARK: - O motor do site, sem janela
 
-/// Dirige um `WKWebView` numa janela visível.
+/// Dirige um `WKWebView` sem janela nenhuma.
 ///
-/// A janela não é enfeite: `WKWebView` fora da tela tem temporizador
-/// estrangulado pelo sistema, e a página depende de temporizador para disparar
-/// a tradução. Mostrar é o que faz funcionar — e de quebra o usuário vê o que
-/// está saindo da máquina.
+/// A janela visível era obrigatória por medo do estrangulamento de
+/// temporizador que o sistema aplica a `WKWebView` fora da tela. Medido em
+/// 14/09/2026 no vídeo de 9 minutos (4 blocos, logo com o caminho de
+/// limpar-e-colar exercitado), pelo `--selftest-job` do app assinado:
+///
+///     com janela    141 legendas · 44 s · nenhuma falha
+///     sem janela    143 legendas · 45 s · nenhuma falha
+///
+/// O mesmo empate no `tradutor-verify traduzir` com 90 linhas em três blocos
+/// (18,8 s contra 18,0 s), e com a janela transparente ou fora da tela. O que
+/// dispara a tradução não depende de temporizador estrangulável.
+///
+/// `TRADUTOR_DEEPL_JANELA=1` traz a janela de volta, para ver o que o site
+/// está fazendo quando a geração dá errado.
 @MainActor
 final class DeepLDriver {
 
@@ -533,6 +509,10 @@ final class DeepLDriver {
         )
 
         let view = WKWebView(frame: NSRect(x: 0, y: 0, width: 900, height: 620), configuration: config)
+        guard ProcessInfo.processInfo.environment["TRADUTOR_DEEPL_JANELA"] != nil else {
+            webView = view
+            return view
+        }
         let janela = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -663,20 +643,17 @@ final class DeepLDriver {
     ///
     /// Cinco condições, e nenhuma basta sozinha:
     ///
-    /// - o campo de origem tem o texto deste bloco. É a identidade que vale
-    ///   nos dois caminhos: sem ela a leitura pega o bloco anterior, que ainda
-    ///   está na tela enquanto a página carrega ou enquanto a cola não chegou
-    ///   — e ele tem texto válido, só que errado.
-    /// - na carga, `bloco` igual ao nonce dela, por garantia a mais.
-    /// - nenhuma requisição em voo (o indicador de "traduzindo" do site).
+    /// - o campo de origem tem o texto **deste** bloco — a identidade que vale
+    ///   nos dois caminhos; sem ela a leitura pega o bloco anterior, que tem
+    ///   texto válido e errado.
+    /// - na carga, `bloco` igual ao nonce dela.
+    /// - nenhuma requisição em voo.
     /// - o campo de destino não está vazio.
-    /// - **o destino é diferente da origem.** Esta custou uma legenda inteira:
-    ///   enquanto a tradução não chega, o site mostra o texto de origem do
-    ///   lado de destino. Sem requisição em voo e com o texto parado, isso
-    ///   passava por "pronto" — e o `.srt` saiu com sete das onze falas em
-    ///   japonês, plausível e errado.
-    /// - duas leituras seguidas com o mesmo texto: a tradução aparece aos
-    ///   poucos, e uma pausa no meio pareceria fim.
+    /// - **o destino é diferente da origem**: enquanto a tradução não chega o
+    ///   site mostra a origem do lado do destino, e isso passava por "pronto"
+    ///   — o `.srt` saiu com sete das onze falas em japonês.
+    /// - duas leituras seguidas com o mesmo texto, porque a tradução aparece
+    ///   aos poucos e uma pausa no meio pareceria fim.
     private func esperar(
         _ view: WKWebView, enviado: [String], marca: Int?, esperadas: Int, label: String
     ) async throws -> [String] {
@@ -750,15 +727,12 @@ final class DeepLDriver {
             anterior = destino
 
             // Origem e destino iguais é o estado "ainda não traduziu": o site
-            // enche o campo de destino com a origem enquanto espera a
-            // resposta. Custou uma legenda inteira descobrir isso — o `.srt`
-            // saiu com sete das onze falas em japonês, plausível e errado.
-            //
-            // Só que esse estado é indistinguível do outro, o da tradução que
-            // não muda nada (um nome próprio sozinho), e ali a espera nunca
-            // terminava: 90 s parados numa fala de uma palavra. Sem requisição
-            // em voo e com o texto sem mexer, desistir cedo põe a Apple no
-            // lugar em dez segundos em vez de noventa.
+            // enche o destino com a origem enquanto espera a resposta — o
+            // `.srt` saiu com sete das onze falas em japonês. Mas esse estado
+            // é indistinguível da tradução que não muda nada (um nome próprio
+            // sozinho), e ali a espera nunca terminava: 90 s numa fala de uma
+            // palavra. Sem requisição em voo e com o texto parado, desistir
+            // cedo põe a Apple no lugar em dez segundos.
             let semTexto = !destino.contains(where: { !$0.isEmpty })
             if semTexto || Self.mesmoTexto(estado.origem, destino) {
                 if !semTexto, estado.voo == 0, passouDaGraca, iguais >= Self.stablePartial {

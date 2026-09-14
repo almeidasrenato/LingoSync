@@ -5,23 +5,41 @@ import OSLog
 /// Qwen3-ASR 0.6B (Alibaba, Apache-2.0), o único reconhecedor do app que não
 /// roda dentro do processo.
 ///
-/// Não existe port CoreML dele: o que existe é MLX, em Python. Por isso ele
-/// vive num ambiente próprio, criado por `Scripts/qwen-setup.sh`, e o app só
-/// o oferece quando esse ambiente existe — sem ele, nada muda.
+/// Não há port CoreML utilizável; o que existe é MLX em Python. Ele vive num
+/// ambiente próprio (`Scripts/qwen-setup.sh`) e o app só o oferece quando esse
+/// ambiente existe.
 ///
-/// Por que valeu a pena: medido em 96 s de japonês limpo, ele devolve 281
-/// caracteres contra 260 do Whisper e 248 da Apple, e — o que importa mais
-/// para legenda — devolve **uma fala por bloco, com pontuação**, enquanto a
-/// Apple emenda pergunta e resposta na mesma linha. O desvio de início contra
-/// a energia do áudio é +0,03 s, melhor que os +0,06 s do Whisper.
+/// Em 96 s de japonês limpo devolve 281 caracteres contra 260 do Whisper e 248
+/// da Apple — mas o que importa para legenda é o formato: **uma fala por
+/// bloco, com pontuação**, enquanto a Apple emenda pergunta e resposta na
+/// mesma linha. Desvio de início +0,03 s, melhor que os +0,06 s do Whisper.
 ///
-/// O custo é o tempo: 5,7 s para 96 s de áudio (17× tempo real) contra 172×
-/// da Apple. Daí `supportsLive` ser falso — no tempo real, cada trecho é
-/// re-reconhecido a cada 0,6 s, e 17× não sustenta isso.
+/// Custa 17× tempo real contra 172× da Apple, e daí `supportsLive` ser falso.
 public final class QwenTranscriber: Transcriber, @unchecked Sendable {
 
     /// Qual dos dois tamanhos. O 1.7B só existe em disco se o setup tiver
     /// rodado com `--grande`.
+    ///
+    /// **Os pesos de 4 bits foram medidos e recusados.** São 45% mais rápidos
+    /// (25,1 s contra 45,2 s no vídeo de 9 minutos) e transcrevem um pouco
+    /// menos, pelo caminho do app, em 3 dos 4 vídeos de exemplo:
+    ///
+    /// ```
+    ///                4 bits   float16
+    /// perca            128      129
+    /// anime            261      265
+    /// 9 min japonês   1425     1448
+    /// 161 s inglês    1645     1635
+    /// ```
+    ///
+    /// Meio por cento de texto, e num app de legenda texto vale mais que
+    /// segundos. Num WAV cru, sem `boostQuietAudio` nem `levelQuietSpeech`,
+    /// o 4 bits parecia ganhar (1634 contra 1449) — meça pelo caminho do app,
+    /// que é onde a diferença se inverte.
+    ///
+    /// Dois becos medidos junto, no 0.6B: **8 bits é mais lento que float16**
+    /// (6,0 s contra 4,9 s em 96 s) e **`--dtype bfloat16` é mais lento e
+    /// pior** (21,0 s e 1444 caracteres contra 19,3 s e 1661 em 540 s).
     public enum Size: String, Sendable {
         case small = "Qwen/Qwen3-ASR-0.6B"
         case large = "Qwen/Qwen3-ASR-1.7B"
@@ -67,13 +85,10 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
 
     /// O 0.6B não pontua em inglês.
     ///
-    /// Medido em 161 s de conversa: **zero** sinais de pontuação, contra 63
-    /// do Parakeet, 73 da Apple e 73 do próprio 1.7B. Sem ponto o agrupador
-    /// de legendas perde a fronteira de frase e só corta por pausa e por
-    /// teto de caracteres — legenda pior que a de qualquer outro motor. Em
-    /// japonês o mesmo modelo pontua normalmente, então é por idioma.
-    ///
-    /// Só o inglês foi medido; os outros doze seguem oferecidos.
+    /// Em 161 s de conversa: **zero** sinais, contra 63 do Parakeet, 73 da
+    /// Apple e 73 do próprio 1.7B. Sem ponto o agrupador perde a fronteira de
+    /// frase. Em japonês o mesmo modelo pontua normal — é por idioma, e só o
+    /// inglês foi medido.
     static let unpunctuated: [Size: [Language]] = [.small: [.english]]
 
     /// O que este tamanho oferece de fato.

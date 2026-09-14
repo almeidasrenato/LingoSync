@@ -424,16 +424,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// Roda o item de menu de geracao de legenda de ponta a ponta.
     ///
-    /// Ele e um arquivo separado da janela de legendas — compartilham o nucleo
-    /// mas cada um tem seu proprio codigo de interface, progresso e
-    /// cancelamento. Testar um nao testa o outro.
+    /// Arquivo separado da janela: compartilham o nucleo, mas interface,
+    /// progresso e cancelamento sao de cada um. Testar um nao testa o outro.
     /// Caminho relativo do autoteste, resolvido.
     ///
-    /// `open` não passa o diretório de trabalho para o app — ele nasce em `/` —
-    /// e `--selftest-job "Videos Exemplo/x.mp4"` abria um caminho inexistente,
-    /// com o app respondendo que o arquivo saiu do lugar. Relativo passa a
-    /// valer a partir da pasta que contém o `.app`: o projeto monta em
-    /// `build/Tradutor.app`, então é a raiz do projeto.
+    /// `open` não passa o diretório de trabalho (o app nasce em `/`), então
+    /// relativo vale a partir da pasta que contém o `.app` — o projeto monta
+    /// em `build/Tradutor.app`, ou seja, a raiz do projeto.
     private func resolvedTestPath(_ path: String) -> String {
         guard !path.hasPrefix("/") else { return path }
         let raiz = Bundle.main.bundleURL
@@ -791,16 +788,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(maiorEmLinhas <= 2,
                    "nenhuma legenda da janela passa de duas linhas (maior: \(maiorEmLinhas))")
 
-            // A janela e o arquivo quebram a linha no MESMO lugar.
-            //
-            // Sao dois caminhos diferentes — `displayText` + `LineBreaker` de
-            // um lado, `SRTWriter.render` do outro — e ja divergiram uma vez
-            // pelo travessao. Divergiram de novo quando a largura passou a
-            // depender do idioma de destino e a janela ficou com o 42 fixo:
-            // com destino japones o arquivo saia em 20 e a tela mostrava 42.
-            // A largura do arquivo vem da regra, nao da propriedade do
-            // modelo: assim o teste reprova tambem quando as duas deixarem de
-            // concordar, e nao so quando a quebra mudar.
+            // A janela e o arquivo quebram a linha no MESMO lugar: sao dois
+            // caminhos (`displayText` + `LineBreaker` contra
+            // `SRTWriter.render`) e ja divergiram pelo travessao e pela
+            // largura por idioma. A largura do arquivo vem da regra, nao da
+            // propriedade do modelo, para o teste reprovar tambem quando as
+            // duas deixarem de concordar.
             let doArquivo = SRTWriter.render(
                 model.cues,
                 charactersPerLine: SubtitleFileBuilder.lineWidth(for: model.targetLanguage)
@@ -1003,6 +996,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(model.origin?.recognition == origemAntes?.recognition,
                    "e quem reconheceu nao mudou: o audio nao foi ouvido de novo")
 
+            // --- o que a janela faz quando algo falha ---
+            //
+            // Nenhum tradutor de reserva entra no lugar de quem falhou (ver
+            // `SubtitleFileError.translationFailed`): a falha aparece na tela
+            // e o botao refaz. Com o rascunho de pe, refazer custa so a
+            // traducao, nao o reconhecimento.
+            let legendasAntesDaFalha = model.cues
+            model.loadSubtitles(from: URL(fileURLWithPath:
+                "/tmp/nao-existe-\(UUID().uuidString).srt"))
+            expect(model.failureMessage != nil,
+                   "a falha chega a interface com mensagem: \(model.failureMessage ?? "nenhuma")")
+            expect(model.canRetranslate,
+                   "com rascunho de pe, tentar de novo refaz so a traducao")
+            expect(model.cues.count == legendasAntesDaFalha.count,
+                   "a falha nao apaga o que ja estava na tela")
+            // A faixa vermelha e o botao so existem na tela: um PNG e a unica
+            // forma de conferir que eles aparecem.
+            try? await Task.sleep(for: .milliseconds(300))
+            if let content = window.contentView,
+               let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                content.cacheDisplay(in: content.bounds, to: bitmap)
+                try? bitmap.representation(using: .png, properties: [:])?
+                    .write(to: URL(fileURLWithPath: "/tmp/studio-falha.png"))
+                write("faixa de falha em /tmp/studio-falha.png")
+            }
+
             // `--retraduzir <motor>` troca de tradutor de verdade, que e para
             // isso que o botao existe. Fica atras de uma bandeira porque o
             // DeepL manda texto para a rede, e nenhum autoteste deve fazer
@@ -1188,6 +1207,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             model.listWidth = 480
             expect(model.listWidth == 480, "a coluna de legendas redimensiona")
             model.listWidth = larguraInicial
+
+            // O limite do divisor sai da largura da janela, nao de um teto
+            // fixo: com 560 fixo o divisor travava no meio de uma janela larga
+            // e, na estreita, encolher a janela deixava o video com alguns
+            // pixels.
+            let limite = SubtitleStudioModel.self
+            expect(limite.clampListWidth(2000, available: 1600)
+                   == 1600 - limite.minimumVideoWidth,
+                   "numa janela larga o divisor vai ate onde o video ainda cabe")
+            expect(limite.clampListWidth(900, available: 1000) <= 1000 - limite.minimumVideoWidth,
+                   "encolher a janela encolhe a lista junto")
+            expect(limite.clampListWidth(10, available: 1600) == limite.minimumListWidth,
+                   "a lista nunca some")
+            expect(limite.defaultListWidth > 320,
+                   "a lista abre mais larga que os 320 antigos (\(limite.defaultListWidth))")
 
             // --- clicar no video alterna reproducao ---
             expect(!model.isPlaying, "comeca pausado")

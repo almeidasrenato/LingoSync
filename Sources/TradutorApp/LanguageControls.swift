@@ -41,10 +41,11 @@ struct TranslationEnginePicker: View {
         .fixedSize()
         .help("""
               Quem traduz as legendas de vídeo. Apple é local e instantânea. \
-              DeepL abre o site numa janela e traduz por lá — melhor em \
-              japonês, medido, mas manda o texto para fora da máquina e \
-              precisa de internet. Hunyuan-MT é local como a Apple e roda \
-              fora do processo, quando instalado. Ao vivo é sempre a Apple.
+              DeepL abre o site numa janela e traduz por lá — o melhor em \
+              japonês, medido. Google é o mais rápido e chega perto dele. \
+              Os dois mandam o texto para fora da máquina e precisam de \
+              internet. Hunyuan-MT é local como a Apple e roda fora do \
+              processo, quando instalado. Ao vivo é sempre a Apple.
               """)
     }
 }

@@ -3,18 +3,13 @@ import Foundation
 /// Em que unidades o texto reconhecido é comparado e confirmado.
 ///
 /// O *LocalAgreement-2* confirma o prefixo em que duas passadas concordam, e a
-/// unidade era a palavra separada por espaço. Japonês e chinês não
-/// escrevem espaço entre palavras: medido com `tradutor-verify audio` em 75 s
-/// de japonês, a hipótese tinha 224 caracteres e 16 frases — e **8 unidades**,
-/// a maior com 44 caracteres e três frases inteiras. A confirmação virava tudo
-/// ou nada: a zona azul só andava quando duas passadas repetiam um bloco de
-/// três frases, e o resto ficava na zona vermelha até o segmento fechar no
-/// teto de 12 s.
+/// unidade era a palavra separada por espaço — que japonês e chinês não têm.
+/// Medido em 75 s de japonês: 224 caracteres e 16 frases viravam **8
+/// unidades**, a maior com três frases inteiras, e a zona azul só andava
+/// quando duas passadas repetiam o bloco todo.
 ///
-/// Onde não há espaço, a unidade passa a ser o caractere. `join` desfaz pela
-/// mesma regra — sem isso "今日は" voltaria à tela como "今 日 は", que é o
-/// defeito que o caminho de arquivo já evitava juntando dentro do
-/// reconhecedor.
+/// Onde não há espaço a unidade passa a ser o caractere; `join` desfaz pela
+/// mesma regra, senão "今日は" voltaria à tela como "今 日 は".
 public enum Tokens {
 
     /// Escrita que não separa palavra com espaço.
@@ -68,13 +63,11 @@ public enum Tokens {
     /// densa.
     ///
     /// A Apple devolve `ですか ？` e `よかったです。 頑張ろうね。` — espaços que
-    /// não existem em japonês e que seguem para o tradutor e para o `.srt`.
-    /// Eram 12 no vídeo de 9 minutos depois de juntar os trechos pela regra
-    /// da escrita; estes nascem **dentro** de um trecho, no texto do próprio
+    /// não existem em japonês e seguem para o tradutor e para o `.srt`. Eram
+    /// 12 no vídeo de 9 minutos, e nascem **dentro** do trecho, no texto do
     /// run, então o conserto é aqui e não na junção.
     ///
-    /// Só remove entre dois densos: `今 20歳` mantém o espaço, porque o `2`
-    /// não é escrita densa.
+    /// Só entre dois densos: `今 20歳` mantém o espaço, porque `2` não é.
     public static func tightenDense(_ text: String) -> String {
         var result = ""
         var pending = 0
@@ -119,18 +112,14 @@ public enum Tokens {
 /// Decide que parte de uma transcrição em andamento já pode ser considerada
 /// definitiva.
 ///
-/// O problema que isto resolve: cortar o áudio para transcrever em pedaços
-/// parte palavras ao meio, e nenhuma das metades é reconhecível — "reported"
-/// vira "Reaper's" no fim de um bloco e "ported" no começo do seguinte.
-/// Escolher um ponto de corte mais quieto ajuda, mas não elimina, porque fala
-/// contínua nem sempre tem um vale entre palavras.
+/// Cortar o áudio parte palavras ao meio e nenhuma metade é reconhecível —
+/// "reported" vira "Reaper's" no fim de um bloco e "ported" no começo do
+/// seguinte; cortar no ponto mais quieto ajuda e não elimina.
 ///
-/// A saída é não cortar o áudio. Transcreve-se o trecho inteiro repetidamente,
-/// e a cada passada compara-se com a anterior: o prefixo em que duas passadas
-/// consecutivas concordam é estável e pode ir para a tela. O que ainda oscila
-/// fica na zona vermelha, onde mudar é esperado.
-///
-/// É a política *LocalAgreement-2*, a mesma do `whisper-streaming`.
+/// A saída é não cortar: o trecho é transcrito inteiro, repetidamente, e vai
+/// para a tela o prefixo em que duas passadas concordam. O que oscila fica na
+/// zona vermelha, onde mudar é esperado. É a política *LocalAgreement-2*, do
+/// `whisper-streaming`.
 public struct StablePrefixTracker {
 
     private var previous: [String] = []
@@ -151,15 +140,10 @@ public struct StablePrefixTracker {
     public mutating func feed(_ hypothesis: String) -> [String] {
         let words = Tokens.split(hypothesis)
 
-        // O reconhecedor transcreve o trecho inteiro do zero a cada passada e
-        // as vezes REESCREVE o que ja saiu na tela — troca uma palavra la
-        // atras, junta duas, corta uma. Confirmar por indice sem checar isso
-        // desalinha as posicoes e produz texto embaralhado do tipo
-        // "running in been running in production".
-        //
-        // Como nao da para desdizer o que ja foi exibido, uma passada que
-        // discorda do passado nao confirma nada: espera a proxima, que quase
-        // sempre reconcilia.
+        // O reconhecedor as vezes REESCREVE o que ja saiu na tela, e
+        // confirmar por indice sem checar isso produz texto embaralhado
+        // ("running in been running in production"). Como nao da para desdizer
+        // o exibido, passada que discorda do passado nao confirma nada.
         var aligned = 0
         while aligned < min(confirmed.count, words.count),
               Self.normalize(confirmed[aligned]) == Self.normalize(words[aligned]) {
@@ -194,14 +178,10 @@ public struct StablePrefixTracker {
     /// Fecha o trecho usando a transcrição final, que é feita sobre o áudio
     /// completo e costuma ser melhor que as passadas intermediárias.
     ///
-    /// Existe porque `feed` + `flush` perdiam texto no fim de falas longas: se
-    /// a transcrição final divergisse do que já fora confirmado, `feed`
-    /// devolvia vazio por causa da guarda de alinhamento, e `flush` calculava
-    /// o pendente a partir de uma hipótese mais curta — o fim da frase
-    /// simplesmente sumia da tela.
-    ///
-    /// Aqui a regra é outra: alinha o que dá, e tudo o que a transcrição final
-    /// disser além do ponto de alinhamento entra. Nada se perde.
+    /// `feed` + `flush` perdiam texto no fim de falas longas: divergindo do
+    /// que já fora confirmado, `feed` devolvia vazio pela guarda de
+    /// alinhamento e `flush` partia de uma hipótese mais curta. Aqui a regra é
+    /// outra: alinha o que dá, e tudo além do ponto de alinhamento entra.
     public mutating func reconcile(_ hypothesis: String) -> [String] {
         let words = Tokens.split(hypothesis)
         guard !words.isEmpty else { return flush() }

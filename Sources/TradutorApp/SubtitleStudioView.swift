@@ -56,41 +56,58 @@ struct SubtitleStudioView: View {
     /// onde o arrasto partiu.
     @State private var larguraAoComecarArrasto: CGFloat?
 
+    /// Largura útil da linha inteira, para o divisor não parar antes da borda.
+    /// O limite em si é do modelo, onde dá para conferir sem desenhar nada.
+    @State private var larguraDaLinha: CGFloat = 0
+
+    private func limitar(_ largura: CGFloat) -> CGFloat {
+        SubtitleStudioModel.clampListWidth(largura, available: larguraDaLinha)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             toolbar
             HStack(alignment: .top, spacing: 0) {
                 VStack(spacing: 10) {
                     cueListHeader
+                    failureBanner
                     cueList
                     if isWorking { Isolated { progressPanel } }
                     Isolated { transport }
                 }
                 .frame(width: model.showsVideo ? model.listWidth : nil)
-                .frame(maxWidth: model.showsVideo ? model.listWidth : .infinity)
+                .frame(maxWidth: model.showsVideo ? nil : .infinity)
 
                 if model.showsVideo {
                     divider
                     videoArea
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { largura in
+                larguraDaLinha = largura
+                // Encolher a janela com a lista larga deixava o vídeo com
+                // alguns pixels: o teto novo vale na hora.
+                let ajustada = limitar(model.listWidth)
+                if ajustada != model.listWidth { model.listWidth = ajustada }
+            }
         }
         .padding(14)
         // Largura mínima com folga para o seletor de reconhecimento e o +.
         .frame(minWidth: 1080, minHeight: 580)
         .background(
-            // Atalhos: espaço reproduz, setas andam no tempo, ⌘← e ⌘→ andam
-            // de legenda em legenda.
+            // Atalhos: espaço reproduz, setas andam de legenda em legenda —
+            // que é como se lê uma conversa —, e ⌘← e ⌘→ andam 5 s no tempo,
+            // para quando o que se procura está no meio de uma fala longa.
             Group {
                 Button("") { model.togglePlay() }
                     .keyboardShortcut(.space, modifiers: [])
-                Button("") { model.skip(by: -5) }
-                    .keyboardShortcut(.leftArrow, modifiers: [])
-                Button("") { model.skip(by: 5) }
-                    .keyboardShortcut(.rightArrow, modifiers: [])
                 Button("") { model.jumpToPreviousCue() }
-                    .keyboardShortcut(.leftArrow, modifiers: .command)
+                    .keyboardShortcut(.leftArrow, modifiers: [])
                 Button("") { model.jumpToNextCue() }
+                    .keyboardShortcut(.rightArrow, modifiers: [])
+                Button("") { model.skip(by: -5) }
+                    .keyboardShortcut(.leftArrow, modifiers: .command)
+                Button("") { model.skip(by: 5) }
                     .keyboardShortcut(.rightArrow, modifiers: .command)
                 Button("") { model.toggleMute() }
                     .keyboardShortcut("m", modifiers: [])
@@ -424,12 +441,16 @@ struct SubtitleStudioView: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // O original só na legenda no ar: em todas, a lista vira
-                    // um muro de texto.
-                    if isActive, !cue.source.isEmpty, !cue.translated.isEmpty {
+                    // O original em todas as falas, não só na que está no ar:
+                    // é ele que se quer conferir contra a tradução, e ter de
+                    // reproduzir a legenda para ver o original tirava a lista
+                    // de serviço. Apagado, para a tradução continuar sendo o
+                    // que se lê primeiro.
+                    if !cue.source.isEmpty, !cue.translated.isEmpty {
                         Text(cue.source)
                             .font(.system(size: 9.5))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(isActive ? AnyShapeStyle(.tertiary)
+                                                      : AnyShapeStyle(.quaternary))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -446,6 +467,38 @@ struct SubtitleStudioView: View {
         .help("Ir para \(SRTWriter.timecode(cue.start).prefix(8))")
     }
 
+    /// A falha, dita em voz alta, com o botão de tentar de novo.
+    ///
+    /// Faixa própria em vez do aviso de uma linha da barra de cima: quando a
+    /// tradução caía para outro motor, o aviso passava despercebido e a
+    /// legenda saía com duas qualidades dentro. Hoje a tradução falha inteira
+    /// — não há tradutor de reserva — e isto é o que aparece no lugar.
+    @ViewBuilder
+    private var failureBanner: some View {
+        if let message = model.failureMessage {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                Text(message)
+                    .font(.system(size: 11))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button("Tentar novamente") { model.retryFailed() }
+                    .controlSize(.small)
+                    .disabled(!model.canGenerate)
+                    .help(model.canRetranslate
+                          ? "Refaz só a tradução, sem reconhecer o áudio de novo"
+                          : "Gera a legenda de novo")
+            }
+            .padding(.vertical, 7)
+            .padding(.horizontal, 9)
+            .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8).strokeBorder(.red.opacity(0.35), lineWidth: 1)
+            )
+        }
+    }
+
     private var emptyList: some View {
         VStack(alignment: .leading, spacing: 6) {
             switch model.stage {
@@ -455,11 +508,9 @@ struct SubtitleStudioView: View {
                 Text("Vídeo carregado. Clique em Gerar legenda.")
             case .working:
                 EmptyView()          // o painel de progresso cuida disso
-            case let .failed(message):
-                Text("Não foi possível gerar")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.red)
-                Text(message).font(.system(size: 10))
+            case .failed:
+                // A faixa acima da lista já diz o que houve, e traz o botão.
+                EmptyView()
             case .cancelled:
                 Text("Geração cancelada.")
             case .done:
@@ -485,20 +536,28 @@ struct SubtitleStudioView: View {
                     .frame(width: 3, height: 34)
             )
             .contentShape(Rectangle())
-            .onHover { inside in
-                if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-            }
+            // Cursor pelo sistema, não por `NSCursor.push`/`pop` na mão: os
+            // dois não se equilibram quando o ponteiro sai do divisor no meio
+            // do arrasto — que é o que acontece em todo arrasto rápido — e a
+            // seta ficava presa em redimensionar, ou voltava a ser seta com o
+            // arrasto ainda em curso.
+            .pointerStyle(.columnResize)
             .gesture(
-                DragGesture()
+                // `minimumDistance: 0`: com os 10 px do padrão, o primeiro
+                // evento já chega com 10 px de deslocamento acumulado e o
+                // divisor pulava esse tanto antes de começar a acompanhar o
+                // ponteiro.
+                DragGesture(minimumDistance: 0)
                     .onChanged { value in
                         let base = larguraAoComecarArrasto ?? model.listWidth
                         if larguraAoComecarArrasto == nil { larguraAoComecarArrasto = base }
-                        // Limites: a lista precisa caber um horário e um
-                        // trecho de fala, e o vídeo precisa sobrar.
-                        model.listWidth = min(560, max(240, base + value.translation.width))
+                        model.listWidth = limitar(base + value.translation.width)
                     }
                     .onEnded { _ in larguraAoComecarArrasto = nil }
             )
+            // Duplo clique volta ao tamanho de fábrica: é o que um divisor de
+            // painel faz em todo lugar, e sai mais barato que caçar o valor.
+            .onTapGesture(count: 2) { model.listWidth = SubtitleStudioModel.defaultListWidth }
             .help("Arraste para redimensionar o vídeo")
     }
 

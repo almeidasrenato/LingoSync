@@ -93,13 +93,9 @@ public final class SubtitleFileBuilder {
 
     /// Até onde um trecho cresce **antes** de ser traduzido.
     ///
-    /// Era 64 — o tamanho de uma legenda pronta — e isso cortava orações ao
-    /// meio antes de o tradutor vê-las: ele recebia "Antes de fazer compras,
-    /// tire as" sem o objeto, e traduzia um fragmento sem sujeito.
-    ///
-    /// Agora o corte segue a frase, e é a **tradução** que é repartida depois,
-    /// no tempo, por `enforceLineLimit`. O tradutor vê a oração inteira; a
-    /// tela continua recebendo pedaços de duas linhas.
+    /// Era 64 (o tamanho de uma legenda) e cortava orações ao meio antes de o
+    /// tradutor vê-las. Hoje o corte segue a frase e é a tradução que
+    /// `enforceLineLimit` reparte depois.
     public var maximumCharacters = 150
     /// Largura da linha da legenda pronta.
     ///
@@ -110,16 +106,10 @@ public final class SubtitleFileBuilder {
 
     /// Quantos caracteres cabem numa linha, pelo idioma de destino.
     ///
-    /// Japonês e chinês escrevem caractere de largura cheia e sem espaço, e a
-    /// legenda do meio cabe em 16 a 20 por linha. Com os 42 latinos, medido
-    /// gerando inglês → japonês num vídeo de 161 s: **18 das 49 linhas
-    /// passavam de 20 caracteres e a mais longa tinha 42**, que é o dobro do
-    /// que a convenção admite — na tela, uma faixa de texto que não dá tempo
-    /// de ler.
-    ///
-    /// Coreano usa espaço entre palavras e fica de fora, como já fica em
-    /// `Tokens.isDense`. Tailandês também não separa palavra com espaço, mas
-    /// tem convenção própria e não foi medido aqui.
+    /// Japonês e chinês escrevem largura cheia e cabem em 16 a 20 por linha.
+    /// Com os 42 latinos, medido en → ja em 161 s: 18 das 49 linhas passavam
+    /// de 20, a maior com 42. Coreano fica de fora (usa espaço, como em
+    /// `Tokens.isDense`); tailandês não foi medido.
     public static func lineWidth(for target: Language) -> Int {
         switch target {
         case .japanese, .chinese: 20
@@ -130,13 +120,9 @@ public final class SubtitleFileBuilder {
 
     /// Quanto a legenda entra antes da fala.
     ///
-    /// O reconhecedor marca o início depois de a palavra já ter começado —
-    /// medido, entre 0,15 s e 0,8 s tarde. O efeito é a primeira palavra ser
-    /// ouvida antes de a legenda existir, e a sensação é de que o começo não
-    /// foi captado.
-    ///
-    /// Antecipar um pouco também é prática corrente de legendagem: o olho
-    /// precisa achar o texto antes de a voz chegar.
+    /// O reconhecedor marca o início entre 0,15 s e 0,8 s tarde, e antecipar
+    /// é prática corrente de legendagem: o olho precisa achar o texto antes
+    /// de a voz chegar.
     public var leadIn: TimeInterval = 0.25
     public var minimumDuration: TimeInterval = 1.0
     public var maximumDuration: TimeInterval = 7.0
@@ -147,40 +133,20 @@ public final class SubtitleFileBuilder {
 
     /// Quantas legendas do lote anterior são reenviadas junto com o novo.
     ///
-    /// **Zero, medido.** A ideia era dar vizinhança à legenda da borda: com
-    /// lotes encostados, a primeira de cada lote não tem nada atrás dela. Só
-    /// que o tradutor do sistema não usa essa vizinhança.
-    ///
-    /// `tradutor-verify sobreposicao` planta o caso exato na borda do lote —
-    /// "Marina… She is the lead engineer…" antes, "The engineer walked us
-    /// through…" depois — e compara reenviando 10 legendas contra reenviar
-    /// nenhuma:
-    ///
-    ///     mudaram: 0 das 5 na borda, 0 de 45 no total
-    ///     gênero feminino acertado na borda: com 10 = 0, com 0 = 0
-    ///
-    /// Idêntico, e errado nos dois ("o engenheiro"). O `tradutor-verify
-    /// dialogo` mostra o mesmo com as frases na MESMA requisição: o framework
-    /// da Apple não resolve gênero por contexto, nem a dez linhas nem a uma.
-    ///
-    /// E o custo era real, porque o custo do tradutor é **por string**
-    /// (ver `batchSizeGate`): no vídeo de 9 minutos, 44,4 s de tradução com
-    /// sobreposição contra 36,7 s sem — 17% do tempo total. No vídeo real 11
-    /// de 107 legendas mudavam de texto, metade para melhor e metade para
-    /// pior.
-    ///
-    /// Fica como campo para quem quiser medir de novo com outro tradutor.
+    /// **Zero, medido.** `tradutor-verify sobreposicao` planta o caso que a
+    /// justificava e reenviar 10 muda 0 das 5 na borda, com o gênero errado
+    /// dos dois lados: o framework da Apple não resolve gênero por contexto,
+    /// nem a dez linhas nem a uma. E custava 17% do tempo, porque o custo do
+    /// tradutor é **por string** (ver `batchSizeGate`). Fica como campo para
+    /// quem medir com outro tradutor.
     public var contextOverlap = 0
 
     /// Silêncios medidos no áudio, usados como fronteira de legenda.
     ///
-    /// O reconhecedor pode fechar o trecho na pausa e ainda assim os dois
-    /// pedaços saírem **contíguos** — um termina onde o outro começa, porque
-    /// o silêncio ficou dentro do run que a Apple emitiu. Aí `makeCues` não
-    /// vê pausa nenhuma entre eles e junta os dois de volta na mesma legenda,
-    /// desfazendo o corte. Visto no vídeo de 9 minutos: as falas de duas
-    /// pessoas voltavam a virar `お疲れ様あれさんお疲れ様です。`, e a tradução
-    /// colapsava as duas numa só.
+    /// O trecho pode fechar na pausa e os dois pedaços saírem **contíguos**
+    /// (o silêncio ficou dentro do run da Apple); aí `makeCues` não vê pausa
+    /// e junta de volta, desfazendo o corte. Foi assim que duas falas viravam
+    /// `お疲れ様あれさんお疲れ様です。` e a tradução colapsava as duas.
     public var silences: [ClosedRange<TimeInterval>] = []
 
     /// Aviso do tradutor sobre a geração que acabou de rodar, ou `nil`.
@@ -189,15 +155,15 @@ public final class SubtitleFileBuilder {
     /// silenciosa do DeepL para a Apple deixa de ser silenciosa.
     public private(set) var translationNotice: String?
 
+    /// Quantos lotes a tradução perdeu na última passada. Acima de zero, a
+    /// geração falha em vez de entregar legenda pela metade.
+    public private(set) var failedBatches = 0
+
     /// As legendas como saíram do reconhecimento, antes de traduzir.
     ///
-    /// Guardadas para trocar de tradutor sem reconhecer de novo: entre o
-    /// rascunho e `translate` não há mais nada no caminho — glossário, lote,
-    /// quebra de linha e maiúscula moram todos dentro do `translate` —, então
-    /// retraduzir daqui dá exatamente o que outra geração daria com aquele
-    /// tradutor. E dá com o **mesmo corte e os mesmos locutores**, que uma
-    /// geração nova não repete: o Sortformer varia entre execuções e o Whisper
-    /// tem retentativa com temperatura.
+    /// Entre o rascunho e `translate` não há mais nada no caminho, então
+    /// retraduzir daqui dá o que outra geração daria — e com o **mesmo corte
+    /// e os mesmos locutores**, que uma geração nova não repete.
     public private(set) var draft: [Cue] = []
 
     /// O motor que de fato reconheceu, não o que foi escolhido.
@@ -228,23 +194,14 @@ public final class SubtitleFileBuilder {
 
     /// Extrai o áudio de um arquivo de mídia em 16 kHz mono.
     ///
-    /// Aceita o arquivo mesmo sem extensão no nome. O AVFoundation escolhe o
-    /// demuxer olhando a extensão, então um mp4 chamado só `gravacao` é
-    /// recusado por um detalhe que não diz nada sobre o conteúdo. Quando isso
-    /// acontece, o arquivo é reapresentado ao sistema através de um link
-    /// temporário terminado em `.mp4` — os bytes são os mesmos, só o nome
-    /// muda.
-    ///
-    /// Isso não faz o app aceitar qualquer formato: se o conteúdo realmente
-    /// não for um container que o sistema leia, o erro diz qual formato é e
-    /// quais são aceitos.
+    /// Aceita arquivo sem extensão: o AVFoundation escolhe o demuxer pela
+    /// extensão, então o arquivo é reapresentado por um link temporário
+    /// `.mp4`. Se o conteúdo não for um container que o sistema leia, o erro
+    /// diz qual formato é e quais são aceitos.
     /// - Parameter language: o idioma que se espera ouvir, quando se sabe.
-    ///
-    ///   Vídeo com mais de uma faixa de áudio — dublagem, comentário, um
-    ///   idioma por faixa — não diz qual é a principal, e `tracks.first`
-    ///   pegava a que estivesse na frente. A legenda saía do áudio errado
-    ///   com timecode válido e nada reclamando. Sem faixa que declare o
-    ///   idioma pedido, a primeira continua valendo.
+    ///   `tracks.first` pegava a faixa da frente e a legenda saía do áudio
+    ///   errado, com timecode válido e nada reclamando. Sem faixa que declare
+    ///   o idioma pedido, a primeira continua valendo.
     public static func extractAudio(
         from url: URL, preferring language: Language? = nil, processing: Bool = true
     ) async throws -> [Float] {
@@ -424,28 +381,20 @@ public final class SubtitleFileBuilder {
     /// Iguala o nível ao longo do arquivo, para a fala baixa não sumir ao
     /// lado da alta.
     ///
-    /// Medido em 13/09/2026, japonês, atenuando **só metade das janelas de
-    /// 20 s** — que é como fala baixa aparece de verdade: alguém que fala
-    /// baixo no meio de quem fala alto, não o arquivo inteiro baixo.
+    /// Medido atenuando **só metade das janelas de 20 s**, que é como fala
+    /// baixa aparece de verdade — alguém baixo no meio de quem fala alto:
     ///
     ///     vídeo com música, −30 dB alternado   Whisper  355 → 716 caracteres
     ///     vídeo de 9 min,   −30 dB alternado   Whisper 3571 → 4484
     ///     vídeo com música, −30 dB alternado   Apple    603 → 717
     ///
-    /// (o mesmo áudio sem atenuação nenhuma dá 712 e 4085 no Whisper — ou
-    /// seja, o que se perdia volta inteiro.)
+    /// Baixar o arquivo INTEIRO não perde nada (o modelo normaliza a janela
+    /// que decodifica), e é por isso que `boostQuietAudio`, que mede o
+    /// arquivo todo, não enxerga este caso. Os dois rodam nesta ordem.
     ///
-    /// Baixar o arquivo INTEIRO não faz o Whisper perder nada: medido até
-    /// −40 dB, o texto sai igual, porque o modelo normaliza a janela que
-    /// decodifica. O que ele perde é o que está baixo **em relação ao resto**
-    /// da mesma janela — e é justamente esse caso que `boostQuietAudio`, que
-    /// mede o arquivo todo de uma vez, não enxerga. Os dois continuam, nesta
-    /// ordem: primeiro o nível do arquivo, depois o nível dentro dele.
-    ///
-    /// Só amplifica. Janela mais alta que o alvo fica como está — comprimir
-    /// a fala alta mudaria o que já estava bom. E janela abaixo de
-    /// `levelingFloor` não ganha nada: amplificar silêncio é o que faz o
-    /// Whisper preencher a pausa com frase de cortesia.
+    /// Só amplifica: comprimir a fala alta mudaria o que já estava bom, e
+    /// amplificar silêncio é o que faz o Whisper preencher a pausa com frase
+    /// de cortesia.
     public static func levelQuietSpeech(_ samples: [Float]) -> [Float] {
         // Para refazer a medição de cima sem recompilar.
         guard ProcessInfo.processInfo.environment["TRADUTOR_SEM_NIVELAMENTO"] == nil else {
@@ -719,26 +668,20 @@ public final class SubtitleFileBuilder {
         }
 
         progress(.transcribing, 0, String(format: "0 de %.0f s de áudio", seconds), false)
-        let timed = try await transcriber.transcribeTimed(samples) { fraction in
+        let timed = try await transcriber.transcribeForSubtitles(samples) { fraction in
             progress(.transcribing, fraction,
                      String(format: "%.0f de %.0f s de áudio", fraction * seconds, seconds), false)
         }
         try Task.checkCancellation()
 
-        // A frase de cortesia inventada no silêncio é descartada aqui, e não
-        // dentro de um motor só: o filtro morava no `WhisperTranscriber` e
-        // Apple, Parakeet e Qwen passavam direto — justamente o Qwen, que é o
-        // recomendado para japonês. O do Whisper fica onde está porque também
-        // cobre o caminho ao vivo, que não passa por aqui.
-        let limpos = timed.filter { !Hallucinations.isIsolatedFiller($0.text) }
-        guard !limpos.isEmpty else { throw SubtitleFileError.noSpeech }
+        guard !timed.isEmpty else { throw SubtitleFileError.noSpeech }
 
         // A atribuição é aqui, porque precisa dos tempos do reconhecimento —
         // e antes do agrupamento, porque a troca de locutor é fronteira de
         // legenda.
         let pieces = turns.isEmpty
-            ? limpos
-            : SpeakerDiarizer.renumber(SpeakerDiarizer.assign(limpos, to: turns))
+            ? timed
+            : SpeakerDiarizer.renumber(SpeakerDiarizer.assign(timed, to: turns))
 
         draft = makeCues(from: pieces, mediaDuration: seconds)
         return try await translateDraft(
@@ -794,6 +737,7 @@ public final class SubtitleFileBuilder {
         try Task.checkCancellation()
 
         progress(.translating, 0, "0 de \(draft.count)", false)
+        failedBatches = 0
         let translated = await translate(
             draft,
             using: translator,
@@ -803,9 +747,14 @@ public final class SubtitleFileBuilder {
             onBatch: onBatch
         )
         try Task.checkCancellation()
-        // O motor pode ter mudado de rota no meio — ver `completionNotice` —
-        // e os lotes que falharam já deixaram o aviso deles em `translate`.
-        // São coisas diferentes e as duas precisam chegar à tela.
+        // Nenhum tradutor de reserva, a pedido: lote perdido derruba a
+        // tradução em vez de deixar aquele pedaço no idioma de origem. O
+        // rascunho do reconhecimento fica de pé, e tentar de novo refaz só
+        // esta etapa.
+        if failedBatches > 0 {
+            throw SubtitleFileError.translationFailed(
+                translationNotice ?? "A tradução não foi concluída.")
+        }
         let avisos = [translationNotice, translator.completionNotice].compactMap { $0 }
         translationNotice = avisos.isEmpty ? nil : avisos.joined(separator: " ")
         return translated
@@ -911,8 +860,13 @@ public final class SubtitleFileBuilder {
     }
 
     /// Registra o que não foi traduzido, para a interface poder dizer.
+    ///
+    /// O aviso continua porque `translate` é usado sozinho nos gates; quem
+    /// gera legenda de verdade passa por `translateDraft`, e lá a falha vira
+    /// erro: legenda meio traduzida é arquivo plausível e errado.
     private func note(_ lotesFalhos: Int) {
         guard lotesFalhos > 0 else { return }
+        failedBatches = lotesFalhos
         translationNotice = lotesFalhos == 1
             ? "1 lote não foi traduzido — essas legendas saíram no idioma original."
             : "\(lotesFalhos) lotes não foram traduzidos — essas legendas saíram no idioma original."
@@ -963,20 +917,11 @@ public final class SubtitleFileBuilder {
     /// Repartir por número de caracteres dá pedaços de tamanho parecido, e
     /// cada um recebe tempo proporcional ao que carrega.
     public func enforceLineLimit(_ cues: [Cue]) -> [Cue] {
-        // Repartir uma vez não basta, e isso custou uma investigação.
-        //
-        // A conta de quantas partes fazer era `caracteres / (42 × 2)`, ou
-        // seja, supunha que toda linha chega aos 42. Ela não chega: a quebra
-        // procura pontuação e espaço, então 81 caracteres podem precisar de
-        // três linhas. Uma legenda de 159 caracteres virava duas de ~80, e a
-        // segunda — "Depois, desculpe, como você faz os músculos triângulos?
-        // Eu não entendo muito bem." — saía com três linhas no arquivo, sem
-        // ninguém conferir de novo.
-        //
-        // Medido em 12/09/2026: acontecia em 2 de 4 gerações do vídeo de 9
-        // minutos, conforme o texto que o tradutor devolvia. Duas correções:
-        // a conta passou a ser por **linhas**, não por caracteres, e o que
-        // sobrar grande volta para outra passada.
+        // Repartir uma vez não basta. A conta era `caracteres / (42 × 2)`,
+        // supondo que toda linha chega aos 42 — não chega, porque a quebra
+        // procura pontuação e espaço. Hoje a conta é por **linhas** e o que
+        // sobrar grande volta para outra passada (2 de 4 gerações do vídeo de
+        // 9 minutos saíam com três linhas).
         var atual = cues
         for _ in 0..<3 {
             let (proximo, repartiu) = splitOversized(atual)
@@ -999,20 +944,12 @@ public final class SubtitleFileBuilder {
             let text = cue.translated.isEmpty ? cue.source : cue.translated
             // Medir o texto **como ele será mostrado**, travessão incluído.
             //
-            // O travessão entra depois, na renderização, e ocupa duas colunas
-            // da primeira linha. Medir sem ele deixava passar legenda que sai
-            // com três linhas no arquivo — o caso de 12/09/2026,
-            // "— Se você queimar isso, você / essencialmente vai atrasar o
-            // progresso / científico!". A repartição continua sendo do texto
-            // puro: só a primeira parte recebe o travessão, porque as
-            // seguintes são do mesmo locutor.
+            // O travessão entra na renderização e ocupa duas colunas da
+            // primeira linha: medir sem ele deixava passar legenda de três
+            // linhas. A repartição é do texto puro — só a primeira parte
+            // recebe o travessão, as seguintes são do mesmo locutor.
             let renderizado = SpeakerMark.decorate(text, speaker: cue.speaker, previous: anterior)
             anterior = SpeakerMark.advance(anterior, with: cue.speaker)
-            if ProcessInfo.processInfo.environment["TRADUTOR_SONDA_LINHAS"] != nil,
-               text.count > 70 {
-                FileHandle.standardError.write(Data(
-                    "[sonda] \(text.count) chars, wrap=\(LineBreaker.wrap(renderizado, maximum: charactersPerLine).count), traduzido=\(!cue.translated.isEmpty) :: \(text.prefix(50))\n".utf8))
-            }
             guard LineBreaker.wrap(renderizado, maximum: charactersPerLine).count > maximumLines else {
                 result.append(cue)
                 continue
@@ -1472,11 +1409,17 @@ public enum SubtitleFileError: LocalizedError {
     case notFound(String)
     case unreadable(String)
     case noSpeech
+    /// A tradução não terminou. O reconhecimento continua de pé: tentar de
+    /// novo refaz só esta etapa.
+    case translationFailed(String)
 
     public var errorDescription: String? {
         switch self {
         case .noSpeech:
             return "Nenhuma fala foi reconhecida neste vídeo."
+
+        case let .translationFailed(detalhe):
+            return "A tradução falhou: \(detalhe)"
 
         case let .noAudioTrack(name):
             return "\(name) não tem trilha de áudio que o sistema consiga ler."

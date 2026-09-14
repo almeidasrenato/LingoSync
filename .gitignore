@@ -13,3 +13,7 @@ build/
 *.aiff
 
 .DS_Store
+
+# Saída bruta de medição: fica no disco, não no histórico. O que vale
+# está no CLAUDE.md; os scripts ao lado reproduzem.
+scratchpad/*/resultados/

@@ -29,14 +29,12 @@ public protocol Transcriber: AnyObject, Sendable {
     /// Instantes em que uma voz troca por outra.
     ///
     /// Quem monta trecho a partir de palavras precisa disto para não juntar
-    /// duas pessoas num trecho só — e trecho é indivisível daí para frente:
-    /// `SpeakerDiarizer.assign` dá a ele um locutor, o que mais o cobre, e a
-    /// palavra da outra pessoa vai junto com o rótulo errado.
+    /// duas pessoas: o trecho é indivisível daí para frente, e
+    /// `SpeakerDiarizer.assign` dá a ele o locutor que mais o cobre.
     ///
-    /// Medido no vídeo de 9 minutos com o reconhecimento da Apple: 14 a 21
-    /// dos 135 trechos carregavam duas vozes, somando 13 a 16 s. Com o Qwen,
-    /// que corta em cada fala, eram 0 de 211 — por isso isto é opcional:
-    /// quem já corta certo ignora.
+    /// Medido no vídeo de 9 minutos: a Apple juntava duas vozes em 14 a 21 dos
+    /// 135 trechos; o Qwen, que corta em cada fala, 0 de 211. Por isso é
+    /// opcional — quem já corta certo ignora.
     var speakerBoundaries: [TimeInterval] { get set }
 
     /// Instantes de silêncio medidos no áudio, no meio de cada pausa. Mesma
@@ -59,6 +57,19 @@ extension Transcriber {
 
     public func transcribeTimed(_ samples: [Float]) async throws -> [TimedText] {
         try await transcribeTimed(samples) { _ in }
+    }
+
+    /// Mesmo pós-processamento no app e nas verificações de legendas. O texto
+    /// suspeito precisa chegar aqui intacto para poder ser conferido no áudio.
+    public func transcribeForSubtitles(
+        _ samples: [Float], progress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> [TimedText] {
+        try Task.checkCancellation()
+        // Silêncio digital não contém fala. O Whisper emitia "Thank you."
+        // até em três segundos de zeros; não use limiar que corte voz baixa.
+        guard samples.contains(where: { $0 != 0 }) else { return [] }
+        let pieces = try await transcribeTimed(samples, progress: progress)
+        return try await Hallucinations.filter(pieces, samples: samples, language: language)
     }
 }
 
@@ -314,15 +325,13 @@ public final class ParakeetTranscriber: Transcriber, @unchecked Sendable {
 
 /// Uma segunda tentativa quando a predicao no Neural Engine falha.
 ///
-/// Medido no Parakeet japones: a primeira inferencia depois de carregar as
-/// vezes estoura o tempo do ANE — "ANE op async execution has timed out" — e
-/// a transcricao inteira falha. O usuario ve "nenhuma fala reconhecida" num
-/// audio cheio de fala, e em outra execucao os mesmos 96 s levaram 59 s em
-/// vez dos 2 s de sempre. Quente, o modelo nao erra mais.
+/// A primeira inferencia depois de carregar as vezes estoura o tempo do ANE
+/// ("ANE op async execution has timed out") e a transcricao inteira falha: o
+/// usuario ve "nenhuma fala reconhecida" num audio cheio de fala. Quente, o
+/// modelo nao erra mais.
 ///
-/// Uma tentativa so: se a segunda falhar tambem, o erro sobe — repetir sem
-/// limite esconderia um modelo quebrado. Cancelamento nunca e retentado:
-/// quem cancelou quer parar.
+/// Uma tentativa so — repetir sem limite esconderia um modelo quebrado — e
+/// cancelamento nunca e retentado.
 public enum AneRetry {
     public static func once<T>(
         _ attempt: (_ isRetry: Bool) async throws -> T
@@ -370,30 +379,19 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
 
     /// Confianca minima do primeiro token de uma janela.
     ///
-    /// O padrao do WhisperKit e -1,5, e e o numero que fazia a legenda variar
-    /// de execucao para execucao. Abaixo dele o WhisperKit re-decodifica a
-    /// mesma janela com temperatura 0,2 · 0,4 · 0,6 · 0,8 · 1,0 — e o
-    /// amostrador, com temperatura acima de zero, sorteia o token
-    /// (`Float.random`, sem semente). O mesmo arquivo dava 9, 20, 25 ou 34
-    /// trechos, e em uma execucao a cada tres os primeiros 32 s do dialogo
-    /// sumiam inteiros.
-    ///
-    /// Medido no video de conversa com musica ao fundo, quatro execucoes cada:
+    /// Abaixo dele o WhisperKit re-decodifica a janela com temperatura
+    /// 0,2 · 0,4 · 0,6 · 0,8 · 1,0, e acima de zero o amostrador **sorteia**
+    /// o token (`Float.random`, sem semente). Com o padrao de -1,5 o mesmo
+    /// arquivo dava 9, 20, 25 ou 34 trechos, e uma execucao em cada tres
+    /// perdia os primeiros 32 s do dialogo. Quatro execucoes de cada:
     ///
     ///     -1,5 (padrao) : 34 / 25 / 20 / 31 trechos, 7 a 17 retentativas
     ///     -3,0          : 30 / 32 / 30 / 32 trechos, nenhuma retentativa
     ///
-    /// Em audio limpo o texto sai identico ao da melhor execucao do padrao
-    /// (unica diferenca em 96 s: um tempo 0,02 s adiante). A cobertura do
-    /// .srt desse video subiu de 44% para 70%.
-    ///
-    /// Zerar `temperatureFallbackCount` tambem acaba com o sorteio, e foi
-    /// medido: cai para 9 trechos: as retentativas aleatorias recuperavam
-    /// texto de verdade. O caminho certo e nao precisar delas.
-    ///
-    /// As outras defesas do WhisperKit continuam de pe: `noSpeechThreshold`,
-    /// `compressionRatioThreshold` e `logProbThreshold`, mais o filtro de
-    /// `isRealSpeech` e a lista de alucinacoes.
+    /// Cobertura do .srt de 44% para 70%, e em audio limpo o texto sai
+    /// identico ao da melhor execucao do padrao. Zerar
+    /// `temperatureFallbackCount` tambem acaba com o sorteio e foi medido:
+    /// cai para 9 trechos — as retentativas recuperavam texto de verdade.
     public static let firstTokenLogProbThreshold: Float = -3.0
 
     public init(language: Language) {
@@ -462,19 +460,13 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
 
     /// Repete a passada quando ela sai pobre, e fica com a melhor.
     ///
-    /// O WhisperKit re-decodifica a janela com temperatura acima de zero
-    /// quando um dos três limiares dispara, e aí o amostrador **sorteia** o
-    /// token. Em áudio difícil isso vira loteria: medido num vídeo de 78 s
-    /// com fala baixa e vento, três execuções do mesmo arquivo deram 4, 14 e
-    /// 9 trechos — uma pegou só o começo, outra só o fim.
+    /// Em áudio difícil o sorteio de temperatura vira loteria: num vídeo de
+    /// 78 s com fala baixa e vento, três execuções deram 4, 14 e 9 trechos.
+    /// Não dá para tirá-lo (`temperatureFallbackCount = 0` derruba a captação,
+    /// 30 trechos para 9, e o `Float.random` não aceita semente); dá para
+    /// **notar que a passada saiu ruim e tentar de novo**.
     ///
-    /// Não dá para tirar o sorteio: `temperatureFallbackCount = 0` foi medido
-    /// e derruba a captação (30 trechos para 9), e o `Float.random` do
-    /// WhisperKit não aceita semente. O que dá é **notar que a passada saiu
-    /// ruim e tentar de novo**, ficando com a que cobriu mais fala.
-    ///
-    /// Em áudio normal a primeira passada já passa do piso e nada se repete —
-    /// o custo só aparece onde o problema existe.
+    /// Em áudio normal a primeira passada já passa do piso e nada se repete.
     public func transcribeTimed(
         _ samples: [Float],
         progress: @escaping @Sendable (Double) -> Void
@@ -490,7 +482,11 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
                 let fatia = 1 / Double(Self.maximumAttempts)
                 progress(min(1, (Double(tentativa - 1) + fracao) * fatia))
             }
-            let cobertura = Self.reached(regioes, by: saida)
+            // Uma frase suspeita não pode fazer uma passada pobre parecer
+            // completa. Preserve-a na saída para a conferência posterior.
+            let cobertura = Self.reached(regioes, by: saida.filter {
+                !Hallucinations.isIsolatedFiller($0.text)
+            })
             if cobertura > melhorCobertura {
                 melhorCobertura = cobertura
                 melhor = saida
@@ -544,6 +540,10 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         var options = decodingOptions()
         options.withoutTimestamps = false
         options.wordTimestamps = true
+        // Não encerrar a janela antes de emitir conteúdo. No vídeo difícil,
+        // recuperou o diálogo de 7–20 s em 2/3 execuções contra 0/3; mesmos
+        // textos nos dois ingleses e no japonês curto. Só no caminho de arquivo.
+        options.suppressBlank = true
         // Arquivo longo: deixa o WhisperKit fatiar nas pausas, senao ele so
         // enxerga os primeiros 30 s.
         options.chunkingStrategy = .vad
@@ -590,9 +590,6 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
             .compactMap { segment -> TimedText? in
                 let text = WhisperTranscriber.stripSpecialTokens(segment.text)
                 guard !text.isEmpty else { return nil }
-                // As metricas do proprio modelo nao pegam a frase de cortesia
-                // inventada: para ele e uma predicao confiante. O texto pega.
-                guard !Hallucinations.isIsolatedFiller(text) else { return nil }
                 return TimedText(
                     text: text,
                     start: TimeInterval(segment.start),
@@ -608,14 +605,11 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
 
     /// Descarta o que o modelo inventou.
     ///
-    /// O Whisper preenche silencio e musica com frases de cortesia aprendidas
-    /// do material de treino — em japones, "ご視聴ありがとうございました"
-    /// (obrigado por assistir) aparece sozinha no meio do video. Ela vinha com
-    /// tempo e tudo, indistinguivel de fala real na saida final.
-    ///
-    /// Os dois numeros que o proprio modelo reporta separam isso: a
-    /// probabilidade de nao haver fala no trecho, e a confianca media dos
-    /// tokens. Alucinacao pontua mal nos dois.
+    /// O Whisper preenche silencio e musica com frases de cortesia do
+    /// treino — em japones, "ご視聴ありがとうございました" aparece sozinha no
+    /// meio do video, com tempo e tudo. Os dois numeros que o modelo reporta
+    /// separam isso: probabilidade de nao haver fala e confianca media dos
+    /// tokens.
     private static func isRealSpeech(_ segment: TranscriptionSegment) -> Bool {
         guard segment.noSpeechProb < 0.6 else { return false }
         guard segment.avgLogprob > -1.0 else { return false }

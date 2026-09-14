@@ -124,13 +124,16 @@ struct Verify {
             await translateLines(
                 path: arguments[2],
                 source: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .japanese) : .japanese,
-                target: arguments.count >= 5 ? (Language(rawValue: arguments[4]) ?? .portuguese) : .portuguese
+                target: arguments.count >= 5 ? (Language(rawValue: arguments[4]) ?? .portuguese) : .portuguese,
+                engine: arguments.count >= 6
+                    ? (TranslationEngine(rawValue: arguments[5]) ?? .apple) : .apple
             )
         case "lotes": await batchSizeGate()
         case "sobreposicao": await overlapGate()
         case "motores": await engineGate()
         case "locutores": speakerGate()
         case "deepl": deepLGate()
+        case "webapi": await webAPIGate()
         case "treslinhas":
             guard arguments.count >= 3 else { print("falta o caminho do video"); exit(1) }
             await threeLineHunt(path: arguments[2])
@@ -475,7 +478,7 @@ struct Verify {
             exit(1)
         }
         FileHandle.standardError.write(Data("motor: \(transcriber.engineName)\n".utf8))
-        guard let timed = try? await transcriber.transcribeTimed(samples), !timed.isEmpty else {
+        guard let timed = try? await transcriber.transcribeForSubtitles(samples), !timed.isEmpty else {
             FileHandle.standardError.write(Data("nenhuma fala reconhecida\n".utf8))
             exit(1)
         }
@@ -489,7 +492,9 @@ struct Verify {
 
     /// Traduz um arquivo de linhas com o motor do sistema, uma traducao por
     /// linha, na mesma ordem.
-    static func translateLines(path: String, source: Language, target: Language) async {
+    static func translateLines(
+        path: String, source: Language, target: Language, engine: TranslationEngine = .apple
+    ) async {
         guard let text = try? String(contentsOfFile: path, encoding: .utf8) else {
             FileHandle.standardError.write(Data("nao consegui ler \(path)\n".utf8))
             exit(1)
@@ -497,7 +502,7 @@ struct Verify {
         let lines = text.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
         guard !lines.isEmpty else { exit(0) }
 
-        let translator = TranslatorFactory.make(.apple)
+        let translator = TranslatorFactory.make(engine)
         try? await translator.prepare { _, _ in }
 
         let started = Date()
@@ -512,7 +517,12 @@ struct Verify {
         let ms = Int(Date().timeIntervalSince(started) * 1000)
 
         for line in output { print(line.replacingOccurrences(of: "\n", with: " ")) }
-        FileHandle.standardError.write(Data("\(lines.count) linhas em \(ms) ms\n".utf8))
+        FileHandle.standardError.write(Data(
+            "\(translator.engineName): \(lines.count) linhas, \(output.count) traduzidas, \(ms) ms\n".utf8))
+        if let aviso = translator.completionNotice {
+            FileHandle.standardError.write(Data("\(aviso)\n".utf8))
+        }
+        translator.reset()
         exit(0)
     }
 
@@ -847,7 +857,7 @@ struct Verify {
         let asrStart = Date()
         let timed: [TimedText]
         do {
-            timed = try await transcriber.transcribeTimed(samples)
+            timed = try await transcriber.transcribeForSubtitles(samples)
         } catch {
             print("FALHA na transcricao: \(error.localizedDescription)")
             exit(1)
@@ -1376,6 +1386,14 @@ struct Verify {
                "o lote que falhou nao inventa traducao")
         expect(comFalha.translationNotice != nil,
                "a falha vira aviso na tela: \(comFalha.translationNotice ?? "nenhum")")
+        // E, no caminho de quem gera legenda, vira erro: `translateDraft` lê
+        // este contador e lança em vez de entregar meio arquivo traduzido.
+        // Nenhum tradutor de reserva entra no lugar — pedido do usuário em
+        // 14/09/2026.
+        expect(comFalha.failedBatches == 1,
+               "o lote perdido fica contado para a geracao poder falhar (\(comFalha.failedBatches))")
+        expect(SubtitleFileError.translationFailed("x").errorDescription?.contains("falhou") == true,
+               "o erro diz que foi a traducao que falhou")
         // O `.srt` cai no original — e por isso que o aviso precisa existir.
         expect(SRTWriter.render(semTraducao).contains("This is English."),
                "sem traducao, o arquivo sai no idioma de origem")
@@ -1816,7 +1834,7 @@ struct Verify {
                 transcriber.pauseBoundaries = SpeechEnergy.pauseBoundaries(
                     samples, minimumPause: minima)
             }
-            let pieces = try await transcriber.transcribeTimed(samples) { _ in }
+            let pieces = try await transcriber.transcribeForSubtitles(samples) { _ in }
             let construtor = SubtitleFileBuilder()
             if let valor = ProcessInfo.processInfo.environment["TRADUTOR_PAUSA_MINIMA"],
                let minima = Double(valor) {
@@ -1958,7 +1976,7 @@ struct Verify {
                 transcriber.speakerBoundaries = comFronteiras
                     ? SpeakerDiarizer.boundaries(of: turns)
                     : []
-                guard let timed = try? await transcriber.transcribeTimed(samples) else {
+                guard let timed = try? await transcriber.transcribeForSubtitles(samples) else {
                     print("FALHA no reconhecimento"); exit(1)
                 }
                 medidas.append((comFronteiras ? "com fronteiras" : "sem fronteiras", timed))
@@ -2148,7 +2166,7 @@ struct Verify {
             print("FALHA ao carregar: \(error.localizedDescription)")
             exit(1)
         }
-        guard let timed = try? await transcriber.transcribeTimed(samples) else {
+        guard let timed = try? await transcriber.transcribeForSubtitles(samples) else {
             print("FALHA no reconhecimento"); exit(1)
         }
         guard let turns = try? await SpeakerDiarizer.turns(in: samples) else {
@@ -2275,7 +2293,7 @@ struct Verify {
             print("FALHA ao carregar: \(error.localizedDescription)")
             exit(1)
         }
-        guard let pieces = try? await transcriber.transcribeTimed(samples) else {
+        guard let pieces = try? await transcriber.transcribeForSubtitles(samples) else {
             print("FALHA na primeira passada")
             exit(1)
         }
@@ -2523,6 +2541,90 @@ struct Verify {
     /// um HTML que não é nosso, e um teste que precisa de internet não é
     /// teste, é notícia. O que está aqui é o que, quebrando, desalinha a
     /// legenda — a repartição em blocos e a montagem do link.
+    // MARK: Tradutores de rede que falam JSON
+
+    /// O que é nosso no motor Google: repartição, código de idioma e escape.
+    /// O JSON alheio não vira teste; a conta que desalinha legenda, sim.
+    static func webAPIGate() async {
+        var failures = 0
+        func expect(_ condition: Bool, _ label: String) {
+            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
+            if !condition { failures += 1 }
+        }
+
+        print("tradutor de rede (Google)\n")
+
+        // Repartição do Google: por bytes de URL, sem perder nem trocar fala.
+        let curtas = (1...50).map { "fala número \($0)" }
+        let umBloco = GoogleWebTranslator.blocos(curtas, source: .japanese, target: .portuguese)
+        expect(umBloco.count == 1, "50 falas curtas cabem numa requisição")
+        expect(umBloco.flatMap { $0 } == Array(curtas.indices),
+               "a repartição preserva ordem e índices")
+
+        // Japonês escapado custa 9 bytes por caractere: 300 falas de 40
+        // caracteres passam de 100 KB e têm de virar vários blocos.
+        let longas = (1...300).map { _ in String(repeating: "あ", count: 40) }
+        let muitos = GoogleWebTranslator.blocos(longas, source: .japanese, target: .portuguese)
+        expect(muitos.count > 1, "texto longo vira mais de uma requisição")
+        expect(muitos.flatMap { $0 } == Array(longas.indices),
+               "repartido em vários, nenhuma fala se perde")
+        let base = "https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=ja&tl=pt"
+        let maior = muitos.map { bloco in
+            bloco.reduce(base.utf8.count) { $0 + WebAPI.escapar(longas[$1]).utf8.count + 3 }
+        }.max() ?? 0
+        expect(maior <= GoogleWebTranslator.urlBudget,
+               "nenhuma requisição passa do teto de URL (maior: \(maior))")
+
+        // Fala sozinha maior que o teto vai sozinha, e não some.
+        let gigante = [String(repeating: "あ", count: 2000)]
+        let sozinha = GoogleWebTranslator.blocos(gigante, source: .japanese, target: .portuguese)
+        expect(sozinha == [[0]], "fala maior que o teto vai sozinha em vez de sumir")
+
+        expect(GoogleWebTranslator.code(for: .portuguese) == "pt",
+               "no Google, pt já é o brasileiro")
+        expect(GoogleWebTranslator.code(for: .chinese) == "zh-CN", "chinês no Google é zh-CN")
+
+        // Escape: legenda tem & + # e ?, e os quatro mudam de sentido dentro
+        // de uma consulta. Um escape frouxo parte a fala em duas.
+        let sujo = "a & b + c # d ? e/f"
+        let escapado = WebAPI.escapar(sujo)
+        expect(!escapado.contains("&") && !escapado.contains("+")
+               && !escapado.contains("#") && !escapado.contains("?")
+               && !escapado.contains("/"),
+               "o escape não deixa passar separador de consulta")
+        expect(escapado.removingPercentEncoding == sujo, "e volta igual ao que entrou")
+
+        // Nenhum tradutor de reserva: bloco que falha derruba a tradução em
+        // vez de deixar metade do arquivo com outra qualidade dentro.
+        struct BlocoQuebrado: Error {}
+        var chamadas = 0
+        do {
+            _ = try await WebAPI.porBlocos(
+                ["uma", "outra"],
+                blocos: { falas in falas.indices.map { [$0] } },
+                traduzir: { _ in chamadas += 1; throw BlocoQuebrado() }
+            )
+            expect(false, "bloco que falha propaga o erro")
+        } catch is BlocoQuebrado {
+            expect(true, "bloco que falha propaga o erro")
+            expect(chamadas == 1, "e para no primeiro, sem tentar os seguintes (\(chamadas))")
+        } catch {
+            expect(false, "o erro que sai é o do bloco, não \(error)")
+        }
+
+        // Os dois mandam texto para fora e nenhum serve ao vivo.
+        for motor in [TranslationEngine.google] {
+            expect(motor.leavesTheMachine, "\(motor.displayName) manda o texto para fora")
+            expect(!motor.supportsLive, "\(motor.displayName) não serve ao vivo")
+            expect(motor.isAvailable, "\(motor.displayName) está disponível")
+            expect(motor.costPerSecondOfVideo > 0, "\(motor.displayName) tem custo estimado")
+            expect(motor.supports(.japanese, .portuguese), "\(motor.displayName) cobre ja → pt")
+        }
+
+        print(failures == 0 ? "\ntudo certo" : "\n\(failures) falha(s)")
+        exit(failures == 0 ? 0 : 1)
+    }
+
     static func deepLGate() {
         var failures = 0
         func expect(_ condition: Bool, _ label: String) {
@@ -3049,7 +3151,7 @@ struct Verify {
                 transcriber.pauseBoundaries = pausas
                 builder.silences = minimaPausa.map {
                     SpeechEnergy.silences(samples, minimumPause: $0) } ?? []
-                guard let pieces = try? await transcriber.transcribeTimed(samples, progress: { _ in })
+                guard let pieces = try? await transcriber.transcribeForSubtitles(samples, progress: { _ in })
                 else { continue }
                 let marcados = SpeakerDiarizer.assign(pieces, to: turns)
                 let cues = SpeakerDiarizer.renumber(marcados).isEmpty
@@ -3196,6 +3298,39 @@ struct Verify {
         }
 
         print("Motores de reconhecimento\n")
+
+        // Lista de frases suspeitas não prova ausência de fala.
+        expect(Hallucinations.isConfirmed("おやすみなさい。", by: "おやすみなさい"),
+               "confirma uma despedida japonesa realmente falada")
+        expect(Hallucinations.isConfirmed("Thank you for watching.", by: "THANK YOU for watching!"),
+               "conferência ignora caixa, espaços e pontuação")
+        expect(!Hallucinations.isConfirmed("Thank you for watching.", by: "Thank you."),
+               "uma parte da frase não confirma o restante")
+        expect(!Hallucinations.isConfirmed("ご視聴ありがとうございました", by: "。"),
+               "ruído sem palavras não confirma uma alucinação")
+        expect(!Hallucinations.isConfirmed("", by: "fala"), "texto vazio não é confirmação")
+        let outside = [TimedText(text: "おやすみなさい", start: 2, end: 3),
+                       TimedText(text: "Thank you for watching.", start: .infinity, end: .infinity),
+                       TimedText(text: "fala válida", start: 0, end: 0.5)]
+        let filtered = try? await Hallucinations.filter(outside, samples: [Float](repeating: 0, count: 16000), language: .japanese)
+        expect(filtered?.map(\.text) == ["fala válida"],
+               "tempos inválidos ou depois do arquivo não enviam recorte vazio à Apple")
+        let fallback = try? await Hallucinations.filter(outside, samples: [], language: .arabic)
+        expect(fallback?.map(\.text) == ["fala válida"], "idioma sem conferência mantém o descarte anterior")
+        let cancelled = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            do {
+                _ = try await Hallucinations.filter([], samples: [], language: .japanese)
+                return false
+            } catch is CancellationError { return true } catch { return false }
+        }
+        expect(await cancelled.value, "cancelamento da conferência é propagado")
+        let unloaded = WhisperTranscriber(language: .english)
+        let silent = try? await unloaded.transcribeForSubtitles([Float](repeating: 0, count: 48000))
+        expect(silent?.isEmpty == true && !unloaded.isPrepared,
+               "silêncio digital não inventa agradecimento nem carrega modelo")
+        let emptyAudio = try? await unloaded.transcribeForSubtitles([])
+        expect(emptyAudio?.isEmpty == true, "áudio vazio não chega ao reconhecedor")
 
         // O numero que fazia a legenda mudar a cada execucao. Com o padrao do
         // WhisperKit (-1,5) o mesmo video dava 9, 20, 25 ou 34 trechos, e uma
@@ -3659,7 +3794,7 @@ extension Verify {
             // A mesma fronteira nas duas pontas evita atribuir um bloco com
             // duas pessoas inteiro a quem só falou por mais tempo.
             transcriber.speakerBoundaries = SpeakerDiarizer.boundaries(of: turns)
-            let pieces = try await transcriber.transcribeTimed(audio.samples) { _ in }
+            let pieces = try await transcriber.transcribeForSubtitles(audio.samples) { _ in }
             let rows = VoiceCoverage.measure(pieces, turns: turns)
             print(audio.description)
             print("motor: \(transcriber.engineName) · referência de vozes: Sortformer · nivelamento: \(ProcessInfo.processInfo.environment["TRADUTOR_SEM_NIVELAMENTO"] == nil ? "ligado" : "desligado")")

@@ -101,6 +101,7 @@ public enum TranslatorFactory {
         switch engine {
         case .apple: AppleTranslator()
         case .deepl: DeepLWebTranslator()
+        case .google: GoogleWebTranslator()
         case .hunyuan: HunyuanTranslator()
         }
     }
@@ -114,6 +115,8 @@ public enum TranslatorFactory {
 public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     case apple
     case deepl
+    /// Google Tradutor, pelo endereço interno do site. Ver `GoogleWebTranslator`.
+    case google
     /// Hunyuan-MT-7B (Tencent), local, fora do processo. Só existe quando
     /// `Scripts/hunyuan-setup.sh` tiver rodado — ver `HunyuanTranslator`.
     case hunyuan
@@ -124,6 +127,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .apple: "Apple"
         case .deepl: "DeepL (site)"
+        case .google: "Google (site)"
         case .hunyuan: "Hunyuan-MT 7B"
         }
     }
@@ -135,7 +139,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// geração de dez minutos.
     public var isAvailable: Bool {
         switch self {
-        case .apple, .deepl: true
+        case .apple, .deepl, .google: true
         case .hunyuan: HunyuanTranslator.isInstalled
         }
     }
@@ -152,7 +156,12 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// A primeira linha do CLAUDE.md promete que nada sai; o DeepL é a
     /// exceção que o usuário escolhe, e o painel avisa. O Hunyuan é local
     /// como a Apple.
-    public var leavesTheMachine: Bool { self == .deepl }
+    public var leavesTheMachine: Bool {
+        switch self {
+        case .deepl, .google: true
+        case .apple, .hunyuan: false
+        }
+    }
 
     /// Idiomas cobertos, ou `nil` para todos os do app.
     public var supportedLanguages: [Language]? {
@@ -161,16 +170,16 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         // O cartão do modelo lista 33 idiomas, e os 18 do app estão entre
         // eles. Só japonês → português foi medido aqui.
         case .hunyuan: nil
+        case .google: nil
         case .deepl: DeepLWeb.supportedLanguages
         }
     }
 
     /// Quanto o trabalho custa por segundo de vídeo, medido no M5.
     ///
-    /// Os dois custam quase o mesmo, por motivos opostos: a Apple cobra por
-    /// string (ver "Tamanho de lote") e o DeepL cobra por carga de página, que
-    /// leva 1400 caracteres de uma vez. Medido em 12/09/2026, mesmo vídeo e
-    /// mesmas opções:
+    /// Apple e DeepL custam quase o mesmo por motivos opostos: a Apple cobra
+    /// por string (ver "Tamanho de lote") e o DeepL por carga de página, que
+    /// leva 1400 caracteres de uma vez.
     ///
     /// ```
     ///              96 s (11 falas)   540 s (75 legendas)
@@ -178,13 +187,10 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// DeepL              11 s               20 s
     /// ```
     ///
-    /// Ou seja: o DeepL é mais caro no vídeo curto, onde a carga de página não
-    /// se dilui, e mais barato no longo. O 0,12 aqui é o pior dos dois casos.
-    ///
-    /// **Não é a velocidade que limita o DeepL, é o desafio anti-robô.** Uma
-    /// execução com desafio da Cloudflare no meio levou 195 s no vídeo de 96 s
-    /// — quinze vezes o normal, porque cada bloco espera o tempo esgotar antes
-    /// de cair para a Apple.
+    /// O DeepL é mais caro no vídeo curto, onde a carga não se dilui, e mais
+    /// barato no longo; o 0,12 é o pior dos dois casos. **O que o limita não é
+    /// a velocidade, é o desafio anti-robô** — uma execução barrada levou
+    /// 195 s no vídeo de 96 s.
     public var costPerSecondOfVideo: Double {
         switch self {
         case .apple: TranslatorFactory.costPerSecondOfVideo
@@ -194,13 +200,16 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         // contexto (sem ela eram 84 s — o contexto custa ~13%). Bem abaixo do
         // 1,02× que o Qwen3-8B custava: é tradução, não conversa.
         case .hunyuan: 0.18
+        // Medido em 13/09/2026, 110 falas do vídeo de 9 minutos: 1,3 s,
+        // contra 11,0 s do DeepL e 36,4 s da Apple.
+        case .google: 0.01
         }
     }
 
     /// Se o par escolhido passa por este motor.
     public func supports(_ source: Language, _ target: Language) -> Bool {
         switch self {
-        case .apple, .hunyuan: true
+        case .apple, .hunyuan, .google: true
         case .deepl: DeepLWeb.supports(source, target)
         }
     }

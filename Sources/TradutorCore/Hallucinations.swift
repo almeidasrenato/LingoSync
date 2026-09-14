@@ -9,8 +9,9 @@ import Foundation
 ///
 /// Elas vêm com tempo e probabilidades normais — os números que o modelo
 /// reporta (`noSpeechProb`, `avgLogprob`, razão de compressão) não as separam
-/// de fala real, porque para o modelo elas *são* uma predição confiante. O que
-/// as denuncia é o texto, e o fato de aparecerem isoladas.
+/// de fala real, porque para o modelo elas *são* uma predição confiante. O texto
+/// isolado é suspeito, mas também pode ter sido dito: confira o áudio antes de
+/// apagar, quando houver reconhecimento da Apple instalado para o idioma.
 public enum Hallucinations {
 
     /// Comparadas depois de tirar pontuação, espaço e caixa.
@@ -37,10 +38,8 @@ public enum Hallucinations {
 
     /// Verdadeiro quando o trecho é *só* uma dessas frases.
     ///
-    /// A exigência de estar isolado é o que evita apagar um agradecimento
-    /// verdadeiro: num vídeo que de fato termina agradecendo, a frase vem
-    /// cercada de outras palavras, ou o trecho inteiro é ela — e aí o corte
-    /// custa uma legenda no fim, não conteúdo no meio.
+    /// Isto identifica candidatos, não prova alucinação. `filter` confirma
+    /// no áudio para preservar um agradecimento que foi realmente falado.
     public static func isIsolatedFiller(_ text: String) -> Bool {
         let normalized = normalize(text)
         guard !normalized.isEmpty else { return true }
@@ -57,6 +56,49 @@ public enum Hallucinations {
             }
         }
         return false
+    }
+
+    public static func isConfirmed(_ text: String, by confirmation: String) -> Bool {
+        let target = normalize(text)
+        return !target.isEmpty && normalize(confirmation).contains(target)
+    }
+
+    /// Só candidatos pagam outra transcrição. Sem o idioma instalado, mantém
+    /// o descarte anterior; não instala modelo nem usa rede. Medido em en/ja.
+    public static func filter(
+        _ pieces: [TimedText], samples: [Float], language: Language
+    ) async throws -> [TimedText] {
+        try Task.checkCancellation()
+        let suspects = pieces.indices.filter { isIsolatedFiller(pieces[$0].text) }
+        guard !suspects.isEmpty else { return pieces }
+        var rejected = Set(suspects)
+        guard #available(macOS 26.0, *), language == .english || language == .japanese else {
+            return pieces.enumerated().filter { !rejected.contains($0.offset) }.map(\.element)
+        }
+        let apple = AppleSpeechTranscriber(language: language)
+        let duration = Double(samples.count) / 16_000
+        for index in suspects {
+            try Task.checkCancellation()
+            let piece = pieces[index]
+            // Whisper pode inventar tempos depois do fim do arquivo. Nunca
+            // passe um recorte vazio ao SpeechAnalyzer: ele não finaliza.
+            guard !normalize(piece.text).isEmpty, piece.start.isFinite, piece.end.isFinite,
+                  piece.end > piece.start, piece.start < duration, piece.end > 0 else { continue }
+            let start = Int(max(0, piece.start - 0.5) * 16_000)
+            let end = Int(min(duration, piece.end + 0.5) * 16_000)
+            guard end > start else { continue }
+            do {
+                if !apple.isPrepared { try await apple.prepare { _, _ in } }
+                let confirmation = try await apple.transcribe(Array(samples[start..<end]))
+                if isConfirmed(piece.text, by: confirmation) { rejected.remove(index) }
+            } catch {
+                try Task.checkCancellation()
+                // Falha na conferência não autoriza devolver a frase suspeita.
+                if !apple.isPrepared { break }
+            }
+        }
+        try Task.checkCancellation()
+        return pieces.enumerated().filter { !rejected.contains($0.offset) }.map(\.element)
     }
 
     private static func normalize(_ text: String) -> String {

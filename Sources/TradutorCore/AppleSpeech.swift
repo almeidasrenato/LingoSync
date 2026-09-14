@@ -214,48 +214,29 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
             }
             // Pausa longa é fronteira natural.
             if start != nil, range.start.seconds - end > 0.5 { close() }
-            // E há pausa que não aparece como intervalo.
-            //
-            // Em japonês a Apple emite **um caractere por run** e não deixa
-            // buraco entre eles: o silêncio antes de uma palavra fica embutido
-            // na duração do caractere que a abre. Medido no vídeo de 9
-            // minutos: a mediana do run é 0,120 s, e `本` durava 2,82 s, `緊`
-            // 2,52 s, `そ` 2,10 s — não é vogal longa, é a pausa que antecede.
-            // Sem isto a pausa é invisível, e quando o teto de tempo obriga a
-            // cortar, o corte cai no meio da palavra: `…そうだよ` / `ね。`.
+            // E há pausa que não aparece como intervalo: em japonês a Apple
+            // emite um caractere por run, sem buraco entre eles, e o silêncio
+            // fica embutido na duração do caractere que abre a palavra
+            // (mediana de 0,120 s, mas `本` durou 2,82 s). Sem isto o corte
+            // por tempo cai no meio da palavra: `…そうだよ` / `ね。`.
             if start != nil, range.end.seconds - range.start.seconds >= Self.longRunIsPause {
                 close()
             }
-            // Troca de voz também, e esta não se vê no áudio: sem ela, a
-            // última palavra de quem entrou fica no trecho de quem saiu.
-            //
-            // Cada palavra vai para o lado da fronteira em que está o seu
-            // **meio**, e o trecho fecha quando esse lado muda. Comparar
-            // contra o início ou o fim da palavra não serve: a fronteira vem
-            // de um modelo por quadro e erra ±100 ms contra o tempo da
-            // palavra, então o corte caía uma palavra tarde e o "E" de
-            // "Entendi" ficava no trecho da outra pessoa. O meio é o ponto
-            // que tolera esse desencontro.
-            // Sonda de medição: cada run com o seu tempo, para achar onde há
-            // pausa dentro de uma fala corrida. Ver `TRADUTOR_SONDA_LINHAS`.
-            if ProcessInfo.processInfo.environment["TRADUTOR_SONDA_RUNS"] != nil {
-                FileHandle.standardError.write(Data(
-                    "[run] \(range.start.seconds) \(range.end.seconds) \(piece)\n".utf8))
-            }
+            // Troca de voz também. Cada palavra vai para o lado da fronteira
+            // em que está o seu **meio**: a fronteira vem de um modelo por
+            // quadro e erra ±100 ms, então comparar contra o início ou o fim
+            // fazia o corte cair uma palavra tarde, e o "E" de "Entendi"
+            // ficava no trecho da outra pessoa.
             let lado = Self.side(of: (range.start.seconds + range.end.seconds) / 2,
                                 in: boundaries)
             if start != nil, lado != currentSide { close() }
             currentSide = lado
 
-            // O teto duro é conferido ANTES de acrescentar o run.
-            //
-            // Conferindo depois, o trecho estoura o teto pelo tamanho do run
-            // que o cruzou. Medido no vídeo de 9 minutos, sem locutores: 5
-            // trechos passavam de 7 s e o maior tinha 7,98 s — que vira uma
-            // legenda de 8,23 s com a entrada antecipada, acima do teto de
-            // legenda (`SubtitleFileBuilder.maximumDuration`), e nada adiante
-            // reparte legenda por duração. Antes eram 0 porque o teto era 5 s
-            // e o estouro cabia na folga; com o teto em 7 s a folga acabou.
+            // O teto duro é conferido ANTES de acrescentar o run: conferindo
+            // depois, o trecho estoura pelo tamanho do run que o cruzou — 5
+            // trechos acima de 7 s, o maior com 7,98 s, que vira legenda de
+            // 8,23 s com a entrada antecipada, e nada adiante reparte legenda
+            // por duração.
             if let aberto = start, range.end.seconds - aberto >= Self.hardCeiling { close() }
             if start == nil { start = range.start.seconds }
             text += piece
@@ -265,19 +246,11 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
                 .map { SentenceSplitter.sentenceEnders.contains($0) } ?? false
             if endsSentence { close(); continue }
 
-            // O fecho por tempo espera um lugar seguro para cortar.
-            //
-            // Em inglês cada run do sistema é uma palavra inteira, com o
-            // espaço junto, e cortar no teto cai entre palavras. Em japonês
-            // os runs são sub-palavra e o corte parte a palavra ao meio:
-            // `今日` saía como `…はい今` / `日から…`, `もちろん` como
-            // `…はいもち` / `ろんです。`. Eram 21 dos 133 trechos do vídeo de
-            // 9 minutos (16%), contra 3 de 54 no inglês — o texto quebrado
-            // chegava assim ao tradutor.
-            //
-            // Lugar seguro é onde o texto já terminou: espaço (inglês) ou
-            // pontuação de frase ou de oração (os dois). Passado o teto duro
-            // o corte sai de qualquer jeito, senão uma fala corrida sem
+            // O fecho por tempo espera lugar seguro: espaço (inglês) ou
+            // pontuação de frase ou de oração. Em japonês os runs são
+            // sub-palavra e cortar no teto partia a palavra — `今日` virava
+            // `…はい今` / `日から…`, em 21 dos 133 trechos. Passado o teto
+            // duro o corte sai de qualquer jeito, senão fala corrida sem
             // pontuação cresceria sem limite.
             let span = end - (start ?? end)
             if span >= Self.softCeiling, Self.isSafeBreak(text) { close() }

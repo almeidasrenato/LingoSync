@@ -119,6 +119,21 @@ final class SubtitleStudioModel {
         return !isWorking
     }
 
+    /// A mensagem da falha, quando houve uma. É o que a faixa vermelha mostra.
+    var failureMessage: String? {
+        if case let .failed(message) = stage { return message }
+        return nil
+    }
+
+    /// Tenta de novo o que falhou.
+    ///
+    /// Quando o rascunho do reconhecimento está de pé — que é o caso quando
+    /// quem falhou foi a tradução — refaz **só** a tradução: reconhecer de
+    /// novo custa minutos e daria o mesmo texto. Sem rascunho, refaz tudo.
+    func retryFailed() {
+        if canRetranslate { retranslate() } else { generate() }
+    }
+
     var isWorking: Bool {
         if case .working = stage { return true }
         return false
@@ -407,7 +422,27 @@ final class SubtitleStudioModel {
 
     /// Largura da coluna de legendas. O resto é vídeo, então arrastar o
     /// divisor aumenta um e diminui o outro.
-    var listWidth: CGFloat = 320
+    var listWidth: CGFloat = SubtitleStudioModel.defaultListWidth
+
+    /// 320 cortava a fala em três linhas e obrigava a alargar a cada abertura,
+    /// e agora cada linha traz também o original.
+    static let defaultListWidth: CGFloat = 400
+    /// A lista precisa caber um horário e um trecho de fala; o vídeo precisa
+    /// sobrar como vídeo.
+    static let minimumListWidth: CGFloat = 240
+    static let minimumVideoWidth: CGFloat = 360
+
+    /// O limite do divisor, dada a largura que a janela tem agora.
+    ///
+    /// Era um teto fixo de 560: numa janela larga o divisor travava no meio do
+    /// caminho e parecia defeito. Numa estreita, encolher a janela com a lista
+    /// larga deixava o vídeo com alguns pixels.
+    static func clampListWidth(_ largura: CGFloat, available: CGFloat) -> CGFloat {
+        let teto = available > 0
+            ? max(minimumListWidth, available - minimumVideoWidth)
+            : 560
+        return min(teto, max(minimumListWidth, largura))
+    }
 
     /// Progresso de 0 a 1, para a barra de posição.
     var progress: Double {

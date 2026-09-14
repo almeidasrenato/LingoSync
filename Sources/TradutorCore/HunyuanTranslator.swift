@@ -3,22 +3,16 @@ import OSLog
 
 /// Hunyuan-MT-7B (Tencent), tradutor local que roda fora do processo.
 ///
-/// Por que existe: o DeepL ganha da Apple em japonês — medido, ver o
-/// CLAUDE.md — mas manda o texto para fora da máquina, que é a premissa que o
-/// app abriu mão para tê-lo. Este é o candidato a fazer o mesmo trabalho sem
-/// sair daqui: pesos abertos, especializado em tradução, 33 idiomas.
+/// O DeepL ganha da Apple em japonês mas manda o texto para fora; este é o
+/// candidato a fazer o mesmo sem sair daqui — pesos abertos, especializado em
+/// tradução, 33 idiomas. Mesmo desenho do `QwenTranscriber`: MLX em Python,
+/// ambiente por `Scripts/hunyuan-setup.sh`, e o motor só aparece quando ele
+/// existe.
 ///
-/// Mesmo desenho do `QwenTranscriber`: não existe port CoreML, o que existe é
-/// MLX em Python. O ambiente é criado por `Scripts/hunyuan-setup.sh` e o motor
-/// só aparece no seletor quando ele existe.
-///
-/// **O processo fica vivo entre as falas.** Um modelo de 7B leva dezenas de
-/// segundos para carregar; carregar por fala seria inviável. O servidor lê uma
-/// linha JSON, devolve uma linha JSON, e o modelo carrega uma vez só.
-///
-/// **Uma fala por requisição, de propósito.** Mandar várias juntas devolve um
-/// bloco de texto e a contagem de linhas deixa de ser garantida — é o mesmo
-/// problema que apareceu no site do DeepL, e lá custou um `.srt` desalinhado.
+/// - **O processo fica vivo entre as falas**: um 7B leva dezenas de segundos
+///   para carregar. O servidor lê uma linha JSON e devolve outra.
+/// - **Uma fala por requisição**: várias juntas devolvem um bloco e a contagem
+///   de linhas deixa de ser garantida — o mesmo problema do site do DeepL.
 public final class HunyuanTranslator: Translator, @unchecked Sendable {
 
     public let engineName = "Hunyuan-MT 7B"
