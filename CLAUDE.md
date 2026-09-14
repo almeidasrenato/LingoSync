@@ -1840,7 +1840,70 @@ a próxima ideia, e continua não medida.
 documentação da Apple, não medição: ele existe para captura ao vivo e não
 funciona no modo de renderização offline, que é o que a geração de legenda usa.
 
-### Cortar o trecho no silêncio: medido e descartado
+### A fala que sumia: o silêncio precisa chegar ao agrupador
+
+Anotação de gabarito humano no vídeo de 9 minutos, legenda 44: "houve perda na
+captura da fala da segunda pessoa (o homem, voz mais baixa e suave)".
+Investigado, e o texto **não** estava perdido no reconhecimento:
+
+```
+221,34–227,34   お疲れ様あれさんお疲れ様です。
+```
+
+As duas falas — a dela e a dele — num trecho só de 6 s, apesar de haver
+silêncio real em 225,0–226,0 s. A tradução da Apple então colapsou as duas em
+"obrigado por seu trabalho árduo", e a fala do homem desapareceu do `.srt`.
+
+Reconhecendo o mesmo pedaço isolado (13 s), a Apple devolve as duas falas
+separadas. É o contexto grande que cola.
+
+O conserto tem duas metades, e **só as duas juntas funcionam**:
+
+- `SpeechEnergy.pauseBoundaries` vai para o `phrases`, que fecha o trecho no
+  silêncio. Sozinho não resolve: os dois pedaços saem **contíguos** — um
+  termina onde o outro começa — e `makeCues` junta de volta, porque para ele
+  não houve pausa nenhuma.
+- `SpeechEnergy.silences` vai para o `makeCues`, que fecha a legenda quando a
+  junção entre dois trechos cai dentro de um silêncio medido. **Casa por
+  intervalo, não por ponto**: o reconhecedor corta onde a *palavra* cruza a
+  fronteira (225,12 s), e o silêncio está em 225,0–226,0 — comparar ponto com
+  ponto não casa nunca.
+
+Resultado no `.srt`, o caso que a anotação apontou:
+
+```
+antes    221,09  obrigado por seu trabalho árduo.
+depois   221,09  obrigado por seu trabalho árduo
+         225,12  Obrigado por seu trabalho árduo.   ← a fala dele, recuperada
+```
+
+Medido nos três gabaritos, com as fronteiras de voz ligadas:
+
+```
+                      legendas que juntam duas pessoas   locutor certo
+9 min, 2 pessoas         1 → 1  (139 → 150 legendas)      33 → 35
+inglês, 5 pessoas        2 → 2  ( 43 →  43)               31 → 31
+japonês, 10 pessoas      2 → 3  ( 22 →  23)               10 → 11
+```
+
+Neutro na contaminação (uma piora no vídeo de dez vozes), melhor na identidade
+em dois, e recupera fala inteira que antes sumia — que é o que a métrica não
+capta, porque o gabarito marcou aquela legenda com uma pessoa só: o texto do
+outro nunca chegou a aparecer para ser marcado.
+
+Custa fragmentação: 110 legendas viram 116 no vídeo de 9 minutos. O silêncio
+mínimo é `SpeechEnergy.subtitlePause` (0,8 s); com 0,6 s a contaminação piora
+nos dois vídeos com mais gente. `TRADUTOR_SEM_PAUSAS=1` desliga.
+
+#### A primeira tentativa, com a métrica errada
+
+Isto já tinha sido medido e descartado uma vez, contando "trechos com pausa
+dentro" — 49 caíam para 40 ao custo de 44% mais trechos, e pareceu mau
+negócio. A métrica estava errada duas vezes: media trecho em vez de legenda, e
+não enxergava o dano real, que é fala inteira sumindo na tradução. Foi preciso
+gabarito humano para ver.
+
+### Cortar o trecho no silêncio: a primeira tentativa, medida e descartada
 
 A pausa que o reconhecedor não expõe parecia a causa da legenda mal cortada em
 japonês: medido no vídeo de 9 minutos, **44 dos 119 trechos da Apple (37%)**

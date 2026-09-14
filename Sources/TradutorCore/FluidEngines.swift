@@ -117,6 +117,42 @@ public enum SpeechEnergy {
         return energy.map { $0 > threshold }
     }
 
+    /// O meio de cada pausa longa o bastante para fechar um trecho.
+    ///
+    /// Em japonês a Apple emite um caractere por run e **não deixa buraco
+    /// entre eles**: o silêncio fica embutido na duração do caractere que
+    /// abre a fala seguinte, e só `longRunIsPause` (2 s) o percebe. Uma
+    /// pausa de 1 s entre duas pessoas passa invisível, e as duas falas vão
+    /// para o mesmo trecho — que daí em diante é indivisível.
+    /// Silêncio a partir do qual o trecho fecha. Ver `pauseBoundaries`.
+    public static let subtitlePause: Double = 0.8
+
+    /// Os silêncios em si, e não o meio deles.
+    ///
+    /// O agrupador de legendas precisa do intervalo: o reconhecedor corta o
+    /// trecho onde a **palavra** cruza a fronteira, que não é onde o silêncio
+    /// está, e comparar ponto com ponto não casa nunca.
+    public static func silences(
+        _ samples: [Float], minimumPause: Double = subtitlePause
+    ) -> [ClosedRange<Double>] {
+        let speech = regions(samples, minimumPause: minimumPause)
+        guard speech.count > 1 else { return [] }
+        return (1..<speech.count).compactMap { indice in
+            let inicio = speech[indice - 1].upperBound, fim = speech[indice].lowerBound
+            return fim > inicio ? inicio...fim : nil
+        }
+    }
+
+    public static func pauseBoundaries(
+        _ samples: [Float], minimumPause: Double = 0.6
+    ) -> [TimeInterval] {
+        let speech = regions(samples, minimumPause: minimumPause)
+        guard speech.count > 1 else { return [] }
+        return (1..<speech.count).map { indice in
+            (speech[indice - 1].upperBound + speech[indice].lowerBound) / 2
+        }
+    }
+
     /// Encosta cada trecho na fala de verdade: o começo volta até onde a voz
     /// começou (até 0,6 s) e o fim avança até onde ela acaba (até 2 s), sem
     /// invadir o trecho vizinho.

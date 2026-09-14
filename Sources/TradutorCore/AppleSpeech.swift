@@ -94,7 +94,8 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
     ) async throws -> [TimedText] {
         let results = try await analyze(samples, progress: progress)
         progress(1)
-        let limites = speakerBoundaries
+        // Troca de voz e pausa medida fecham trecho pela mesma mecânica.
+        let limites = (speakerBoundaries + pauseBoundaries).sorted()
         return results
             .flatMap { Self.phrases(in: $0, boundaries: limites) }
             .sorted { $0.start < $1.start }
@@ -167,6 +168,9 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
     /// Fronteiras de voz, quando a identificação de locutor está ligada.
     /// Ver `Transcriber.speakerBoundaries`.
     public var speakerBoundaries: [TimeInterval] = []
+
+    /// Meio de cada pausa medida no áudio. Ver `SpeechEnergy.pauseBoundaries`.
+    public var pauseBoundaries: [TimeInterval] = []
 
     static func phrases(
         in result: SpeechTranscriber.Result, boundaries: [TimeInterval] = []

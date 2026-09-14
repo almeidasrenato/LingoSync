@@ -39,12 +39,20 @@ public protocol Transcriber: AnyObject, Sendable {
     /// quem já corta certo ignora.
     var speakerBoundaries: [TimeInterval] { get set }
 
+    /// Instantes de silêncio medidos no áudio, no meio de cada pausa. Mesma
+    /// mecânica das fronteiras de voz — ver `SpeechEnergy.pauseBoundaries`.
+    var pauseBoundaries: [TimeInterval] { get set }
 }
 
 extension Transcriber {
     /// Ignorar é o comportamento padrão: só quem monta trecho a partir de
     /// palavras usa as fronteiras.
     public var speakerBoundaries: [TimeInterval] {
+        get { [] }
+        set { _ = newValue }
+    }
+
+    public var pauseBoundaries: [TimeInterval] {
         get { [] }
         set { _ = newValue }
     }

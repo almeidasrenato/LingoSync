@@ -1037,6 +1037,32 @@ struct Verify {
                "pico isolado limita o ganho, sem clipping")
 
         print("")
+        print("silêncio como fronteira de legenda\n")
+        do {
+            let construtor = SubtitleFileBuilder()
+            // Dois trechos colados, com silêncio real entre as falas: é o que
+            // a Apple entrega em japonês, porque ela embute o silêncio na
+            // duração do caractere e os trechos saem contíguos. Sem olhar o
+            // áudio, o agrupador não vê pausa nenhuma e junta as duas pessoas.
+            let colados = [
+                TimedText(text: "お疲れ様あれさん", start: 221.09, end: 225.12),
+                TimedText(text: "お疲れ様です。", start: 225.12, end: 227.34),
+            ]
+            expect(construtor.makeCues(from: colados).count == 1,
+                   "sem o silêncio, dois trechos colados viram uma legenda só")
+            construtor.silences = [225.0...226.0]
+            let partidas = construtor.makeCues(from: colados)
+            expect(partidas.count == 2,
+                   "o silêncio medido separa as duas falas (deu \(partidas.count))")
+            // O silêncio precisa casar pelo INTERVALO: o reconhecedor corta
+            // onde a palavra cruza a fronteira, não onde o silêncio está, e
+            // comparar ponto com ponto nunca casa.
+            construtor.silences = [226.5...227.0]
+            expect(construtor.makeCues(from: colados).count == 1,
+                   "silêncio fora da junção não parte a legenda")
+        }
+
+        print("")
         print("nivelamento de fala baixa\n")
         do {
             // Fala sintetica: rajadas de 0,25 s separadas por fundo baixo, e
@@ -1784,8 +1810,23 @@ struct Verify {
             let duration = Double(samples.count) / 16_000
             let transcriber = TranscriberFactory.make(for: language, engine: engine)
             try await transcriber.prepare { _, _ in }
+            // Sonda: `TRADUTOR_PAUSA_MINIMA=0.8` liga o corte por silêncio.
+            if let valor = ProcessInfo.processInfo.environment["TRADUTOR_PAUSA_MINIMA"],
+               let minima = Double(valor) {
+                transcriber.pauseBoundaries = SpeechEnergy.pauseBoundaries(
+                    samples, minimumPause: minima)
+            }
             let pieces = try await transcriber.transcribeTimed(samples) { _ in }
-            let cues = SubtitleFileBuilder().makeCues(from: pieces, mediaDuration: duration)
+            let construtor = SubtitleFileBuilder()
+            if let valor = ProcessInfo.processInfo.environment["TRADUTOR_PAUSA_MINIMA"],
+               let minima = Double(valor) {
+                construtor.silences = SpeechEnergy.silences(samples, minimumPause: minima)
+            }
+            let cues = construtor.makeCues(from: pieces, mediaDuration: duration)
+            if ProcessInfo.processInfo.environment["TRADUTOR_MOSTRA_CUES"] != nil {
+                for cue in cues { print(String(format: "[cue] %7.2f–%7.2f  %@",
+                                               cue.start, cue.end, cue.source)) }
+            }
             let regions = audio.regions
 
             print(audio.description)
@@ -2992,17 +3033,22 @@ struct Verify {
             let duracao = Double(samples.count) / 16_000
             print("")
             print("legendas que passam por cima de uma troca de pessoa conhecida:")
-            let variantes: [(String, [TimeInterval])] = [
-                ("sem fronteiras", []),
-                ("cruas         ", SpeakerDiarizer.boundaries(of: turns, shift: 0)),
-                ("adianta 0,25 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.25)),
-                ("adianta 0,40 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.40)),
-                ("adianta 0,50 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.50)),
-                ("adianta 0,60 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.60)),
-                ("adianta 0,75 s", SpeakerDiarizer.boundaries(of: turns, shift: 0.75)),
+            let vozes = SpeakerDiarizer.boundaries(of: turns)
+            let variantes: [(String, [TimeInterval], Double?)] = [
+                ("sem nada       ", [], nil),
+                ("só voz         ", vozes, nil),
+                ("só pausa 0,8 s ", [], 0.8),
+                ("voz + pausa 0,6", vozes, 0.6),
+                ("voz + pausa 0,8", vozes, 0.8),
+                ("voz + pausa 1,2", vozes, 1.2),
             ]
-            for (nome, fronteiras) in variantes {
+            for (nome, fronteiras, minimaPausa) in variantes {
                 transcriber.speakerBoundaries = fronteiras
+                let pausas = minimaPausa.map {
+                    SpeechEnergy.pauseBoundaries(samples, minimumPause: $0) } ?? []
+                transcriber.pauseBoundaries = pausas
+                builder.silences = minimaPausa.map {
+                    SpeechEnergy.silences(samples, minimumPause: $0) } ?? []
                 guard let pieces = try? await transcriber.transcribeTimed(samples, progress: { _ in })
                 else { continue }
                 let marcados = SpeakerDiarizer.assign(pieces, to: turns)
@@ -3030,9 +3076,9 @@ struct Verify {
                         min(cue.end, $0.fim) - max(cue.start, $0.inicio) > 0.15 && $0.quem.contains(pessoa)
                     }
                 }.count
-                print(String(format: "  %@ (%3d fronteiras): %2d de %d cruzam troca · locutor certo em %d de %d",
-                             nome as NSString, fronteiras.count, contaminadas(cues), cues.count,
-                             certos, comDono))
+                print(String(format: "  %@ (%3d+%3d): %2d de %3d cruzam troca · locutor certo em %d de %d",
+                             nome as NSString, fronteiras.count, pausas.count,
+                             contaminadas(cues), cues.count, certos, comDono))
                 if ProcessInfo.processInfo.environment["TRADUTOR_MOSTRA_CRUZAMENTO"] != nil {
                     for cue in cues {
                         let cruzou = trocas.filter { cue.start + 0.2 < $0 && $0 < cue.end - 0.2 }

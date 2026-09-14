@@ -172,6 +172,17 @@ public final class SubtitleFileBuilder {
     /// Fica como campo para quem quiser medir de novo com outro tradutor.
     public var contextOverlap = 0
 
+    /// Silêncios medidos no áudio, usados como fronteira de legenda.
+    ///
+    /// O reconhecedor pode fechar o trecho na pausa e ainda assim os dois
+    /// pedaços saírem **contíguos** — um termina onde o outro começa, porque
+    /// o silêncio ficou dentro do run que a Apple emitiu. Aí `makeCues` não
+    /// vê pausa nenhuma entre eles e junta os dois de volta na mesma legenda,
+    /// desfazendo o corte. Visto no vídeo de 9 minutos: as falas de duas
+    /// pessoas voltavam a virar `お疲れ様あれさんお疲れ様です。`, e a tradução
+    /// colapsava as duas numa só.
+    public var silences: [ClosedRange<TimeInterval>] = []
+
     /// Aviso do tradutor sobre a geração que acabou de rodar, ou `nil`.
     ///
     /// Quem chama lê depois de `generate` e mostra ao usuário: é como a troca
@@ -589,6 +600,13 @@ public final class SubtitleFileBuilder {
         for piece in ordered {
             // Uma pausa longa entre trechos é fronteira natural de legenda.
             if let last = buffer.last, piece.start - last.end > 0.8 { flush() }
+            // E o silêncio medido no áudio também, mesmo com os trechos
+            // colados: o reconhecedor corta onde a palavra cruza a fronteira,
+            // não onde o silêncio está, então o que casa é o intervalo.
+            if let last = buffer.last,
+               silences.contains(where: { $0.contains(last.end) || $0.contains(piece.start) }) {
+                flush()
+            }
             // Troca de locutor também é: duas pessoas na mesma legenda é o
             // que fazia a leitura embaralhar quando há diálogo rápido.
             if let last = buffer.last, last.speaker != piece.speaker { flush() }
@@ -682,6 +700,22 @@ public final class SubtitleFileBuilder {
                 log.error("identificação de locutores falhou: \(error.localizedDescription, privacy: .public)")
             }
             try Task.checkCancellation()
+        }
+
+        // A pausa que o reconhecedor não expõe fecha o trecho aqui.
+        //
+        // Em japonês a Apple embute o silêncio na duração do caractere que
+        // abre a fala seguinte, e duas pessoas separadas por um segundo de
+        // silêncio caem no mesmo trecho — que daí em diante é indivisível.
+        // Visto no vídeo de 9 minutos: `お疲れ様あれさんお疲れ様です。` num
+        // trecho só, e a tradução colapsou as duas falas numa.
+        //
+        // Vale com ou sem identificação de locutor: é silêncio, não voz.
+        if ProcessInfo.processInfo.environment["TRADUTOR_SEM_PAUSAS"] == nil {
+            let pausas = SpeechEnergy.pauseBoundaries(
+                samples, minimumPause: SpeechEnergy.subtitlePause)
+            transcriber.pauseBoundaries = pausas
+            silences = SpeechEnergy.silences(samples)
         }
 
         progress(.transcribing, 0, String(format: "0 de %.0f s de áudio", seconds), false)
