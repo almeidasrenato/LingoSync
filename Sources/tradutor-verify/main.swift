@@ -119,7 +119,8 @@ struct Verify {
                 path: arguments[2],
                 language: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .japanese) : .japanese,
                 engine: arguments.count >= 5
-                    ? (RecognitionEngine(rawValue: arguments[4]) ?? .whisper) : .whisper
+                    ? (RecognitionEngine(rawValue: arguments[4]) ?? .whisper) : .whisper,
+                jsonPath: option("--json")
             )
         case "traduzir":
             guard arguments.count >= 3 else { print("falta o arquivo de linhas"); exit(1) }
@@ -463,10 +464,12 @@ struct Verify {
     /// Serve de entrada para comparar motores de traducao: o mesmo texto de
     /// origem passa por cada um, e a diferenca fica isolada na traducao.
     static func dumpSource(
-        path: String, language: Language, engine: RecognitionEngine = .whisper
+        path: String, language: Language, engine: RecognitionEngine = .whisper,
+        jsonPath: String? = nil
     ) async {
+        let started = Date()
         guard let samples = try? await SubtitleFileBuilder.extractAudio(
-            from: URL(fileURLWithPath: path)
+            from: URL(fileURLWithPath: path), preferring: language
         ) else {
             FileHandle.standardError.write(Data("nao consegui ler \(path)\n".utf8))
             exit(1)
@@ -486,7 +489,22 @@ struct Verify {
             exit(1)
         }
 
-        let cues = SubtitleFileBuilder().makeCues(from: timed, mediaDuration: duration)
+        let builder = SubtitleFileBuilder()
+        let cues = builder.makeCues(from: timed, mediaDuration: duration)
+        if let jsonPath {
+            let report: [String: Any] = [
+                "seconds": Date().timeIntervalSince(started), "duration": duration,
+                "pieces": timed.map { ["text": $0.text, "start": $0.start, "end": $0.end] as [String: Any] },
+                "srt": SRTWriter.render(cues, charactersPerLine: SubtitleFileBuilder.lineWidth(for: language))
+            ]
+            do {
+                try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+                    .write(to: URL(fileURLWithPath: jsonPath), options: .atomic)
+            } catch {
+                FileHandle.standardError.write(Data("FALHA: \(error.localizedDescription)\n".utf8))
+                exit(1)
+            }
+        }
         for cue in cues where !cue.source.isEmpty {
             print(cue.source.replacingOccurrences(of: "\n", with: " "))
         }

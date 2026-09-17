@@ -160,6 +160,11 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
 
         let audio = folder.appendingPathComponent("fala.wav")
         try Self.writeWAV(samples, to: audio)
+        // Régua de medição: o mesmo WAV preparado pelo app pode alimentar
+        // todas as variantes. copyItem recusa sobrescrever uma captura anterior.
+        if let capture = ProcessInfo.processInfo.environment["TRADUTOR_QWEN_GUARDAR_WAV"] {
+            try FileManager.default.copyItem(at: audio, to: URL(fileURLWithPath: capture))
+        }
         progress(0.1)
 
         // `-f srt` em vez de json de propósito: o próprio modelo quebra o
