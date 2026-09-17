@@ -29,6 +29,12 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BUILD_DIR/$EXECUTABLE" "$APP/Contents/MacOS/$APP_NAME"
 cp "$ROOT/$PLIST" "$APP/Contents/Info.plist"
 
+# So existe para quem tem CFBundleIconFile no Info.plist (hoje, o app
+# principal); copiar sem uso nao atrapalha o probe.
+if [ -f "$ROOT/Resources/AppIcon.icns" ]; then
+    cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+fi
+
 # Modelos ficam fora do bundle, baixados no primeiro uso. Gigabytes dentro do
 # .app tornariam a assinatura lenta e a distribuicao impraticavel.
 printf 'APPL????' > "$APP/Contents/PkgInfo"

@@ -584,6 +584,7 @@ O custo não sumiu, só passou a ser dito antes. `TranslationEngine.liveCostNote
 Apple, só transcrever   instantâneo, local        (liveCostNote nil)
 Google                  ~1 s por bloco
 DeepL                   2 a 3 s por bloco, e o desafio anti-robô quando insiste
+Gemini                  alguns segundos por bloco, mensagem de chat por vez
 Hunyuan                 4,5 GB residentes, disputando GPU com o reconhecedor
 ```
 
@@ -833,6 +834,122 @@ Limites:
   sending automated queries" antes de olhar a consulta.
 - **Determinístico**: três execuções sobre as 110 falas, nenhuma linha mudou.
 - `pt` já é o brasileiro; `zh` precisa ser `zh-CN`.
+
+### Gemini: motor de chat travestido de motor de tradução
+
+`GeminiWeb.swift`. Mesma família do DeepL (`WKWebView`, `.nonPersistent()`, sem
+API paga, sem conta) mas o site é um chat, não um campo de tradução — não há
+API de lote nenhuma, então quem faz o lote virar N traduções alinhadas é só o
+prompt.
+
+**Sempre sessão anônima**: sem conta dentro do app, o Gemini cai no modelo
+mais fraco da web ("Flash-Lite" em vez do "Flash" de quem loga). Medido em
+15/09/2026: sozinho esse modelo errava concordância dentro da própria
+legenda — "cansad**a**" numa frase que também dizia "vocês dois". Duas regras
+no prompt consertaram (`GeminiWeb.instructions`, regras 5 e 6): concordância
+de número/gênero obrigatória dentro do mesmo item, e masculino-plural
+genérico como padrão quando não há pista de gênero. Com elas, anônimo empatou
+com uma conta logada nas mesmas seis falas.
+
+**O prompt nasceu de três rodadas medidas contra o DeepL**, nos mesmos vídeos
+do benchmark de gênero (`ja-dificil`, 6 falas, e o vídeo de 40 falas com
+palavrão). Sem regra nenhuma: o Gemini oferecia duas traduções por linha
+separadas por "/", e inventava contexto que a fala não tinha ("aqui no
+restaurante", que não existe no áudio). A regra do formato fixo (`N::tradução`,
+uma linha por item, nunca "/") e a proibição explícita de inventar contexto
+fecharam isso; depois empatou com o DeepL nas mesmas falas, incluindo o teste
+que separa os dois de verdade — resolver "amo você" em vez de "amo isso" numa
+resposta de uma palavra sem pronome no original.
+
+**`execCommand('insertText')` funciona aqui — ao contrário do DeepL**, cujo
+editor ignora e só aceita colar por `ClipboardEvent('paste')`. Mas **um só**
+`execCommand` com o prompt inteiro (2000+ caracteres, dezenas de linhas)
+truncava no meio de vez em quando — medido em 15/09/2026, sempre logo depois
+de uma carga de página: chegava a inserir 224 dos 2401 caracteres mandados, o
+Gemini recebia meia instrução e respondia "entendido, me manda o texto".
+Inserir linha por linha, com uma quebra de parágrafo (`execCommand
+('insertParagraph')`) entre cada uma — do jeito que alguém digitando faria —
+não truncou mais numa dúzia de execuções.
+
+**O sinal de "terminou" não é ícone de volume como no DeepL** (o chat não tem
+um). É o botão "Parar resposta": existe enquanto gera, some quando termina.
+Cruzado com o número de respostas na conversa (a leitura tem que ser da
+resposta **desta** mensagem, não da anterior, que continua na tela até a nova
+aparecer) e com leituras estáveis do texto (a resposta chega por streaming).
+
+**Sem rede de segurança, igual DeepL**: bloco que não fechar direito derruba
+a tradução com erro na tela. Mas aqui, quando a resposta chega e não bate com
+`N::` vezes a contagem esperada, o prompt inteiro e a resposta crua vão para
+`/tmp/tradutor-gemini-erro.txt` — só no caminho de erro, uma tradução que dá
+certo não toca o arquivo. `TRADUTOR_GEMINI_DEBUG=1` imprime cada leitura de
+estado no stderr, mesmo padrão do `ASR_DEBUG`.
+
+Lote de 40, igual DeepL e Google — sem medição própria de teto de
+caracteres (o chat não tem a carga-de-página-por-bloco que limita o DeepL),
+mas 40 falas (~1200 caracteres) foi o que os testes usaram sem problema.
+
+**A conversa se joga fora sozinha de vez em quando.** Pedido em 15/09/2026:
+em sessão longa (ao vivo, ou vídeo com muitos lotes), de vez em quando uma
+fala japonesa voltava sem traduzir de verdade — sem quebrar o formato `N::`,
+então não cai na rede de segurança do `GeminiWeb.parse`. Suspeita, não
+medição: o histórico da conversa crescendo dilui a instrução. `GeminiDriver`
+recomeça a conversa do zero a cada 15 lotes ou 10 minutos, o que vier
+primeiro — reiniciar é mais simples e mais seguro que confiar numa mensagem
+extra "lembrando as regras" no meio de um histórico que só cresce.
+
+**Corrigir erro de reconhecimento, mas sem inventar fato.** Mesmo pedido:
+de vez em quando o reconhecedor erra uma palavra solta, e pediram para o
+Gemini usar o contexto e ajustar — já que é um modelo de linguagem, não só
+um tradutor. Testado em quatro rodadas contra `写真真経撮れるかな` e frases
+sintéticas com erro plantado (hora, nome de pessoa, número de telefone):
+
+- **Só pedir "use o contexto" não mudou nada** — sem exemplo concreto no
+  prompt, o modelo continuava traduzindo o pedaço quebrado ao pé da letra.
+- **Com exemplo, corrigiu — mas inventando.** Pedindo para `ネコ時` (hora do
+  "gato") virar uma hora plausível, duas rodadas diferentes devolveram duas
+  horas diferentes, nenhuma vinda de lugar nenhum. Uma legenda errada mas
+  plausível é **pior** que uma visivelmente quebrada — ninguém desconfia da
+  primeira.
+- **A versão que ficou proíbe inventar fato específico** (número, hora, data,
+  nome, lugar) e só permite suavizar a palavra solta quando ela não carrega
+  um desses. Testado em quatro rodadas (hora, nome, telefone, mais o caso
+  real de câmera) e mais uma rodada juntando com as regras de gênero — zero
+  fatos inventados, e o `写真真経` seguiu virando "tirar uma foto" limpo, sem
+  fantasiar um número em nenhum dos casos.
+
+**A causa real do "não traduziu" apareceu testando pelo app de verdade.**
+`tradutor-verify traduzir` (o gate isolado) nunca reproduziu a falha — sempre
+traduzia certo. Rodando os mesmos vídeos pelo caminho de verdade (`open -n
+build/Tradutor.app --args --selftest-job ...`), um vídeo em inglês voltou
+**inteiro em inglês** 3 de 3 vezes: `N::` batendo linha por linha, contagem
+certa, só que cada tradução era a própria origem devolvida sem traduzir.
+Nenhum erro, nenhuma quebra de formato — `GeminiWeb.parse` aceitava porque
+a forma estava certa. Rodando o binário direto (sem `open`), a mesma
+tradução saiu certa. Suspeita, não confirmada: limite de uso da sessão
+anônima que não avisa — o site devolve uma resposta com a forma certa e o
+conteúdo errado, em vez de um erro.
+
+`GeminiWeb.pareceIntocado` compara origem e tradução linha a linha (só as
+com mais de três palavras, pra não confundir interjeição/nome que
+legitimamente fica igual) e desconfia quando a **maioria** ficou idêntica.
+Pegando isso, `GeminiDriver` recomeça a conversa e tenta de novo uma vez;
+falhando de novo, vira `GeminiWebError.untranslated` (erro de verdade, com
+log em `/tmp/tradutor-gemini-erro.txt`) em vez de gravar a legenda em
+inglês sem avisar ninguém. Depois do conserto: o mesmo vídeo que falhou 3
+de 3 passou 3 de 3. Retestando os outros quatro vídeos com esse build, um
+lote esbarrou na mesma falha e a rede pegou — subiu como erro de verdade em
+vez de sair calado, e a tentativa seguinte passou. É o comportamento
+certo: falha visível, não legenda errada sem aviso.
+
+**Frase virou pergunta sem motivo — outra forma do mesmo defeito.** Relatado
+em 15/09/2026: uma fala afirmativa em inglês saiu com ponto de interrogação
+em português, sem nada no original pedindo isso. É a regra 9 (não inventar
+fato) de novo, agora sobre a **intenção da frase**: a regra 11 do prompt
+proíbe mudar afirmação para pergunta (ou o contrário) e manda decidir só
+pela pontuação e estrutura da origem, nunca pelo que soaria mais natural.
+Testado com 16 frases inglesas armadilhadas — afirmação com jeito de
+pergunta retórica, tom de deboche, frase incompleta de efeito — zero
+inversões em duas rodadas.
 
 ### Hunyuan-MT-7B: o tradutor local fora do processo
 
@@ -1750,3 +1867,15 @@ WhisperKit) e `~/Library/Application Support/FluidAudio`.
   destruiu a lista real uma vez: restaurava num `defer` que `exit()` nunca
   executa. Quem guarda dado do usuário aceita um diretório no construtor.
 - Antes de trocar um número que tem comentário de medição, meça de novo.
+
+### Importação e exportação de SRT (17/09/2026)
+
+Importar **original** só carrega e guarda o rascunho. O botão de tradução é
+a única ação que o traduz. Importar **tradução** carrega apenas essa faixa.
+Exportação nunca substitui uma faixa ausente pela outra: original usa
+`builder.draft`, antes dos cortes da tradução; tradução usa o resultado.
+Os idiomas do conteúdo são guardados independentemente dos seletores.
+
+`--selftest-srt` verifica os dois caminhos sem vídeo, modelo ou rede, antes
+da inicialização normal do app; relatório `/tmp/tradutor-srt.txt`. O gate
+`legendas` verifica também japonês e ida e volta exata dos milissegundos.

@@ -819,23 +819,34 @@ public final class SubtitleFileBuilder {
                 waiting: true
             ))
 
-            let translations: [String]
-            do {
-                translations = try await translator.translate(texts, from: source, to: target)
-            } catch {
-                log.error("lote \(start) falhou: \(error.localizedDescription, privacy: .public)")
+            // Uma segunda tentativa do MESMO lote, não do arquivo inteiro —
+            // o Gemini às vezes devolve a origem sem traduzir mesmo depois do
+            // reload interno do `GeminiDriver`, e refazer só este pedaço custa
+            // uma requisição, não a tradução inteira de novo.
+            var translations: [String]?
+            for tentativa in 0..<2 {
+                do {
+                    let resultado = try await translator.translate(texts, from: source, to: target)
+                    // Resposta com contagem diferente da entrada é o defeito
+                    // que não devolve erro: a legenda 5 recebe a tradução da
+                    // 4, com timecode válido e arquivo sem nada de errado.
+                    // Melhor sem tradução do que retomar sem conferir.
+                    guard resultado.count == texts.count else {
+                        log.error("lote \(start): \(resultado.count) traduções para \(texts.count) textos")
+                        continue
+                    }
+                    translations = resultado
+                    break
+                } catch {
+                    log.error("lote \(start) falhou (tentativa \(tentativa + 1)): \(error.localizedDescription, privacy: .public)")
+                }
+                if Task.isCancelled { break }
+            }
+            guard let translations else {
                 // Seguir é certo — perder dez minutos de trabalho por um lote
                 // seria pior —, mas em silêncio não: o `.srt` sai com esse
                 // pedaço no idioma de origem, e sem aviso isso parece geração
                 // completa. Ver `translationNotice`.
-                lotesFalhos += 1
-                continue
-            }
-            // Resposta com contagem diferente da entrada é o defeito que não
-            // devolve erro: a legenda 5 recebe a tradução da 4, com timecode
-            // válido e arquivo sem nada de errado. Melhor sem tradução.
-            guard translations.count == texts.count else {
-                log.error("lote \(start): \(translations.count) traduções para \(texts.count) textos")
                 lotesFalhos += 1
                 continue
             }
@@ -1320,9 +1331,10 @@ public enum SRTWriter {
 
     /// `00:01:23,456` — SubRip usa vírgula como separador decimal.
     public static func timecode(_ seconds: TimeInterval) -> String {
-        let clamped = max(0, seconds)
-        let total = Int(clamped)
-        let milliseconds = Int((clamped - Double(total)) * 1000)
+        // Arredonda uma vez; truncar a fração perdia 1 ms a cada ida e volta.
+        let ticks = Int((max(0, seconds) * 1000).rounded())
+        let total = ticks / 1000
+        let milliseconds = ticks % 1000
         return String(
             format: "%02d:%02d:%02d,%03d",
             total / 3600, (total % 3600) / 60, total % 60, milliseconds
@@ -1364,16 +1376,15 @@ public enum SRTParser {
                   let (start, end) = parseTimes(lines[timeLineIndex])
             else { continue }
 
-            let body = lines.dropFirst(timeLineIndex + 1)
-                .joined(separator: " ")
-                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
-                .trimmingCharacters(in: .whitespaces)
+            let body = Tokens.join(lines.dropFirst(timeLineIndex + 1).map {
+                $0.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            }).trimmingCharacters(in: .whitespaces)
             guard !body.isEmpty else { continue }
 
             cues.append(Cue(
                 index: cues.count + 1,
                 start: start,
-                end: max(end, start + 0.2),
+                end: end > start ? end : start + 0.2,
                 source: "",
                 translated: body
             ))
@@ -1410,7 +1421,10 @@ public enum SRTParser {
         guard pieces.count == 3,
               let hours = Double(pieces[0]),
               let minutes = Double(pieces[1]),
-              let secs = Double(pieces[2])
+              let secs = Double(pieces[2]),
+              hours.isFinite, hours >= 0, hours < 1_000_000,
+              minutes.isFinite, (0..<60).contains(minutes),
+              secs.isFinite, (0..<60).contains(secs)
         else { return nil }
         return hours * 3600 + minutes * 60 + secs
     }

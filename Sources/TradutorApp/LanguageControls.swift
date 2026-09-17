@@ -43,11 +43,13 @@ struct TranslationEnginePicker: View {
               Quem traduz as legendas de vídeo. Apple é local e instantânea. \
               DeepL abre o site numa janela e traduz por lá — o melhor em \
               japonês, medido. Google é o mais rápido e chega perto dele. \
-              Os dois mandam o texto para fora da máquina e precisam de \
-              internet. Hunyuan-MT é local como a Apple e roda fora do \
-              processo, quando instalado. "Só transcrever" pula a tradução e \
-              deixa o texto no idioma falado. Todos valem ao vivo também — os \
-              de rede custam segundos por bloco, e a nota abaixo diz quanto.
+              Gemini conversa com o chat do site, sempre na sessão anônima — \
+              sem conta, sem histórico salvo. Os três de rede mandam o texto \
+              para fora da máquina e precisam de internet. Hunyuan-MT é \
+              local como a Apple e roda fora do processo, quando instalado. \
+              "Só transcrever" pula a tradução e deixa o texto no idioma \
+              falado. Todos valem ao vivo também — os de rede custam \
+              segundos por bloco, e a nota abaixo diz quanto.
               """)
     }
 }

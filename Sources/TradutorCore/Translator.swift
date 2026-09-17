@@ -102,6 +102,7 @@ public enum TranslatorFactory {
         case .apple: AppleTranslator()
         case .deepl: DeepLWebTranslator()
         case .google: GoogleWebTranslator()
+        case .gemini: GeminiWebTranslator()
         case .hunyuan: HunyuanTranslator()
         case .transcriptionOnly: IdentityTranslator()
         }
@@ -118,6 +119,9 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     case deepl
     /// Google Tradutor, pelo endereço interno do site. Ver `GoogleWebTranslator`.
     case google
+    /// Chat do Gemini, sem API paga e sem conta — sempre a sessão anônima do
+    /// site. Ver `GeminiWebTranslator`.
+    case gemini
     /// Hunyuan-MT-7B (Tencent), local, fora do processo. Só existe quando
     /// `Scripts/hunyuan-setup.sh` tiver rodado — ver `HunyuanTranslator`.
     case hunyuan
@@ -135,6 +139,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         case .apple: "Apple"
         case .deepl: "DeepL (site)"
         case .google: "Google (site)"
+        case .gemini: "Gemini (site)"
         case .hunyuan: "Hunyuan-MT 7B"
         case .transcriptionOnly: "Só transcrever"
         }
@@ -147,7 +152,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// geração de dez minutos.
     public var isAvailable: Bool {
         switch self {
-        case .apple, .deepl, .google, .transcriptionOnly: true
+        case .apple, .deepl, .google, .gemini, .transcriptionOnly: true
         case .hunyuan: HunyuanTranslator.isInstalled
         }
     }
@@ -180,6 +185,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         case .apple, .transcriptionOnly: nil
         case .google: "cada bloco vai à rede · ~1 s de atraso"
         case .deepl: "cada bloco carrega o site · 2 a 3 s de atraso"
+        case .gemini: "cada bloco manda uma mensagem ao chat · alguns segundos de atraso"
         case .hunyuan: "modelo de 4,5 GB residente · disputa a GPU com o reconhecimento"
         }
     }
@@ -191,7 +197,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// como a Apple.
     public var leavesTheMachine: Bool {
         switch self {
-        case .deepl, .google: true
+        case .deepl, .google, .gemini: true
         case .apple, .hunyuan, .transcriptionOnly: false
         }
     }
@@ -204,6 +210,9 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         // eles. Só japonês → português foi medido aqui.
         case .hunyuan: nil
         case .google: nil
+        // O site anuncia mais de 200 idiomas; nenhum par foi medido como
+        // recusado nos testes contra o DeepL (ver GeminiWeb).
+        case .gemini: nil
         case .deepl: DeepLWeb.supportedLanguages
         }
     }
@@ -236,6 +245,13 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         // Medido em 13/09/2026, 110 falas do vídeo de 9 minutos: 1,3 s,
         // contra 11,0 s do DeepL e 36,4 s da Apple.
         case .google: 0.01
+        // Medido em 15/09/2026 pelo tradutor-verify traduzir, as 6 falas do
+        // vídeo `ja-dificil` (78,1 s), só a fase de tradução: 5,7 a 6,1 s em
+        // três execuções, média 5,9 s. `tradutor-verify srt` não tem como
+        // trocar o tradutor (fixo em `.apple`, ver o gate), então a medição
+        // aqui não passou pelo pipeline inteiro como as dos outros motores —
+        // vale refazer se um vídeo mais longo mudar a conta.
+        case .gemini: 0.08
         // Sem tradução sobra o reconhecimento, e ele varia demais entre
         // motores para um número só: medido em 540 s, a Apple gastou 10,2 s
         // (0,019) e o Whisper 11,8 s em 97 s (0,12). O 0,05 fica no meio,
@@ -257,7 +273,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     /// Se o par escolhido passa por este motor.
     public func supports(_ source: Language, _ target: Language) -> Bool {
         switch self {
-        case .apple, .hunyuan, .google, .transcriptionOnly: true
+        case .apple, .hunyuan, .google, .gemini, .transcriptionOnly: true
         case .deepl: DeepLWeb.supports(source, target)
         }
     }

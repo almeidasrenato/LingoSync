@@ -576,6 +576,16 @@ struct Verify {
         expect(voltaram.last?.translated == "Ninguém tinha perguntas.",
                "ida e volta preserva o texto")
 
+        let japones = "今日は皆さんにお会いできてうれしいです。どうぞよろしくお願いします。"
+        let ida = [Cue(index: 1, start: 1.001, end: 1.101, source: japones)]
+        let volta = SRTParser.parse(SRTWriter.render(ida, charactersPerLine: 20))
+        expect(volta.first?.translated == japones, "SRT japonês não ganha espaços na quebra de linha")
+        expect(volta.first?.start == 1.001 && volta.first?.end == 1.101,
+               "ida e volta preserva milissegundos e duração menor que 200 ms")
+        expect(SRTWriter.timecode(59.9996) == "00:01:00,000", "arredondamento atravessa o minuto")
+        expect(SRTParser.parse("1\n00:00:nan --> 00:01:02,000\nTexto").isEmpty,
+               "tempo não finito é recusado")
+
         // Variacoes que aparecem na pratica.
         let comCRLF = SRTParser.parse("1\r\n00:00:01,000 --> 00:00:02,000\r\nTexto\r\n")
         expect(comCRLF.count == 1, "aceita quebra de linha do Windows")

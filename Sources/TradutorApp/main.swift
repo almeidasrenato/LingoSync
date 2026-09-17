@@ -30,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var studioCounter = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if CommandLine.arguments.contains("--selftest-srt") {
+            Task { await SubtitleIOCheck.run() }
+            return
+        }
         NSApp.setActivationPolicy(.accessory)
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -867,6 +871,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 expect(!comLocutor.isEmpty,
                        "com locutores ligado, as legendas ganham quem fala (\(comLocutor.count) de \(model.cues.count))")
             }
+            let originalCheck = FileManager.default.temporaryDirectory
+                .appendingPathComponent("original-gerado-\(UUID().uuidString).srt")
+            model.export(to: originalCheck, track: .original)
+            let originalWritten = (try? String(contentsOf: originalCheck, encoding: .utf8)) ?? ""
+            expect(originalWritten == SRTWriter.render(
+                model.originalCues, colorBySpeaker: model.diarizeSpeakers && model.colorBySpeaker,
+                charactersPerLine: SubtitleFileBuilder.lineWidth(for: source)),
+                "exportacao original usa todas as falas anteriores ao corte da traducao")
+            try? FileManager.default.removeItem(at: originalCheck)
+
             // O que a janela mostra e o que o arquivo leva: travessao incluido.
             // O autoteste do item de menu ja conferia as duas linhas; este
             // nao, e era aqui que a terceira linha passava — 4 dos 24 backups
@@ -1190,8 +1204,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(model.activeIndex == 2, "navegacao funciona com legenda carregada")
             try? FileManager.default.removeItem(at: srtTemporario)
 
-            // Importar o idioma original traduz somente as falas do SRT e
-            // mantém os tempos, sem reconhecer o vídeo outra vez.
+            // Importar só carrega; traduzir exige uma ação separada.
             let originalImport = FileManager.default.temporaryDirectory
                 .appendingPathComponent("original-\(UUID().uuidString).srt")
             let importedText = ("Hello from SRT. " + String(repeating: "This timing must remain unchanged. ", count: 4))
@@ -1201,6 +1214,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let motorAntesDoImport = model.translationEngine
             model.translationEngine = .transcriptionOnly
             model.loadSubtitles(from: originalImport, as: .original)
+            expect(model.stage == .done && !model.isWorking,
+                   "importar original nao inicia traducao")
+            expect(model.cues.first?.translated.isEmpty == true,
+                   "original importado nao finge ter traducao")
+            model.retranslate()
             let prazoImport = Date().addingTimeInterval(5)
             while model.isWorking && Date() < prazoImport {
                 try? await Task.sleep(for: .milliseconds(20))

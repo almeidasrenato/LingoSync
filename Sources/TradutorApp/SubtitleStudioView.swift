@@ -267,8 +267,7 @@ struct SubtitleStudioView: View {
             .help(model.canRetranslate
                   ? "Retraduzir: refaz só a tradução, com o tradutor escolhido agora, "
                     + "sem reconhecer o áudio outra vez"
-                  : "Retraduzir exige uma legenda gerada nesta janela — "
-                    + "legenda aberta de arquivo não traz o texto original")
+                  : "Tradução exige uma legenda gerada ou importada como idioma original")
             .disabled(!model.canRetranslate)
 
             Button {
@@ -956,7 +955,7 @@ struct SubtitleStudioView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let track = chooseSubtitleTrack(
             title: "O que este SRT contém?",
-            message: "Escolha o idioma usado no arquivo. Se for o original, o vídeo não será retranscrito; somente estas falas serão traduzidas."
+            message: "Escolha o idioma usado no arquivo. Importar apenas carrega a legenda. Para traduzir o original depois, use o botão de tradução."
         ) else { return }
         model.loadSubtitles(from: url, as: track)
     }
@@ -967,7 +966,8 @@ struct SubtitleStudioView: View {
         guard let track = chooseSubtitleTrack(
             title: "O que deseja exportar?",
             message: "Escolha entre as falas no idioma original e a tradução.",
-            originalAvailable: model.cues.contains { !$0.source.isEmpty }
+            originalAvailable: model.canExport(.original),
+            translationAvailable: model.canExport(.translation)
         ) else { return }
 
         let panel = NSSavePanel()
@@ -982,7 +982,8 @@ struct SubtitleStudioView: View {
     }
 
     private func chooseSubtitleTrack(
-        title: String, message: String, originalAvailable: Bool = true
+        title: String, message: String, originalAvailable: Bool = true,
+        translationAvailable: Bool = true
     ) -> SubtitleStudioModel.SubtitleTrack? {
         let alert = NSAlert()
         alert.messageText = title
@@ -990,7 +991,8 @@ struct SubtitleStudioView: View {
         let original = alert.addButton(
             withTitle: SubtitleStudioModel.SubtitleTrack.original.displayName)
         original.isEnabled = originalAvailable
-        alert.addButton(withTitle: SubtitleStudioModel.SubtitleTrack.translation.displayName)
+        let translation = alert.addButton(withTitle: SubtitleStudioModel.SubtitleTrack.translation.displayName)
+        translation.isEnabled = translationAvailable
         alert.addButton(withTitle: "Cancelar")
 
         switch alert.runModal() {

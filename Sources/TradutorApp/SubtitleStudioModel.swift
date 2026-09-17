@@ -69,6 +69,15 @@ final class SubtitleStudioModel {
     private(set) var isPlaying = false
     private(set) var savedSRT: URL?
     private(set) var loadedFromFile = false
+    // Idiomas do conteúdo, independentes dos seletores da próxima geração.
+    private var originalLanguage: Language?
+    private var translatedLanguage: Language?
+
+    var originalCues: [Cue] { builder?.draft ?? [] }
+
+    func canExport(_ track: SubtitleTrack) -> Bool {
+        track == .original ? !originalCues.isEmpty : cues.contains { !$0.translated.isEmpty }
+    }
 
     /// O que produziu as legendas que estão na tela agora.
     ///
@@ -166,17 +175,18 @@ final class SubtitleStudioModel {
     /// O idioma em que a legenda sai. Sem tradução é o próprio falado — ver
     /// `TranslationEngine.destination`.
     var writtenLanguage: Language {
-        translationEngine.destination(from: sourceLanguage, to: targetLanguage)
+        translatedLanguage ?? originalLanguage
+            ?? translationEngine.destination(from: sourceLanguage, to: targetLanguage)
     }
 
     func subtitleLanguage(for track: SubtitleTrack) -> Language {
-        track == .original ? sourceLanguage : writtenLanguage
+        track == .original ? (originalLanguage ?? sourceLanguage) : writtenLanguage
     }
 
     /// Nome sugerido na hora de exportar: o do vídeo com o idioma no meio,
     /// que é a convenção que os players usam para achar a legenda sozinhos.
     var suggestedSRTName: String {
-        suggestedSRTName(for: .translation)
+        suggestedSRTName(for: canExport(.translation) ? .translation : .original)
     }
 
     func suggestedSRTName(for track: SubtitleTrack) -> String {
@@ -234,21 +244,25 @@ final class SubtitleStudioModel {
 
     /// Grava as legendas onde o usuário escolher.
     func export(to url: URL) {
-        export(to: url, track: .translation)
+        export(to: url, track: canExport(.translation) ? .translation : .original)
     }
 
     func export(to url: URL, track: SubtitleTrack) {
         exportError = nil
+        guard canExport(track) else {
+            exportError = "Não há legenda disponível nesta faixa."
+            return
+        }
         do {
-            let output = cues.map { cue in
+            // O original vem do rascunho inteiro: a tradução pode ter sido
+            // repartida em mais blocos, alguns sem texto original associado.
+            let output = (track == .original ? originalCues : cues).map { cue in
                 Cue(
                     index: cue.index,
                     start: cue.start,
                     end: cue.end,
                     source: "",
-                    translated: track == .original
-                        ? (cue.source.isEmpty ? cue.translated : cue.source)
-                        : (cue.translated.isEmpty ? cue.source : cue.translated),
+                    translated: track == .original ? cue.source : cue.translated,
                     speaker: cue.speaker
                 )
             }
@@ -275,6 +289,8 @@ final class SubtitleStudioModel {
         activeIndex = nil
         savedSRT = nil
         loadedFromFile = false
+        originalLanguage = nil
+        translatedLanguage = nil
         origin = nil
         builder?.finish()
         builder = nil
@@ -597,7 +613,7 @@ final class SubtitleStudioModel {
     // MARK: - Geração
 
     func generate() {
-        guard let url = videoURL else { return }
+        guard !isWorking, let url = videoURL else { return }
 
         // Regerar começa do zero: manter as legendas antigas na tela enquanto
         // outras estão sendo feitas confunde, e clicar numa delas levaria o
@@ -607,6 +623,8 @@ final class SubtitleStudioModel {
         activeIndex = nil
         savedSRT = nil
         loadedFromFile = false
+        originalLanguage = nil
+        translatedLanguage = nil
         origin = nil
 
         jobStartedAt = Date()
@@ -619,6 +637,11 @@ final class SubtitleStudioModel {
             }
         }
 
+        builder?.finish()
+        builder = nil
+        originalLanguage = sourceLanguage
+        translatedLanguage = translationEngine.destination(from: sourceLanguage, to: targetLanguage)
+        update(.extracting)
         job = Task { await runGeneration(url) }
     }
 
@@ -643,14 +666,17 @@ final class SubtitleStudioModel {
             }
         }
         update(.loadingTranslator)
+        let source = originalLanguage ?? sourceLanguage
+        let target = targetLanguage
+        let engine = translationEngine
 
         job = Task { [weak self] in
-            guard let self else { return }
+            guard let self, !Task.isCancelled else { return }
             do {
                 let translated = try await builder.retranslate(
-                    using: self.translationEngine,
-                    from: self.sourceLanguage,
-                    to: self.targetLanguage,
+                    using: engine,
+                    from: source,
+                    to: target,
                     progress: { [weak self] step, fraction, detail, waiting in
                         Task { @MainActor in self?.advance(step, fraction, detail, waiting) }
                     },
@@ -658,6 +684,7 @@ final class SubtitleStudioModel {
                 )
                 guard !Task.isCancelled else { return }
                 self.cues = translated
+                self.translatedLanguage = engine.destination(from: source, to: target)
                 self.notice = builder.translationNotice
                 self.origin = Origin(
                     recognition: builder.recognitionName ?? (self.loadedFromFile ? "SRT" : ""),
@@ -669,6 +696,8 @@ final class SubtitleStudioModel {
                 self.activeIndex = self.index(at: self.currentTime)
                 self.finishJob(.done)
             } catch {
+                // Importar ou abrir outro vídeo pode ter cancelado este trabalho.
+                guard !Task.isCancelled else { return }
                 // A tradução anterior continua na tela, inteira.
                 self.finishJob(Task.isCancelled ? .cancelled : .failed(error.localizedDescription))
             }
@@ -709,6 +738,13 @@ final class SubtitleStudioModel {
             }
             job?.cancel()
             job = nil
+            clock?.invalidate()
+            clock = nil
+            retranslating = false
+            jobStartedAt = nil
+            elapsed = 0
+            notice = nil
+            exportError = nil
             builder?.finish()
             builder = nil
             cues = track == .original
@@ -717,6 +753,8 @@ final class SubtitleStudioModel {
                          source: $0.translated, speaker: $0.speaker)
                 }
                 : parsed
+            originalLanguage = track == .original ? sourceLanguage : nil
+            translatedLanguage = track == .translation ? targetLanguage : nil
             savedSRT = url
             loadedFromFile = true
             origin = nil
@@ -724,10 +762,8 @@ final class SubtitleStudioModel {
             stage = .done
 
             if track == .original {
-                // O SRT já traz os tempos e as falas; só a etapa de tradução
-                // precisa rodar. O rascunho fica disponível para retraduzir.
+                // Importar só carrega. Traduzir exige o clique do usuário.
                 builder = SubtitleFileBuilder(draft: cues)
-                retranslate()
             }
         } catch {
             stage = .failed(error.localizedDescription)
@@ -759,6 +795,7 @@ final class SubtitleStudioModel {
     }
 
     private func runGeneration(_ url: URL) async {
+        guard !Task.isCancelled else { return }
         // O anterior encerra aqui: a janela do DeepL e o servidor do Hunyuan
         // ficam vivos até alguém mandar parar.
         builder?.finish()
@@ -806,7 +843,8 @@ final class SubtitleStudioModel {
             activeIndex = index(at: currentTime)
             finishJob(.done)
         } catch {
-            finishJob(Task.isCancelled ? .cancelled : .failed(error.localizedDescription))
+            guard !Task.isCancelled else { return }
+            finishJob(.failed(error.localizedDescription))
         }
     }
 }
