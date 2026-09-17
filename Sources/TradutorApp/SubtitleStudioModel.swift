@@ -256,7 +256,7 @@ final class SubtitleStudioModel {
         do {
             // O original vem do rascunho inteiro: a tradução pode ter sido
             // repartida em mais blocos, alguns sem texto original associado.
-            let output = (track == .original ? originalCues : cues).map { cue in
+            var output = (track == .original ? originalCues : cues).map { cue in
                 Cue(
                     index: cue.index,
                     start: cue.start,
@@ -265,6 +265,14 @@ final class SubtitleStudioModel {
                     translated: track == .original ? cue.source : cue.translated,
                     speaker: cue.speaker
                 )
+            }
+            if track == .original, !loadedFromFile {
+                // O rascunho ainda contém frases longas; exportar o original
+                // também precisa do limite de duas linhas. SRT importado
+                // conserva seus próprios tempos e blocos.
+                let layout = SubtitleFileBuilder()
+                layout.charactersPerLine = SubtitleFileBuilder.lineWidth(for: subtitleLanguage(for: track))
+                output = layout.enforceLineLimit(output)
             }
             try SRTWriter.render(
                 output, colorBySpeaker: diarizeSpeakers && colorBySpeaker,

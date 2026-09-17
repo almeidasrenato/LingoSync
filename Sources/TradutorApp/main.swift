@@ -875,8 +875,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 .appendingPathComponent("original-gerado-\(UUID().uuidString).srt")
             model.export(to: originalCheck, track: .original)
             let originalWritten = (try? String(contentsOf: originalCheck, encoding: .utf8)) ?? ""
+            let originalLayout = SubtitleFileBuilder()
+            originalLayout.charactersPerLine = SubtitleFileBuilder.lineWidth(for: source)
+            let originalFormatted = originalLayout.enforceLineLimit(model.originalCues)
             expect(originalWritten == SRTWriter.render(
-                model.originalCues, colorBySpeaker: model.diarizeSpeakers && model.colorBySpeaker,
+                originalFormatted, colorBySpeaker: model.diarizeSpeakers && model.colorBySpeaker,
                 charactersPerLine: SubtitleFileBuilder.lineWidth(for: source)),
                 "exportacao original usa todas as falas anteriores ao corte da traducao")
             try? FileManager.default.removeItem(at: originalCheck)
