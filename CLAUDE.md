@@ -1879,3 +1879,22 @@ Os idiomas do conteúdo são guardados independentemente dos seletores.
 `--selftest-srt` verifica os dois caminhos sem vídeo, modelo ou rede, antes
 da inicialização normal do app; relatório `/tmp/tradutor-srt.txt`. O gate
 `legendas` verifica também japonês e ida e volta exata dos milissegundos.
+
+### Qwen 1.7B: memória do MLX (17/09/2026)
+
+O CLI roda pelo Python do mesmo venv, com o cache livre limitado a **512 MiB**
+e residência dos buffers até **metade da RAM**, limitada também pelo teto do
+dispositivo. Nenhuma mudança em pesos, float16, áudio, tokens ou alinhador.
+Controles ausentes/recusados no MLX não impedem o mesmo CLI de continuar.
+O 0.6B mantém o caminho anterior; processo termina e libera tudo após o vídeo.
+
+Cinco vídeos com WAV fixo preparado pelo app: SRT e JSON completo idênticos.
+Redução de tempo de **7% a 19%** nesta rodada; pico de footprint de **10,6–11,2
+para 7,8–7,9 GiB**. Vídeo de 9 min: média de 63,5 s para 59,0 s. Varia com
+carga/temperatura; não prometer o mesmo percentual em qualquer vídeo.
+
+`TRADUTOR_QWEN_SEM_OTIMIZACAO=1` repete o controle. Medições, amostras, limites
+e comandos: `scratchpad/qwen-performance-2026-09-17/README.md`; regressão de
+configuração: `python3 scratchpad/qwen-performance-2026-09-17/check_wired.py`.
+Não reintroduzir especulativa, sincronização rápida ou laço async: não trouxeram
+ganho consistente suficiente nesta máquina.

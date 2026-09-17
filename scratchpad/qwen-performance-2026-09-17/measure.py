@@ -17,13 +17,14 @@ files = {
 }
 for name in sys.argv[1:] or files:
     filename, language = files[name]
-    for variant in os.environ.get('QWEN_VARIANTS', 'base,fast').split(','):
+    for variant in os.environ.get('QWEN_VARIANTS', 'base,optimized').split(','):
         target = out / f'{name}-{variant}.json'
         env = dict(os.environ)
         env.pop('TRADUTOR_QWEN_DRAFT', None)
         env.pop('MLX_METAL_FAST_SYNCH', None)
-        if variant.startswith('fast'):
-            env['MLX_METAL_FAST_SYNCH'] = '1'
+        env.pop('TRADUTOR_QWEN_SEM_OTIMIZACAO', None)
+        if variant.startswith('base'):
+            env['TRADUTOR_QWEN_SEM_OTIMIZACAO'] = '1'
         command = [str(root / '.build/release/tradutor-verify'), 'fonte',
                    str(root / 'Videos Exemplo' / filename), language, 'qwenLarge', '--json', str(target)]
         with target.with_suffix('.log').open('w') as log:
@@ -31,6 +32,6 @@ for name in sys.argv[1:] or files:
         data = json.loads(target.read_text())
         print(f'{name} {variant}: {data["seconds"]:.2f}s; {len(data["pieces"])} trechos', flush=True)
     base = json.loads((out / f'{name}-base.json').read_text())
-    fast = json.loads((out / f'{name}-fast.json').read_text())
+    fast = json.loads((out / f'{name}-optimized.json').read_text())
     print(f'  trechos idênticos: {base["pieces"] == fast["pieces"]}; SRT idêntico: {base["srt"] == fast["srt"]}; '
           f'ganho: {100*(1-fast["seconds"]/base["seconds"]):.1f}%', flush=True)

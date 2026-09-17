@@ -64,6 +64,24 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         home.appendingPathComponent("venv/bin/mlx-qwen3-asr")
     }
 
+    // O cache livre do MLX nasce maior que a RAM desta máquina. Em 97 s de
+    // japonês, limitar a 512 MiB e manter buffers residentes reduziu 12,2 s
+    // para 9,9 s e o pico de 11,2 para 7,9 GiB, com SRT idêntico.
+    // Só muda a gestão dos buffers: CLI, pesos, precisão e alinhador iguais.
+    // O processo termina ao fim do vídeo e libera a RAM.
+    private static let memoryLauncher = """
+    import mlx.core as mx
+    from mlx_qwen3_asr.cli import main
+    try:
+        mx.set_cache_limit(512 * 1024 * 1024)
+        info = mx.device_info()
+        mx.set_wired_limit(min(info["max_recommended_working_set_size"], info["memory_size"] // 2))
+    except (AttributeError, KeyError, RuntimeError, ValueError):
+        # MLX antigo ou limite indisponível: executa o mesmo CLI normalmente.
+        pass
+    main()
+    """
+
     /// O motor só aparece no seletor quando o ambiente está instalado.
     public static func isInstalled(_ size: Size = .small) -> Bool {
         guard FileManager.default.isExecutableFile(atPath: executable.path) else { return false }
@@ -172,7 +190,10 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         // o `SRTParser` do app já sabe ler isso — inclusive o piso de duração
         // que conserta os blocos de duração zero que ele às vezes emite.
         let process = Process()
-        process.executableURL = Self.executable
+        let optimizedMemory = size == .large
+            && ProcessInfo.processInfo.environment["TRADUTOR_QWEN_SEM_OTIMIZACAO"] == nil
+        process.executableURL = optimizedMemory
+            ? Self.home.appendingPathComponent("venv/bin/python") : Self.executable
         var arguments = [
             "--model", size.rawValue,
             "--language", idioma,
@@ -183,7 +204,7 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
             "--quiet",
         ]
         arguments.append(audio.path)
-        process.arguments = arguments
+        process.arguments = optimizedMemory ? ["-c", Self.memoryLauncher] + arguments : arguments
         var environment = ProcessInfo.processInfo.environment
         // O modelo fica na pasta do app, nunca em ~/.cache.
         environment["HF_HOME"] = Self.home.appendingPathComponent("hf").path

@@ -7,8 +7,11 @@
 - A instância original (PID 2183) e `build/Tradutor.app` foram preservados.
 - Não existe remoto Git configurado; a main é local.
 - Branch de pesquisa: `codex/qwen-1.7b-performance`.
-- **Nenhuma otimização do Qwen foi aprovada ou ativada.** O padrão continua com
-  os mesmos pesos, precisão float16, áudio, segmentação e alinhador.
+- Implementação nova: cache livre do MLX limitado a 512 MiB e residência de
+  buffers limitada à metade da RAM/teto recomendado do dispositivo, só no 1.7B.
+  Mantém os mesmos pesos, precisão float16, áudio, segmentação e alinhador.
+  Validação final concluída; build separado `build/Tradutor Qwen.app`.
+  `build/Tradutor Legendas.app` e `main` continuam na versão de SRT anterior.
 - A branch acrescenta instrumentos de medição: `fonte ... --json <arquivo>`
   grava tempo total, falas com tempos completos e SRT; a variável
   `TRADUTOR_QWEN_GUARDAR_WAV` copia o WAV temporário exatamente como o app o
@@ -97,10 +100,11 @@ QWEN_VARIANTS=profile python3 scratchpad/qwen-performance-2026-09-17/frozen.py j
 
 Outras entradas disponíveis: `en-conversa`, `en-dialogo`, `ja-longo`.
 `QWEN_VARIANTS=base1,draft4` mede a especulativa sobre WAV fixo.
-`measure.py` compara normal e sincronização rápida no caminho inteiro do app;
-essa comparação não congela o WAV entre execuções.
+`measure.py` agora compara normal e otimizado no caminho inteiro do app,
+com `TRADUTOR_QWEN_SEM_OTIMIZACAO=1` no controle. Essa comparação não congela o
+WAV entre execuções. `frozen.py` é o teste que exige saída inteiramente idêntica.
 
-## Pendente
+## Pendências registradas ao encerrar a primeira rodada
 
 1. Localizar um ganho real na decodificação mantendo as operações numéricas e
    todos os tokens. O perfil aponta o custo, não uma solução comprovada.
@@ -116,3 +120,67 @@ essa comparação não congela o WAV entre execuções.
 As alterações locais preexistentes dos SRTs de exemplo continuam fora dos commits.
 As mudanças de Gemini, retentativa de tradução e ícone já existentes foram
 preservadas no primeiro commit da versão da main.
+
+
+## Continuação — memória do MLX
+
+A sobreposição CPU/GPU (`async_runner.py`) conservou a saída e passou nos testes
+de tokens/EOS/repetição, mas não trouxe ganho consistente após aquecimento;
+não foi integrada. `MLX_METAL_FAST_SYNCH` e a especulativa continuam desativados.
+
+O cache de buffers livres do MLX usa, por padrão, o limite de memória (1,5 vez
+o working set recomendado). Na máquina de 16 GB ele pode reter memória demais.
+Primeiro medi apenas `set_wired_limit`: redução de 2% a 5%, sem reduzir o pico.
+Limitar o cache livre a 512 MiB trouxe o maior benefício. Não é quantização nem
+corte de contexto: os buffers ativos do modelo permanecem intactos.
+
+A produção chama o mesmo `mlx_qwen3_asr.cli.main()` pelo Python do venv após
+ajustar os dois controles nativos. Não altera a instalação Python, pesos ou
+API interna de decodificação. Ao terminar/cancelar o processo, a memória é
+liberada. Se o MLX antigo não expõe os controles, ou recusa o ajuste, o mesmo
+CLI continua; não há mudança de reconhecedor. O 0.6B mantém sua chamada antiga.
+
+`TRADUTOR_QWEN_SEM_OTIMIZACAO=1` permite repetir o controle sem recompilar.
+`check_wired.py` executa o texto real embutido no Swift com APIs simuladas:
+limite de 512 MiB, metade da RAM/teto do dispositivo, API antiga, falha no ajuste
+e encaminhamento intacto de idioma/modelo/caminho com espaços.
+
+```sh
+python3 scratchpad/qwen-performance-2026-09-17/check_wired.py
+QWEN_VARIANTS=base11,app1,app2,base12 python3 scratchpad/qwen-performance-2026-09-17/frozen.py ja-dificil en-dialogo ja-longo
+python3 scratchpad/qwen-performance-2026-09-17/summary.py
+```
+
+As variantes `app*` usam exatamente o launcher embutido em `QwenEngine.swift`.
+`bounded*` usou os mesmos controles no arnês exploratório. Todas mantêm o
+mesmo arquivo WAV por vídeo. A ordem ABBA intercala duas execuções do candidato
+entre duas do controle. Para música e conversa em inglês, a rodada exploratória
+teve controle/cache isolado/cache+residência/controle (uma execução combinada).
+Os tempos têm variação de carga/temperatura; não extrapolar os percentuais para
+todo vídeo. `/usr/bin/time -l` fornece o pico de footprint do processo Python,
+incluindo memória Metal; ele não é o RSS. Saídas brutas locais em `frozen/`.
+
+### Resultado final da comparação
+
+SRT e JSON completo (texto, idioma, motivos de parada, trechos, tempos) idênticos
+em todas as variantes finais dos cinco vídeos. A comparação aborta se divergir.
+
+| Vídeo | Controle (média) | Otimizado (média) | Redução | Pico de footprint |
+|---|---:|---:|---:|---:|
+| ja-dificil | 7.11 s | 5.81 s | 18.3% | 11.05 → 7.84 GiB |
+| ja-musica | 12.18 s | 9.92 s | 18.6% | 11.16 → 7.85 GiB |
+| en-conversa | 21.38 s | 18.17 s | 15.0% | 10.62 → 7.84 GiB |
+| en-dialogo | 17.06 s | 14.57 s | 14.6% | 11.15 → 7.86 GiB |
+| ja-longo | 63.47 s | 59.03 s | 7.0% | 11.20 → 7.92 GiB |
+
+### Entrega da continuação
+
+- Release compilado; gate `motores` passou; regressão `check_wired.py` passou.
+- Integração com binário compilado: `fonte ... ja qwenLarge --json ...`,
+  otimização padrão, concluiu reconhecimento e geração do SRT de diagnóstico.
+- Novo bundle `build/Tradutor Qwen.app` assinado/verificado; `--selftest-srt`
+  passou com 16 verificações. Os dois bundles anteriores foram preservados.
+- Sem alteração da main nesta etapa: otimização fica na branch
+  `codex/qwen-1.7b-performance` para uso e avaliação do build separado.
+- Não restam etapas de implementação desta otimização. Ganhos maiores exigem
+  outra investigação; as variantes descartadas não entraram no app.
