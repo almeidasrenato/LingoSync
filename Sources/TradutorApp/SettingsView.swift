@@ -21,40 +21,56 @@ struct SettingsView: View {
     var onNewStudio: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Tradutor Instantâneo")
-                .font(.system(size: 13, weight: .semibold))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "captions.bubble.fill")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 40, height: 40)
+                    .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Tradutor Instantâneo")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Áudio ao vivo e legendas de vídeo")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.bottom, 2)
 
-            Divider()
+            card("Idiomas e modelos", icon: "character.bubble") { languages }
+            card("Ao vivo", icon: "waveform") { liveControls }
+            card("Vídeos", icon: "film") { videoControls }
 
-            languages
-
-            Divider()
-
-            section("Tradução ao vivo")
-            liveControls
-
-            Divider()
-
-            section("Vídeos")
-            videoControls
-
-            Divider()
-
-            Button("Encerrar") { NSApp.terminate(nil) }
-                .buttonStyle(.borderless)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+            HStack {
+                if !pipeline.modelDiskUsage.isEmpty {
+                    Label(pipeline.modelDiskUsage, systemImage: "internaldrive")
+                        .help("Espaço ocupado pelos modelos em disco")
+                }
+                Spacer()
+                Button("Encerrar") { NSApp.terminate(nil) }
+                    .buttonStyle(.borderless)
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
         }
         .padding(14)
-        .frame(width: 330)
+        .frame(width: 372)
     }
 
-    private func section(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.system(size: 9.5, weight: .semibold))
-            .foregroundStyle(.tertiary)
-            .padding(.bottom, -6)
+    private func card<Content: View>(
+        _ title: String, icon: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 12, weight: .semibold))
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.7),
+                    in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.quaternary, lineWidth: 0.5))
     }
 
     private func caption(_ text: String) -> some View {
@@ -95,7 +111,7 @@ struct SettingsView: View {
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .padding(.top, 14)
 
                 VStack(alignment: .leading, spacing: 5) {
@@ -116,22 +132,22 @@ struct SettingsView: View {
             // O motor de reconhecimento muda com o idioma, e a diferenca de
             // latencia e grande o suficiente para valer dizer ao usuario.
             Text(engineNote)
-                .font(.system(size: 9.5))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
 
             // O mesmo para a traducao: um motor que nao cobre o par escolhido,
             // ou que nao serve ao vivo, precisa dizer isso aqui — senao o
             // usuario descobre no meio de uma geracao de dez minutos.
             if let translationNote {
                 Text(translationNote)
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             if let erro = AppleSpeechLanguages.shared.lastError {
                 Text(erro)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 10.5))
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -228,13 +244,17 @@ struct SettingsView: View {
                          ? "\(selected.name) · \(selected.pids.count) processos"
                          : "\(selected.name) · 1 processo")
                         .font(.system(size: 9))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            Button(pipeline.isRunning ? "Parar tradução" : "Iniciar tradução") {
-                onToggle()
+            Button(action: onToggle) {
+                Label(pipeline.isRunning ? "Parar tradução" : "Iniciar tradução",
+                      systemImage: pipeline.isRunning ? "stop.fill" : "waveform")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .keyboardShortcut(.defaultAction)
             .disabled(pipeline.selectedProcess == nil && !pipeline.isRunning)
             .frame(maxWidth: .infinity)
@@ -245,12 +265,12 @@ struct SettingsView: View {
                     .frame(width: 5, height: 5)
                 Text(pipeline.isWarm ? "modelos carregados" : "carregando modelos…")
                     .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .help(pipeline.engineNames)
                 Spacer()
                 Text("atalho")
                     .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                 Text(GlobalHotKey.displayName)
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     .padding(.horizontal, 6)
@@ -344,19 +364,10 @@ struct SettingsView: View {
                 .disabled(!pipeline.diarizeSpeakers)
             }
 
-            HStack(alignment: .firstTextBaseline) {
-                Text("Os dois geram a mesma legenda, nos idiomas acima, e gravam o .srt ao lado do vídeo.")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                if !pipeline.modelDiskUsage.isEmpty {
-                    Text(pipeline.modelDiskUsage)
-                        .font(.system(size: 9).monospacedDigit())
-                        .foregroundStyle(.quaternary)
-                        .help("Espaço ocupado pelos modelos em disco")
-                }
-            }
+            Text("Assista e revise na janela de legendas, ou gere apenas o arquivo SRT.")
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

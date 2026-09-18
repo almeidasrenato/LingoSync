@@ -73,8 +73,8 @@ struct OverlayView: View {
                             block,
                             size: 15,
                             color: .yellowZone,
-                            opacity: max(0.3, 0.7 - Double(age) * 0.07),
-                            sourceSize: 8
+                            opacity: max(0.6, 0.85 - Double(age) * 0.04),
+                            sourceSize: 10.5
                         )
                         .id(block.id)
                     }
@@ -194,7 +194,7 @@ struct OverlayView: View {
                 if block.source != block.translated {
                     Text(block.source)
                         .font(.system(size: sourceSize))
-                        .foregroundStyle(.white.opacity(0.3 * opacity))
+                        .foregroundStyle(.white.opacity(0.65))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -221,68 +221,50 @@ struct OverlayView: View {
     // MARK: Estados
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Text(pair)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.42))
-
-            if pipeline.lastTranslateMs > 0 {
-                Text("\(pipeline.lastTranscribeMs + pipeline.lastTranslateMs) ms")
-                    .font(.system(size: 10).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.26))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(pair)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                Spacer(minLength: 4)
+                Text(pipeline.engineNames + (pipeline.lastTranslateMs > 0
+                    ? " · \(pipeline.lastTranscribeMs + pipeline.lastTranslateMs) ms" : ""))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help("Reconhecimento e tradução usados nesta captura")
             }
+            HStack(spacing: 6) {
+                copyButton(pipeline.sourceLanguage, "Copiar o texto original") { $0.source }
+                if translating {
+                    copyButton(pipeline.targetLanguage, "Copiar a tradução") { $0.translated }
+                }
+                Spacer(minLength: 4)
+                HStack(spacing: 4) {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .foregroundStyle(.white.opacity(0.6))
+                    Slider(value: $windowOpacity, in: OverlayPanel.minimumOpacity...1.0)
+                        .controlSize(.mini)
+                        .frame(width: 54)
+                        .accessibilityLabel("Opacidade do painel")
+                }
+                .font(.system(size: 10))
+                .help("Transparência da janela")
+                .onChange(of: windowOpacity) { _, value in onOpacityChange(value) }
 
-            // Copiar, com o idioma escrito ao lado do ícone. Dois ícones de
-            // prancheta lado a lado seriam indistinguíveis; o código do idioma
-            // diz qual é qual sem precisar passar o mouse.
-            copyButton(pipeline.sourceLanguage, "Copiar o texto original") { $0.source }
-
-            if translating {
-                copyButton(pipeline.targetLanguage, "Copiar a tradução") { $0.translated }
+                icon(pipeline.isPaused ? "play.fill" : "pause.fill",
+                     pipeline.isPaused ? "Retomar a transcrição" : "Pausar a transcrição") {
+                    pipeline.togglePause()
+                }
+                icon("square.and.arrow.down", "Exportar a captura com data e hora") { exportCapture() }
+                    .disabled(subtitles.transcript.isEmpty)
+                icon("trash", "Limpar o que foi captado") { pipeline.subtitles.clear() }
+                    .disabled(subtitles.transcript.isEmpty && subtitles.current == nil)
+                icon("xmark", "Parar a tradução", bold: true, action: onClose)
             }
-
-            Text(pipeline.engineNames)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.redZone)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .layoutPriority(1)
-                .help("Reconhecimento e tradução usados nesta captura")
-
-            HStack(spacing: 4) {
-                Image(systemName: "circle.lefthalf.filled")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.4))
-                Slider(value: $windowOpacity, in: OverlayPanel.minimumOpacity...1.0)
-                    .controlSize(.mini)
-                    .frame(width: 70)
-                    .help("Transparência da janela")
-            }
-            .onChange(of: windowOpacity) { _, value in
-                onOpacityChange(value)
-            }
-
-            Spacer()
-
-            // Pausar não solta a captura: retomar tem de ser instantâneo.
-            icon(pipeline.isPaused ? "play.fill" : "pause.fill",
-                 pipeline.isPaused ? "Retomar a transcrição" : "Pausar a transcrição") {
-                pipeline.togglePause()
-            }
-
-            // Exportar antes de limpar, na ordem em que se usam: quem vai
-            // apagar a tela costuma querer guardar antes.
-            icon("square.and.arrow.down", "Exportar a captura com data e hora") {
-                exportCapture()
-            }
-            .disabled(subtitles.transcript.isEmpty)
-
-            icon("trash", "Limpar o que foi captado") {
-                pipeline.subtitles.clear()
-            }
-            .disabled(subtitles.transcript.isEmpty && subtitles.current == nil)
-
-            icon("xmark", "Parar a tradução", bold: true, action: onClose)
         }
     }
 
@@ -351,11 +333,14 @@ struct OverlayView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: name)
-                .font(.system(size: 9, weight: bold ? .bold : .medium))
-                .foregroundStyle(.white.opacity(0.4))
+                .font(.system(size: 11, weight: bold ? .bold : .medium))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(help)
+        .accessibilityLabel(help)
     }
 
     /// Grava a sessão inteira num `.txt`, com o dia e a hora de cada fala.

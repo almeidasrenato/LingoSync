@@ -93,7 +93,7 @@ struct SubtitleStudioView: View {
         }
         .padding(14)
         // Largura mínima com folga para o seletor de reconhecimento e o +.
-        .frame(minWidth: 1080, minHeight: 580)
+        .frame(minWidth: 1080, minHeight: 640)
         .background(
             // Atalhos: espaço reproduz, setas andam de legenda em legenda —
             // que é como se lê uma conversa —, e ⌘← e ⌘→ andam 5 s no tempo,
@@ -132,169 +132,123 @@ struct SubtitleStudioView: View {
     // MARK: Topo
 
     private var toolbar: some View {
-        HStack(spacing: 10) {
-            Button {
-                pickVideo()
-            } label: {
-                Label("Abrir vídeo", systemImage: "film")
-            }
-            .fixedSize()
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(model.videoName)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                if model.loadedFromFile, let srt = model.savedSRT {
-                    Text("legenda de \(srt.lastPathComponent)")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Image(systemName: "film.stack")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(model.videoName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .help(model.videoName)
+                    if model.loadedFromFile, let srt = model.savedSRT {
+                        Text(srt.lastPathComponent)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    } else {
+                        Text("Reconheça, traduza e revise suas legendas")
+                    }
                 }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 180, maxWidth: .infinity, alignment: .leading)
+
+                Button(action: pickVideo) { Label("Abrir vídeo", systemImage: "folder") }
+                Button(action: loadSRT) { Label("Importar SRT", systemImage: "square.and.arrow.down") }
+                    .disabled(isWorking)
+                Button(action: exportSRT) { Label("Exportar SRT", systemImage: "square.and.arrow.up") }
+                    .disabled(model.cues.isEmpty)
+                Button { model.showsVideo.toggle() } label: {
+                    Image(systemName: model.showsVideo ? "sidebar.right" : "rectangle")
+                }
+                .accessibilityLabel(model.showsVideo ? "Ocultar vídeo" : "Mostrar vídeo")
+                .help(model.showsVideo ? "Ocultar vídeo (V)" : "Mostrar vídeo (V)")
             }
-            // Mínimo: sem ele o nome era o primeiro a ceder e virava "ja…4".
-            // Com 120 a barra passava da largura mínima da janela e cortava
-            // os botões das pontas.
-            .frame(minWidth: 96, maxWidth: 260, alignment: .leading)
+            .controlSize(.regular)
 
-            Spacer()
+            Divider()
 
-            HStack(spacing: 6) {
-                EnginePicker(selection: $model.recognitionEngine)
-                SourceLanguagePicker(
-                    selection: $model.sourceLanguage,
-                    engine: model.recognitionEngine,
-                    width: 106
-                )
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-
-                Picker("", selection: $model.targetLanguage) {
-                    ForEach(Language.allCases) { Text($0.displayName).tag($0) }
+            HStack(alignment: .bottom, spacing: 14) {
+                VStack(alignment: .leading, spacing: 5) {
+                    toolbarCaption("Reconhecimento")
+                    EnginePicker(selection: $model.recognitionEngine)
                 }
-                .labelsHidden()
-                .frame(width: 106)
-                // Sem tradução ninguém lê este seletor — apagado diz isso sem
-                // a barra mudar de largura no meio do trabalho.
-                .disabled(model.translationEngine == .transcriptionOnly)
-
-                // Quem traduz fica ao lado do idioma de destino, que e onde o
-                // resultado dele aparece. So vale para esta janela, como o
-                // seletor de reconhecimento.
-                TranslationEnginePicker(selection: $model.translationEngine)
-
-                // Um menu, não três controles: a barra já está cheia, e as
-                // opções de locutor andam juntas. O ícone cheio diz que a
-                // identificação está ligada sem precisar abrir.
+                VStack(alignment: .leading, spacing: 5) {
+                    toolbarCaption("Idioma original")
+                    SourceLanguagePicker(selection: $model.sourceLanguage,
+                                         engine: model.recognitionEngine, width: 108)
+                }
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 6)
+                VStack(alignment: .leading, spacing: 5) {
+                    toolbarCaption("Traduzir para")
+                    Picker("Idioma da tradução", selection: $model.targetLanguage) {
+                        ForEach(Language.allCases) { Text($0.displayName).tag($0) }
+                    }
+                    .labelsHidden()
+                    .frame(width: 108)
+                    .disabled(model.translationEngine == .transcriptionOnly)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    toolbarCaption("Tradução")
+                    TranslationEnginePicker(selection: $model.translationEngine)
+                }
                 if model.recognitionEngine.supportsDiarization {
                     Menu {
                         Toggle("Identificar quem fala", isOn: $model.diarizeSpeakers)
-                        Picker("Por", selection: $model.speakerModel) {
-                            ForEach(SpeakerDiarizer.Model.allCases) { modelo in
-                                Text(modelo.displayName).tag(modelo)
-                            }
+                        Picker("Modelo de vozes", selection: $model.speakerModel) {
+                            ForEach(SpeakerDiarizer.Model.allCases) { Text($0.displayName).tag($0) }
                         }
                         .disabled(!model.diarizeSpeakers)
                         Toggle("Uma cor por locutor", isOn: $model.colorBySpeaker)
                             .disabled(!model.diarizeSpeakers)
                     } label: {
-                        Image(systemName: model.diarizeSpeakers
-                              ? "person.2.wave.2.fill" : "person.2.wave.2")
+                        Image(systemName: model.diarizeSpeakers ? "person.2.wave.2.fill" : "person.2.wave.2")
                     }
-                    .menuStyle(.borderlessButton)
                     .fixedSize()
-                    .help("Quem fala: separa as legendas por locutor, marca a troca com "
-                          + "travessão e, se você quiser, dá uma cor a cada voz")
+                    .accessibilityLabel("Identificação de locutores")
+                    .help("Identificação, modelo e cores dos locutores")
                 }
+                Spacer(minLength: 8)
+                Button { model.retranslate() } label: {
+                    Label("Traduzir", systemImage: "character.bubble")
+                }
+                .disabled(!model.canRetranslate)
+                .help("Traduz o original com o tradutor escolhido, sem reconhecer o áudio novamente")
+                Button { model.generate() } label: {
+                    Label("Gerar legenda", systemImage: "text.badge.plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!model.canGenerate)
             }
             .disabled(isWorking)
+            .fixedSize(horizontal: false, vertical: true)
 
-            // A estimativa fica inline, ao lado do botão.
-            //
-            // Antes ela morava num VStack sob o seletor de qualidade, e o
-            // texto vazava para fora da coluna e cobria o controle vizinho —
-            // uma pilha dentro de uma barra horizontal não se alinha com os
-            // botões ao lado dela. O seletor saiu junto com os modos locais,
-            // e agora resta uma única linha na altura certa.
-            if model.duration > 0, !isWorking {
-                Text(TranslatorFactory.estimate(
-                    forVideoOf: model.duration, using: model.translationEngine))
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize()
-                    .help("Tempo estimado para gerar a legenda deste vídeo")
-            }
-
-            // O aviso do tradutor, quando existe. Truncado e sem
-            // `fixedSize`: a barra já tem cinco botões e dois seletores, e
-            // texto de tamanho livre aqui cobre o controle vizinho.
             if let aviso = model.notice, !isWorking {
-                HStack(spacing: 3) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                    Text(aviso)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                .font(.system(size: 10))
-                .foregroundStyle(.orange)
-                .help(aviso)
+                Label(aviso, systemImage: "exclamationmark.triangle")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if model.duration > 0, !isWorking {
+                Label(TranslatorFactory.estimate(forVideoOf: model.duration, using: model.translationEngine),
+                      systemImage: "clock")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             }
-
-            Button {
-                model.generate()
-            } label: {
-                Label("Gerar legenda", systemImage: "text.badge.plus")
-            }
-            .fixedSize()
-            .keyboardShortcut(.defaultAction)
-            .disabled(!model.canGenerate)
-
-            // Só ícone: com rótulo, cinco botões e dois seletores não cabem
-            // e o texto de todos aparece truncado.
-            // Traduzir de novo sem reconhecer de novo. Ao lado de "Gerar
-            // legenda" porque é a mesma pergunta feita mais barato: o
-            // reconhecimento e os locutores ficam como estão, e só o texto
-            // traduzido é refeito.
-            Button {
-                model.retranslate()
-            } label: {
-                Image(systemName: "character.bubble")
-            }
-            .help(model.canRetranslate
-                  ? "Retraduzir: refaz só a tradução, com o tradutor escolhido agora, "
-                    + "sem reconhecer o áudio outra vez"
-                  : "Tradução exige uma legenda gerada ou importada como idioma original")
-            .disabled(!model.canRetranslate)
-
-            Button {
-                model.showsVideo.toggle()
-            } label: {
-                Image(systemName: model.showsVideo ? "rectangle" : "rectangle.slash")
-            }
-            .help(model.showsVideo
-                  ? "Ocultar o vídeo e deixar só as legendas"
-                  : "Mostrar o vídeo")
-
-            Button {
-                loadSRT()
-            } label: {
-                Image(systemName: "square.and.arrow.down")
-            }
-            .help("Carregar um .srt pronto em vez de gerar")
-            .disabled(isWorking)
-
-            Button {
-                exportSRT()
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-            }
-            .help("Exportar o .srt para onde você escolher")
-            .disabled(model.cues.isEmpty)
         }
+        .padding(14)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.quaternary, lineWidth: 0.5))
+    }
+
+    private func toolbarCaption(_ title: String) -> some View {
+        Text(title).font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
     }
 
     private var cueListHeader: some View {
@@ -436,10 +390,10 @@ struct SubtitleStudioView: View {
                     }
 
                     Text(model.displayText(at: position))
-                        .font(.system(size: 12.5, weight: isActive ? .semibold : .regular))
+                        .font(.system(size: 13, weight: isActive ? .semibold : .regular))
                         .foregroundStyle(isActive
                                          ? AnyShapeStyle(.primary)
-                                         : AnyShapeStyle(isPast ? .tertiary : .secondary))
+                                         : AnyShapeStyle(.secondary))
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -448,17 +402,16 @@ struct SubtitleStudioView: View {
                     // reproduzir a legenda para ver o original tirava a lista
                     // de serviço. Apagado, para a tradução continuar sendo o
                     // que se lê primeiro.
-                    if !cue.source.isEmpty, !cue.translated.isEmpty {
+                    if !cue.source.isEmpty, !cue.translated.isEmpty, cue.source != cue.translated {
                         Text(cue.source)
-                            .font(.system(size: 9.5))
-                            .foregroundStyle(isActive ? AnyShapeStyle(.tertiary)
-                                                      : AnyShapeStyle(.quaternary))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 7)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 9)
             .background(
                 isActive ? Color.accentColor.opacity(0.13) : .clear,
                 in: RoundedRectangle(cornerRadius: 6)
@@ -924,7 +877,7 @@ struct SubtitleStudioView: View {
                     .shadow(color: .black.opacity(0.95), radius: 2, y: 1)
                     .shadow(color: .black.opacity(0.6), radius: 6)
             }
-            if !cue.source.isEmpty, !cue.translated.isEmpty {
+            if !cue.source.isEmpty, !cue.translated.isEmpty, cue.source != cue.translated {
                 Text(cue.source)
                     .font(.system(size: max(9, corpo * 0.5)))
                     .foregroundStyle(.white.opacity(0.62))

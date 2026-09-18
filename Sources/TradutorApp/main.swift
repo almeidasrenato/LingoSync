@@ -30,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var studioCounter = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if CommandLine.arguments.contains("--selftest-layout") {
+            Task { await LayoutPreview.run() }
+            return
+        }
         if CommandLine.arguments.contains("--selftest-srt") {
             Task { await SubtitleIOCheck.run() }
             return

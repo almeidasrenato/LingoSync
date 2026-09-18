@@ -7,7 +7,7 @@ struct EnginePicker: View {
     @Binding var selection: RecognitionEngine
 
     var body: some View {
-        Picker("", selection: $selection) {
+        Picker("Reconhecimento", selection: $selection) {
             ForEach(RecognitionEngine.allCases.filter(\.isAvailable)) { engine in
                 Text(engine.displayName).tag(engine)
             }
@@ -29,7 +29,7 @@ struct TranslationEnginePicker: View {
     @Binding var selection: TranslationEngine
 
     var body: some View {
-        Picker("", selection: $selection) {
+        Picker("Tradução", selection: $selection) {
             // Só o que existe: o Hunyuan mora num ambiente que o usuário
             // instala à parte, e oferecer o que não está lá daria erro no
             // meio de uma geração.
@@ -69,7 +69,7 @@ struct SourceLanguagePicker: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Picker("", selection: $selection) {
+            Picker("Idioma original", selection: $selection) {
                 ForEach(options) { language in
                     Text(language.displayName).tag(language)
                 }
