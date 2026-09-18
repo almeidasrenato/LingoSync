@@ -10,6 +10,8 @@ enum LayoutPreview {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let pipeline = Pipeline()
         let model = SubtitleStudioModel()
+        model.sourceLanguage = .portuguese
+        model.targetLanguage = .english
         model.recognitionEngine = .qwenLarge
         model.translationEngine = .gemini
         var report = ""
@@ -50,8 +52,18 @@ enum LayoutPreview {
             Cue(index: 3, start: 8, end: 12, source: "Os controles de arquivos, idiomas e geração agora têm seu próprio espaço.")
         ]).write(to: fixture, atomically: true, encoding: .utf8)
         model.loadSubtitles(from: fixture, as: .original)
+        let translation = folder.appendingPathComponent("translation.srt")
+        try? SRTWriter.render([
+            Cue(index: 1, start: 0, end: 3, source: "Hello! Let's check the subtitles for this video."),
+            Cue(index: 2, start: 4, end: 7, source: "You can import both tracks in either order."),
+            Cue(index: 3, start: 8, end: 12, source: "Generation settings can be collapsed to give the video more room.")
+        ]).write(to: translation, atomically: true, encoding: .utf8)
+        model.loadSubtitles(from: translation, as: .translation)
         for dark in [false, true] {
             await render(SubtitleStudioView(model: model), "studio-filled-\(dark ? "dark" : "light")",
+                         width: 1080, height: 700, dark: dark)
+            await render(SubtitleStudioView(model: model, showsGenerationOptions: true),
+                         "studio-expanded-\(dark ? "dark" : "light")",
                          width: 1080, height: 700, dark: dark)
         }
         for text in ["A conversa fica guardada no histórico.", "Agora os controles estão mais fáceis de encontrar."] {

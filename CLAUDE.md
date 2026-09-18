@@ -1879,17 +1879,32 @@ WhisperKit) e `~/Library/Application Support/FluidAudio`.
   executa. Quem guarda dado do usuário aceita um diretório no construtor.
 - Antes de trocar um número que tem comentário de medição, meça de novo.
 
-### Importação e exportação de SRT (17/09/2026)
+### Importação e exportação de SRT (18/09/2026)
 
 Importar **original** só carrega e guarda o rascunho. O botão de tradução é
-a única ação que o traduz. Importar **tradução** carrega apenas essa faixa.
+a única ação que o traduz. Cada importação substitui **apenas a faixa
+escolhida**, mantendo a outra, em qualquer ordem. A exibição combina os
+intervalos de tempo das faixas, não seus índices: blocos e quantidades podem
+ser diferentes. Durante um intervalo sem tradução, o original continua
+visível e usa a largura do próprio idioma.
 Exportação nunca substitui uma faixa ausente pela outra: original usa
-`builder.draft`, antes dos cortes da tradução; tradução usa o resultado.
+`builder.draft`, antes dos cortes da tradução; tradução importada usa seus
+blocos intactos, não os intervalos combinados de exibição. Retraduzir
+explicitamente substitui a tradução importada pelo resultado novo.
 Os idiomas do conteúdo são guardados independentemente dos seletores.
+`originalWasImported` controla a preservação de tempos e blocos originais:
+importar apenas a tradução não pode alterar o tratamento do original gerado.
 
-`--selftest-srt` verifica os dois caminhos sem vídeo, modelo ou rede, antes
+`--selftest-srt` verifica 27 casos sem vídeo, modelo ou rede, antes
 da inicialização normal do app; relatório `/tmp/tradutor-srt.txt`. O gate
 `legendas` verifica também japonês e ida e volta exata dos milissegundos.
+
+O cabeçalho da janela de legendas abre compacto, em uma linha. **Opções**
+expande/recolhe idiomas, motores, locutores e tradução; iniciar geração ou
+tradução recolhe a área. Avisos continuam visíveis. `--selftest-layout`
+renderiza os estados compacto/expandido e duas faixas importadas, em claro
+e escuro. Build desta revisão: `build/Tradutor Layout Revisado.app`, separado
+dos builds anteriores e da instância em uso.
 
 ### Qwen 1.7B: memória do MLX (17/09/2026)
 

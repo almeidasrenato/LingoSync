@@ -72,11 +72,16 @@ final class SubtitleStudioModel {
     // Idiomas do conteúdo, independentes dos seletores da próxima geração.
     private var originalLanguage: Language?
     private var translatedLanguage: Language?
+    // As faixas importadas mantêm seus blocos; só a exibição combina os tempos.
+    private var importedTranslation: [Cue]?
+    private var originalWasImported = false
 
     var originalCues: [Cue] { builder?.draft ?? [] }
+    var translatedCues: [Cue] { importedTranslation ?? cues.filter { !$0.translated.isEmpty } }
 
     func canExport(_ track: SubtitleTrack) -> Bool {
-        track == .original ? !originalCues.isEmpty : cues.contains { !$0.translated.isEmpty }
+        track == .original ? !originalCues.isEmpty
+            : (importedTranslation ?? cues).contains { !$0.translated.isEmpty }
     }
 
     /// O que produziu as legendas que estão na tela agora.
@@ -124,7 +129,7 @@ final class SubtitleStudioModel {
     ///
     /// Uma legenda importada como original também mantém o rascunho, então
     /// pode ser retraduzida sem reconhecer o vídeo novamente. Importação de
-    /// tradução não tem texto original e não cria esse rascunho.
+    /// tradução não cria esse rascunho, mas preserva o original já carregado.
     var canRetranslate: Bool {
         !isWorking && !(builder?.draft.isEmpty ?? true)
     }
@@ -229,7 +234,9 @@ final class SubtitleStudioModel {
     /// view não há o que divergir, e o autoteste confere esta função, que é a
     /// mesma que desenha.
     func displayLines(at index: Int) -> [String] {
-        LineBreaker.wrap(displayText(at: index), maximum: charactersPerLine)
+        let language = cues.indices.contains(index) && cues[index].translated.isEmpty
+            ? subtitleLanguage(for: .original) : writtenLanguage
+        return LineBreaker.wrap(displayText(at: index), maximum: SubtitleFileBuilder.lineWidth(for: language))
     }
 
     func displayText(at index: Int) -> String {
@@ -256,7 +263,7 @@ final class SubtitleStudioModel {
         do {
             // O original vem do rascunho inteiro: a tradução pode ter sido
             // repartida em mais blocos, alguns sem texto original associado.
-            var output = (track == .original ? originalCues : cues).map { cue in
+            var output = (track == .original ? originalCues : translatedCues).map { cue in
                 Cue(
                     index: cue.index,
                     start: cue.start,
@@ -266,7 +273,7 @@ final class SubtitleStudioModel {
                     speaker: cue.speaker
                 )
             }
-            if track == .original, !loadedFromFile {
+            if track == .original, !originalWasImported {
                 // O rascunho ainda contém frases longas; exportar o original
                 // também precisa do limite de duas linhas. SRT importado
                 // conserva seus próprios tempos e blocos.
@@ -297,6 +304,8 @@ final class SubtitleStudioModel {
         activeIndex = nil
         savedSRT = nil
         loadedFromFile = false
+        importedTranslation = nil
+        originalWasImported = false
         originalLanguage = nil
         translatedLanguage = nil
         origin = nil
@@ -435,7 +444,7 @@ final class SubtitleStudioModel {
             let cue = cues[middle]
             if seconds < cue.start {
                 high = middle - 1
-            } else if seconds > cue.end {
+            } else if seconds >= cue.end {
                 low = middle + 1
             } else {
                 return middle
@@ -631,6 +640,8 @@ final class SubtitleStudioModel {
         activeIndex = nil
         savedSRT = nil
         loadedFromFile = false
+        importedTranslation = nil
+        originalWasImported = false
         originalLanguage = nil
         translatedLanguage = nil
         origin = nil
@@ -688,9 +699,10 @@ final class SubtitleStudioModel {
                     progress: { [weak self] step, fraction, detail, waiting in
                         Task { @MainActor in self?.advance(step, fraction, detail, waiting) }
                     },
-                    preserveCueTiming: self.loadedFromFile
+                    preserveCueTiming: self.originalWasImported
                 )
                 guard !Task.isCancelled else { return }
+                self.importedTranslation = nil
                 self.cues = translated
                 self.translatedLanguage = engine.destination(from: source, to: target)
                 self.notice = builder.translationNotice
@@ -753,29 +765,67 @@ final class SubtitleStudioModel {
             elapsed = 0
             notice = nil
             exportError = nil
-            builder?.finish()
-            builder = nil
-            cues = track == .original
-                ? parsed.map {
+            if track == .original {
+                importedTranslation = translatedCues
+                let original = parsed.map {
                     Cue(index: $0.index, start: $0.start, end: $0.end,
                          source: $0.translated, speaker: $0.speaker)
                 }
-                : parsed
-            originalLanguage = track == .original ? sourceLanguage : nil
-            translatedLanguage = track == .translation ? targetLanguage : nil
+                builder?.finish()
+                builder = SubtitleFileBuilder(draft: original)
+                originalLanguage = sourceLanguage
+                originalWasImported = true
+            } else {
+                builder?.finish()
+                importedTranslation = parsed
+                translatedLanguage = targetLanguage
+            }
+            cues = Self.combineTracks(original: originalCues, translation: translatedCues)
             savedSRT = url
             loadedFromFile = true
             origin = nil
             activeIndex = index(at: currentTime)
             stage = .done
 
-            if track == .original {
-                // Importar só carrega. Traduzir exige o clique do usuário.
-                builder = SubtitleFileBuilder(draft: cues)
-            }
+            // Importar só carrega. Traduzir exige o clique do usuário.
         } catch {
             stage = .failed(error.localizedDescription)
         }
+    }
+
+    /// Linha do tempo de exibição: cada faixa entra e sai nos seus próprios
+    /// tempos. Não pareia por índice: uma fala pode virar duas na tradução.
+    static func combineTracks(original: [Cue], translation: [Cue]) -> [Cue] {
+        guard !original.isEmpty else { return translation }
+        guard !translation.isEmpty else { return original }
+        let tracks = [original, translation].map { $0.sorted { $0.start < $1.start } }
+        let times = Set((original + translation).flatMap { [$0.start, $0.end] }).sorted()
+        var next = [0, 0]
+        var active = [[Cue](), [Cue]()]
+        var result: [Cue] = []
+        for (start, end) in zip(times, times.dropFirst()) {
+            for track in 0..<2 {
+                active[track].removeAll { $0.end <= start }
+                while next[track] < tracks[track].count,
+                      tracks[track][next[track]].start <= start {
+                    let cue = tracks[track][next[track]]
+                    if cue.end > start { active[track].append(cue) }
+                    next[track] += 1
+                }
+            }
+            let source = active[0].map(\.source).joined(separator: "\n")
+            let translated = active[1].map(\.translated).joined(separator: "\n")
+            guard !source.isEmpty || !translated.isEmpty else { continue }
+            let speaker = active[1].first?.speaker ?? active[0].first?.speaker
+            if let last = result.last, last.end == start, last.source == source,
+               last.translated == translated, last.speaker == speaker {
+                result[result.count - 1].end = end
+            } else {
+                result.append(Cue(index: result.count + 1, start: start, end: end,
+                                  source: source, translated: translated, speaker: speaker))
+            }
+        }
+        return result
     }
 
     private func update(

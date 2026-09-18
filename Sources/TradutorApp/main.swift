@@ -1207,9 +1207,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 to: srtTemporario, atomically: true, encoding: .utf8)
             let quantasAntes = model.cues.count
             model.loadSubtitles(from: srtTemporario)
-            expect(model.cues.count == quantasAntes, "carregar .srt traz as mesmas legendas")
-            expect(!model.canRetranslate,
-                   "legenda aberta de arquivo nao da para retraduzir: nao ha original")
+            expect(model.translatedCues.count == quantasAntes, "carregar .srt traz as mesmas legendas")
+            expect(model.canRetranslate,
+                   "importar traducao preserva o original para retraduzir")
             expect(model.loadedFromFile, "marca que a legenda veio de arquivo")
             model.jump(to: 2)
             expect(model.activeIndex == 2, "navegacao funciona com legenda carregada")
@@ -1227,8 +1227,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             model.loadSubtitles(from: originalImport, as: .original)
             expect(model.stage == .done && !model.isWorking,
                    "importar original nao inicia traducao")
-            expect(model.cues.first?.translated.isEmpty == true,
-                   "original importado nao finge ter traducao")
+            expect(model.originalCues.first?.source == importedText,
+                   "original importado substitui apenas a faixa original")
             model.retranslate()
             let prazoImport = Date().addingTimeInterval(5)
             while model.isWorking && Date() < prazoImport {

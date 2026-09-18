@@ -68,18 +68,70 @@ enum SubtitleIOCheck {
 
             model.targetLanguage = .portuguese
             model.loadSubtitles(from: translated, as: .translation)
-            expect(!model.canRetranslate && !model.canExport(.original) && model.canExport(.translation),
-                   "importar tradução remove o rascunho anterior")
-            expect(model.writtenLanguage == .portuguese && model.cues.first?.source == "",
+            expect(model.canRetranslate && model.canExport(.original) && model.canExport(.translation),
+                   "importar tradução preserva o original e permite exportar as duas faixas")
+            expect(model.writtenLanguage == .portuguese && model.cues.first?.source == japanese,
                    "tradução importada usa destino mesmo com Só transcrever selecionado")
+            expect(model.cues.first?.translated == "Olá, como vai?" && model.cues.count == 4,
+                   "original e tradução aparecem juntos mesmo com quantidades diferentes")
+            expect(model.cues[1].source.isEmpty && model.cues[1].start == 1.101
+                   && model.cues[1].end == 2.003 && model.cues[1].translated == "Olá, como vai?",
+                   "cada faixa respeita os próprios intervalos de silêncio")
+            expect(model.cues.last?.source == "ありがとうございます。" && model.cues.last?.translated == ""
+                   && model.cues.last?.start == 3.009 && model.cues.last?.end == 4.007,
+                   "original continua visível depois de a tradução terminar")
             model.targetLanguage = .japanese
             model.export(to: output, track: .translation)
             let exportedTranslation = try SRTParser.parse(contentsOf: output)
             expect(model.suggestedSRTName(for: .translation) == "legenda.pt.srt"
-                   && exportedTranslation.first?.translated == "Olá, como vai?",
+                   && exportedTranslation.first?.translated == "Olá, como vai?"
+                   && exportedTranslation.count == 1 && exportedTranslation.first?.end == 3.009,
                    "exportar tradução mantém texto e idioma carregados")
             model.export(to: output, track: .original)
-            expect(model.exportError != nil, "tradução nunca é exportada como original")
+            expect(try Data(contentsOf: output) == saved, "exportar original mantém seus blocos após importar tradução")
+
+            let reverse = SubtitleStudioModel()
+            reverse.sourceLanguage = .japanese
+            reverse.targetLanguage = .portuguese
+            reverse.loadSubtitles(from: translated, as: .translation)
+            expect(!reverse.canRetranslate && !reverse.canExport(.original)
+                   && reverse.cues.allSatisfy { $0.source.isEmpty }, "importar só tradução não inventa original")
+            reverse.loadSubtitles(from: original, as: .original)
+            expect(reverse.cues.count == model.cues.count && zip(reverse.cues, model.cues).allSatisfy {
+                $0.start == $1.start && $0.end == $1.end && $0.source == $1.source && $0.translated == $1.translated
+            }, "importar na ordem inversa produz as mesmas duas faixas")
+            reverse.loadSubtitles(from: original, as: .original)
+            expect(reverse.translatedCues.count == 1 && reverse.originalCues.count == 2,
+                   "substituir original mantém a tradução sem duplicar blocos")
+            reverse.loadSubtitles(from: translated, as: .translation)
+            expect(reverse.cues.count == 4 && reverse.originalCues.count == 2,
+                   "substituir tradução mantém o original sem duplicar blocos")
+            reverse.translationEngine = .transcriptionOnly
+            reverse.retranslate()
+            let translationDeadline = Date().addingTimeInterval(5)
+            while reverse.isWorking && Date() < translationDeadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            expect(reverse.translatedCues.count == 2 && reverse.translatedCues.first?.translated == japanese,
+                   "tradução explícita substitui a faixa importada e mantém o original")
+            reverse.export(to: output, track: .translation)
+            expect(try SRTParser.parse(contentsOf: output).count == 2,
+                   "exportação usa a nova tradução após retraduzir")
+            reverse.stop()
+
+            let separated = SubtitleStudioModel.combineTracks(
+                original: [Cue(index: 1, start: 5, end: 6, source: "Original")],
+                translation: [Cue(index: 1, start: 1, end: 2, source: "", translated: "Tradução")]
+            )
+            expect(separated.count == 2 && separated[0].source.isEmpty && separated[1].translated.isEmpty,
+                   "faixas sem sobreposição não são pareadas pelo número")
+            let delayed = folder.appendingPathComponent("atrasada.pt.srt")
+            try "1\n00:00:06,000 --> 00:00:07,000\nSó depois.\n".write(
+                to: delayed, atomically: true, encoding: .utf8)
+            model.targetLanguage = .portuguese
+            model.loadSubtitles(from: delayed, as: .translation)
+            expect(model.displayLines(at: 0).allSatisfy { $0.count <= 20 },
+                   "original sem tradução naquele instante mantém largura do japonês")
 
             model.loadSubtitles(from: original, as: .original)
             model.translationEngine = .transcriptionOnly
