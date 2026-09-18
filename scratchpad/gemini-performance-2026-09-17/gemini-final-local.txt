@@ -1,0 +1,15 @@
+OK ordem dos itens
+OK recusa item duplicado
+OK recusa tradução vazia
+OK recusa item faltante
+OK recusa item extra
+OK recusa índice inválido
+OK preserva aspas, pontuação e dois-pontos
+OK detecta japonês sem tradução
+OK detecta inglês sem tradução
+OK aceita tradução de japonês
+OK exige maioria intocada
+OK não confunde nomes e interjeições
+OK mantém proteção para fala isolada
+OK espaços de spans animados, parágrafos e br
+0 falhas

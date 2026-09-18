@@ -837,6 +837,17 @@ Limites:
 
 ### Gemini: motor de chat travestido de motor de tradução
 
+**Atualização de 17/09/2026:** as operações Quill continuam linha/parágrafo,
+mas são agrupadas numa chamada ao WebKit. O editor é conferido antes de
+enviar; truncamento repete a digitação serial e só envia texto completo.
+`TRADUTOR_GEMINI_INSERCAO_SERIAL=1` permite comparar com o caminho serial.
+O ganho medido foi pequeno (~100 ms de inserção), sem alterar o prompt.
+Parser recusa duplicados/vazios e a detecção de origem sem tradução cobre
+CJK. A leitura usa texto do DOM com quebras de parágrafo, pois `innerText`
+podia colar palavras durante animações. Testes: `--selftest-gemini` (local),
+`--selftest-gemini --online --batch40` (site). Medições e limites em
+`scratchpad/gemini-performance-2026-09-17/README.md`.
+
 `GeminiWeb.swift`. Mesma família do DeepL (`WKWebView`, `.nonPersistent()`, sem
 API paga, sem conta) mas o site é um chat, não um campo de tradução — não há
 API de lote nenhuma, então quem faz o lote virar N traduções alinhadas é só o

@@ -117,11 +117,13 @@ public enum GeminiWeb {
     public static func parse(_ response: String, expected: Int) -> [String]? {
         guard expected > 0 else { return [] }
         var achadas: [Int: String] = [:]
-        for linha in response.components(separatedBy: "\n") {
+        for linha in response.components(separatedBy: .newlines) {
             let aparada = linha.trimmingCharacters(in: .whitespaces)
             guard let corte = aparada.range(of: "::") else { continue }
             guard let numero = Int(aparada[aparada.startIndex..<corte.lowerBound]) else { continue }
-            achadas[numero] = String(aparada[corte.upperBound...]).trimmingCharacters(in: .whitespaces)
+            let texto = String(aparada[corte.upperBound...]).trimmingCharacters(in: .whitespaces)
+            guard (1...expected).contains(numero), achadas[numero] == nil, !texto.isEmpty else { return nil }
+            achadas[numero] = texto
         }
         guard achadas.count == expected else { return nil }
         var saida: [String] = []
@@ -132,6 +134,18 @@ public enum GeminiWeb {
         }
         return saida
     }
+
+    /// innerText depende da animação dos spans do site e pode omitir espaços.
+    /// Lê o texto completo, preservando as quebras dos parágrafos e de <br>.
+    public static let responseTextScript = """
+        (element) => {
+          if (!element) return '';
+          const copy = element.cloneNode(true);
+          copy.querySelectorAll('br').forEach(e => e.replaceWith('\\n'));
+          copy.querySelectorAll('p, li').forEach(e => e.append('\\n'));
+          return copy.textContent || '';
+        }
+        """
 
     /// A resposta bateu em formato e contagem, mas é a própria origem
     /// devolvida como se fosse tradução?
@@ -147,14 +161,16 @@ public enum GeminiWeb {
     ///
     /// Frase curta (interjeição, nome, "Hmm?") pode legitimamente ficar
     /// igual depois de traduzida — por isso só conta linha com mais de três
-    /// palavras, e só desconfia quando a **maioria** delas ficou intocada.
-    /// Uma ou duas por acaso não bastam.
+    /// palavras (oito letras em CJK), e só desconfia quando a **maioria**
+    /// de pelo menos duas linhas elegíveis ficou intocada.
     public static func pareceIntocado(source: [String], translated: [String]) -> Bool {
         func achatada(_ texto: String) -> String {
             texto.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
         let pares = zip(source, translated).filter { origem, _ in
-            origem.split(separator: " ").count > 3
+            let dense = origem.contains { $0.isLetter && Tokens.isDense($0) }
+            let units = Tokens.split(origem).filter { $0.contains(where: \.isLetter) }
+            return units.count > (dense ? 8 : 3)
         }
         guard pares.count >= 2 else { return false }
         let iguais = pares.filter { origem, traduzido in achatada(origem) == achatada(traduzido) }.count
@@ -401,10 +417,11 @@ final class GeminiDriver {
           }
           var respostas = document.querySelectorAll('model-response message-content');
           var ult = respostas.length ? respostas[respostas.length - 1] : null;
+          var texto = (\(GeminiWeb.responseTextScript))(ult);
           return JSON.stringify({
             gerando: gerando,
             respostas: respostas.length,
-            ultima: ult ? (ult.innerText || ult.textContent || '') : ''
+            ultima: texto
           });
         })();
         """
@@ -423,20 +440,35 @@ final class GeminiDriver {
         FileHandle.standardError.write(Data("[gemini] \(mensagem())\n".utf8))
     }
 
-    /// Limpa e digita o prompt linha por linha — ver o comentário de
-    /// `inserirLinha` sobre por que não é um `execCommand` só.
+    /// As mesmas operações de edição, numa ida ao WebKit. Confere o texto
+    /// após o editor processar os eventos; se truncou, repete linha a linha.
+    /// Nunca envia um prompt parcial, nem depois da segunda tentativa.
     private func inserir(_ view: WKWebView, texto: String) async throws -> Bool {
-        guard (try? await view.evaluateJavaScript(Self.limpar)) as? String == "ok" else { return false }
         let linhas = texto.components(separatedBy: "\n")
-        for (indice, linha) in linhas.enumerated() {
-            try Task.checkCancellation()
-            let quebra = indice < linhas.count - 1
-            let resultado = try? await view.evaluateJavaScript(
-                Self.inserirLinha(linha, quebra: quebra)
-            ) as? String
-            guard resultado == "ok" else { return false }
+        let comandos = linhas.enumerated().map {
+            Self.inserirLinha($0.element, quebra: $0.offset < linhas.count - 1)
         }
-        return true
+        let serial = ProcessInfo.processInfo.environment["TRADUTOR_GEMINI_INSERCAO_SERIAL"] != nil
+        for individual in serial ? [true] : [false, true] {
+            try Task.checkCancellation()
+            guard (try? await view.evaluateJavaScript(Self.limpar)) as? String == "ok" else { return false }
+            for comando in individual ? comandos : [comandos.joined(separator: "\n")] {
+                try Task.checkCancellation()
+                guard (try? await view.evaluateJavaScript(comando)) as? String == "ok" else { return false }
+            }
+            // Quill/Angular pode atualizar o campo depois de execCommand retornar.
+            try await Task.sleep(for: .milliseconds(100))
+            let lido = (try? await view.evaluateJavaScript(
+                "document.querySelector('[contenteditable=\"true\"]')?.innerText || ''"
+            )) as? String ?? ""
+            func normalizado(_ value: String) -> [String] {
+                value.components(separatedBy: .newlines)
+                    .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            }
+            if normalizado(lido) == normalizado(texto) { return true }
+            Self.debug("prompt incompleto: \(lido.count)/\(texto.count), serial=\(individual)")
+        }
+        return false
     }
 
     private func traduzir(
@@ -471,7 +503,9 @@ final class GeminiDriver {
 
         let antes = (try? await ler(view))?.respostas ?? 0
         let texto = GeminiWeb.prompt(for: lines, from: source, to: target)
+        let inicioInsercao = Date()
         let inseriu = try await inserir(view, texto: texto)
+        Self.debug("inserção: \(Int(Date().timeIntervalSince(inicioInsercao) * 1000))ms")
         let enviou = inseriu
             ? (try? await view.evaluateJavaScript(Self.enviar)) as? String
             : nil
@@ -505,7 +539,6 @@ final class GeminiDriver {
             throw error
         }
         log.notice("\(label, privacy: .public): \(lines.count) falas, \(Int(Date().timeIntervalSince(relogio) * 1000))ms")
-
         guard let traduzidas = GeminiWeb.parse(resposta, expected: lines.count) else {
             registrarErro(prompt: texto, resposta: resposta, label: label)
             throw GeminiWebError.malformedResponse(label)

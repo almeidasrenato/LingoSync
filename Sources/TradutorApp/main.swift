@@ -30,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var studioCounter = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if CommandLine.arguments.contains("--selftest-gemini") {
+            Task { await GeminiCheck.run() }
+            return
+        }
         if CommandLine.arguments.contains("--selftest-layout") {
             Task { await LayoutPreview.run() }
             return

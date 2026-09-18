@@ -1,0 +1,43 @@
+[gemini] achouCampo=true
+[gemini] inserção: 266ms
+[gemini] antes=0 enviado=3976 inseriu=true enviou=ok
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] resposta DOM: {"html":"<div _ngcontent-ng-c3504085039=\"\" inline-copy-host=\"\" class=\"markdown markdown-main-panel md-content animate enable-luminous-fast-follows enable-updated-hr-color\" id=\"model-response-message-contentr_57ce559ebda4d394\" aria-busy=\"true\" aria-live=\"polite\" dir=\"ltr\" style=\"--animation-duration: 400ms; --fade-animation-function: ease-out;\"><p data-path-to-node=\"0\" class=\"pending\" style=\"--animation-duration: 602ms;\"><span class=\"pending\">1::</span><span class=\"pending\">Hoje ambos estão ocupados.</span><span class=\"pending\">\n2::</span><span class=\"pending\">Ela veio aqui ontem.</span><span class=\"pending\">\n3::</span><span class=\"pending\">Eu volto amanhã às três da tarde.</span><span class=\"pending\">\n4::</span><span class=\"pending\">Nesta loja tem duas pessoas chamadas Reika?</span><span class=\"pending\">\n5::</span><span class=\"pending\">Socorro!</span><span class=\"pending\">\n6::</span><span class=\"pending\">Isso é o meu trabalho.</span></p></div>","text":"1::Hoje ambos estão ocupados.\n2::Ela veio aqui ontem.\n3::Eu volto amanhã às três da tarde.\n4::Nesta loja tem duas pessoas chamadas Reika?\n5::Socorro!\n6::Isso é o meu trabalho.","inner":""}
+[gemini] inserção: 248ms
+[gemini] antes=1 enviado=4066 inseriu=true enviou=ok
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] resposta DOM: {"html":"<div _ngcontent-ng-c3504085039=\"\" inline-copy-host=\"\" class=\"markdown markdown-main-panel md-content animate enable-luminous-fast-follows enable-updated-hr-color\" id=\"model-response-message-contentr_46ab254dbf4b0a2e\" aria-busy=\"true\" aria-live=\"polite\" dir=\"ltr\" style=\"--animation-duration: 400ms; --fade-animation-function: ease-out;\"><p data-path-to-node=\"0\" class=\"pending\"><span class=\"pending\">1::</span><span class=\"pending\">Eu voltarei amanhã às três da tarde.</span><span class=\"pending\">\n2::</span><span class=\"pending\">Ela chegou aqui ontem.</span><span class=\"pending\">\n3::</span><span class=\"pending\">Vocês dois estão cansados.</span><span class=\"pending\">\n4::</span><span class=\"pending\">Há duas pessoas chamadas Reika nesta loja?</span><span class=\"pending\">\n5::</span><span class=\"pending\">Me ajude!</span><span class=\"pending\">\n6::</span><span class=\"pending\">Isso é o meu trabalho.</span></p></div>","text":"1::Eu voltarei amanhã às três da tarde.\n2::Ela chegou aqui ontem.\n3::Vocês dois estão cansados.\n4::Há duas pessoas chamadas Reika nesta loja?\n5::Me ajude!\n6::Isso é o meu trabalho.","inner":""}

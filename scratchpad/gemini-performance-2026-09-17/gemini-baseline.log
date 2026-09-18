@@ -1,0 +1,60 @@
+[gemini] achouCampo=true
+[gemini] inserção: 487ms
+[gemini] antes=0 enviado=3976 inseriu=true enviou=ok
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=0 apos=0 ultima=
+[gemini] gerando=true respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=false respostas=1 apos=0 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] inserção: 230ms
+[gemini] antes=1 enviado=4066 inseriu=true enviou=ok
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=1 apos=1 ultima=1::Hoje ambos estão ocupados.
+2::Ela vei
+[gemini] gerando=true respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+[gemini] gerando=false respostas=2 apos=1 ultima=1::Eu voltarei amanhã às três da tarde.
+
+Lote 1: 5.917 s
+OK todas as falas presentes
+今日は二人とも忙しいです。 → Hoje ambos estão ocupados.
+彼女は昨日ここに来ました。 → Ela veio aqui ontem.
+私は明日の午後三時に戻ります。 → Eu retorno amanhã às três da tarde.
+この店には玲香さんが二人いるんですか？ → Nesta loja há duas pessoas chamadas Reika?
+助けて！ → Socorro!
+それは私の仕事です。 → Isso é meu trabalho.
+Lote 2: 3.318 s
+OK todas as falas presentes
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+0 falhas

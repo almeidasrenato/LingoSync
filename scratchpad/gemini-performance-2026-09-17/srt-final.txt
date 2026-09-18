@@ -1,0 +1,19 @@
+Importação e exportação de SRT
+OK importar original não inicia tradutor
+OK original japonês preservado, sem espaços criados pela quebra de linha
+OK só a faixa existente pode ser exportada; tradução fica disponível por clique
+OK original usa a largura do japonês
+OK mudar seletores não renomeia o conteúdo importado
+OK exportar original preserva todas as falas
+OK ida e volta preserva milissegundos e legendas menores que 200 ms
+OK faixa ausente não sobrescreve o arquivo com outro idioma
+OK tradução explícita usa o original sem reconhecer áudio
+OK tradução explícita preserva tempos importados
+OK só transcrever usa o idioma da faixa original
+OK importar tradução remove o rascunho anterior
+OK tradução importada usa destino mesmo com Só transcrever selecionado
+OK exportar tradução mantém texto e idioma carregados
+OK tradução nunca é exportada como original
+OK trabalho cancelado não sobrescreve nova importação
+0 falhas
+

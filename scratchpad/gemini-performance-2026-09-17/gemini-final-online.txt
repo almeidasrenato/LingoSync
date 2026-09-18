@@ -1,0 +1,59 @@
+Lote 1: 6.047 s
+OK todas as falas presentes
+今日は二人とも忙しいです。 → Hoje os dois estão ocupados.
+彼女は昨日ここに来ました。 → Ela veio aqui ontem.
+私は明日の午後三時に戻ります。 → Eu volto amanhã às três da tarde.
+この店には玲香さんが二人いるんですか？ → Tem duas Reikas nesta loja?
+助けて！ → Socorro!
+それは私の仕事です。 → Isso é meu trabalho.
+Lote 2: 3.138 s
+OK todas as falas presentes
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+Lote 3: 4.231 s
+OK todas as falas presentes
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+Help me! → Me ajude!
+That is my job. → Isso é o meu trabalho.
+I will return tomorrow at three in the afternoon. → Eu voltarei amanhã às três da tarde.
+She arrived here yesterday. → Ela chegou aqui ontem.
+You are both tired. → Vocês dois estão cansados.
+Are there two people named Reika at this store? → Há duas pessoas chamadas Reika nesta loja?
+0 falhas
