@@ -89,6 +89,7 @@ struct Verify {
         case "frases": sentenceGate()
         case "lote": await batchGate()
         case "prefixo": stablePrefixGate()
+        case "palavras": wordGate()
         case "srt":
             guard arguments.count >= 3 else { print("falta o caminho do video"); exit(1) }
             let origem = arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .english) : .english
@@ -1455,6 +1456,57 @@ struct Verify {
 
     /// A politica LocalAgreement-2: so vai para a tela o prefixo em que duas
     /// passadas consecutivas do reconhecedor concordam.
+    /// A quebra em palavras do hover da janela de prática.
+    ///
+    /// O contrato é um só e é o que importa: **juntar a saída devolve a
+    /// entrada**. Se um caractere se perder, a bolha mostra um texto que
+    /// ninguém falou — e o defeito só apareceria em japonês, olhando de perto.
+    static func wordGate() {
+        var failures = 0
+        func expect(_ condition: Bool, _ label: String) {
+            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
+            if !condition { failures += 1 }
+        }
+
+        print("quebra em palavras para o hover\n")
+
+        let casos = [
+            "How was your day today?",
+            "今日は晴れです。明日は雨です。",
+            "  espaço antes e depois  ",
+            "Sim — e daí? (talvez não)",
+            "안녕하세요 오늘 날씨가 좋습니다.",
+            "今日はSan Franciscoに行きます。",
+            "...",
+            "",
+            "a",
+        ]
+        for texto in casos {
+            let pedacos = Tokens.words(texto)
+            let rotulo = texto.isEmpty ? "(vazio)" : String(texto.prefix(24))
+            expect(pedacos.joined() == texto, "nada se perde em \"\(rotulo)\"")
+        }
+
+        // Japonês não tem espaço: separar por espaço devolveria uma peça só, e
+        // o hover cobriria a frase inteira em vez de uma palavra.
+        expect(Tokens.words("今日は晴れです。").count > 1,
+               "japonês vira mais de um pedaço")
+        expect("今日は晴れです。".split(separator: " ").count == 1,
+               "e por espaço viraria um só, que é o defeito evitado")
+
+        // A pontuação viaja grudada na palavra anterior, senão ela viraria um
+        // alvo de hover que não é palavra nenhuma.
+        expect(Tokens.words("Olá, mundo!").count == 2,
+               "pontuação não vira pedaço próprio")
+
+        let comEspacos = Tokens.words("  dois  espaços  ")
+        expect(comEspacos.joined() == "  dois  espaços  ",
+               "espaço no começo e repetido sobrevive")
+
+        print(failures == 0 ? "\nPASSOU" : "\n\(failures) falha(s)")
+        if failures > 0 { exit(1) }
+    }
+
     static func stablePrefixGate() {
         var failures = 0
         func expect(_ condition: Bool, _ label: String) {

@@ -40,7 +40,8 @@ enum LayoutPreview {
         for dark in [false, true] {
             let mode = dark ? "dark" : "light"
             await render(SettingsView(pipeline: pipeline, onRefresh: {}, onToggle: {},
-                onResetPanel: {}, onMakeSubtitles: {}, onOpenStudio: {}, onNewStudio: {}),
+                onResetPanel: {}, onMakeSubtitles: {}, onOpenStudio: {}, onNewStudio: {},
+                onOpenPractice: {}),
                 "menu-\(mode)", width: 372, height: nil, dark: dark)
             await render(SubtitleStudioView(model: model), "studio-empty-\(mode)",
                          width: 1080, height: 700, dark: dark)

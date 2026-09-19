@@ -92,6 +92,34 @@ public enum Tokens {
         return result
     }
 
+    /// Quebra o texto em pedaços clicáveis, um por palavra, **sem perder um
+    /// caractere**: concatenar a saída devolve a entrada.
+    ///
+    /// É o que permite traduzir a palavra sob o ponteiro na janela de prática.
+    /// `.byWords` é a segmentação do ICU, que resolve japonês e chinês — onde
+    /// separar por espaço não separa nada — sem tokenizador escrito à mão. A
+    /// pontuação e o espaço que vêm depois de uma palavra ficam grudados nela,
+    /// senão o texto na tela deixaria de ser o texto.
+    public static func words(_ text: String) -> [String] {
+        guard !text.isEmpty else { return [] }
+        var ranges: [Range<String.Index>] = []
+        text.enumerateSubstrings(in: text.startIndex..., options: .byWords) { _, range, _, _ in
+            ranges.append(range)
+        }
+        guard let first = ranges.first else { return [text] }
+
+        var saida: [String] = []
+        // O que vem antes da primeira palavra não pode sumir.
+        if first.lowerBound > text.startIndex {
+            saida.append(String(text[text.startIndex..<first.lowerBound]))
+        }
+        for (indice, range) in ranges.enumerated() {
+            let fim = indice + 1 < ranges.count ? ranges[indice + 1].lowerBound : text.endIndex
+            saida.append(String(text[range.lowerBound..<fim]))
+        }
+        return saida
+    }
+
     public static func join(_ tokens: [String]) -> String {
         if !tokens.contains(where: { $0.contains(where: { $0.isLetter && isDense($0) }) }) {
             return tokens.joined(separator: " ")

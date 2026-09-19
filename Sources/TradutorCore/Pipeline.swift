@@ -100,11 +100,9 @@ public final class Pipeline {
         return "\(recognition)  ·  \(translation)"
     }
 
-    private var tap: ProcessTap?
-    private var microphone: MicrophoneTap?
-    private var ring: RingBuffer?
-    private var resampler: Resampler?
-    private var segmenter: Segmenter?
+    /// O caminho de áudio até a frase mora no `LiveSource`, que a janela de
+    /// prática usa duas vezes — uma por lado da conversa. Aqui é uma só.
+    private var source: LiveSource?
     /// Os reconhecedores ficam residentes depois de carregados. Carregar
     /// custa segundos; guardar custa memoria que a maquina tem. Trocar de
     /// idioma dentro do mesmo motor nao recarrega nada, e voltar para um
@@ -118,10 +116,6 @@ public final class Pipeline {
     private var loadedTranslator: TranslationEngine?
     /// Ultimo texto reconhecido, para descontar a sobreposicao do proximo.
     private var previousSource = ""
-    private var tracker = StablePrefixTracker()
-    private var phrases = PhraseAccumulator()
-    /// Impede duas transcricoes simultâneas do mesmo trecho.
-    private var rehearsing = false
 
     /// Texto cru de cada segmento, antes de qualquer limpeza.
     ///
@@ -170,8 +164,15 @@ public final class Pipeline {
     }
 
     /// Verdadeiro quando os modelos ja estao na memoria e ligar e imediato.
+    ///
+    /// O tradutor de rede ou de modelo residente **não** conta: `preload` o
+    /// deixa de fora de propósito, para o app não residir 4,5 GB só porque
+    /// alguém escolheu o Hunyuan uma vez. Exigi-lo aqui fazia o painel dizer
+    /// "modelos não carregados" para sempre a quem escolheu DeepL ou Gemini —
+    /// e travava o `--selftest-live`, que espera por este valor.
     public var isWarm: Bool {
-        transcriber?.isPrepared == true && translator != nil
+        guard transcriber?.isPrepared == true else { return false }
+        return translator != nil || !translationEngine.isInstantaneous
     }
 
     /// Quanto os modelos ocupam em disco.
@@ -198,55 +199,39 @@ public final class Pipeline {
             return
         }
 
-        let ring = RingBuffer()
-        let rate: Double
-        if process.isMicrophone {
-            guard await MicrophoneTap.requestAccess() else {
-                state = .failed(
-                    "O Tradutor precisa de acesso ao microfone. "
-                    + "Ajustes do Sistema › Privacidade e Segurança › Microfone."
-                )
-                return
-            }
-            let mic = MicrophoneTap(device: selectedInputDevice)
-            do {
-                try mic.start { samples in ring.write(samples) }
-            } catch {
-                state = .failed(error.localizedDescription)
-                return
-            }
-            rate = mic.sampleRate ?? 48_000
-            self.microphone = mic
-        } else {
-            let tap = ProcessTap(process: process)
-            do {
-                try tap.start { samples in ring.write(samples) }
-            } catch {
-                state = .failed(error.localizedDescription)
-                return
-            }
-            rate = tap.format?.mSampleRate ?? 48_000
-            self.tap = tap
-        }
-
-        do {
-            resampler = try Resampler(inputSampleRate: rate)
-        } catch {
-            tap?.stop()
-            microphone?.stop()
-            tap = nil
-            microphone = nil
-            state = .failed(error.localizedDescription)
+        if process.isMicrophone, await !MicrophoneTap.requestAccess() {
+            state = .failed(
+                "O Tradutor precisa de acesso ao microfone. "
+                + "Ajustes do Sistema › Privacidade e Segurança › Microfone."
+            )
             return
         }
 
-        self.ring = ring
-        self.segmenter = Segmenter()
+        guard let transcriber else {
+            state = .failed("o reconhecedor não carregou")
+            return
+        }
+        let source = LiveSource(
+            transcriber: transcriber,
+            rehearsalInterval: rehearsalInterval,
+            onPartial: { [weak self] text in self?.subtitles.setPartial(text) },
+            onPhrase: { [weak self] phrase in self?.enqueuePhrase(phrase) }
+        )
+        do {
+            try source.start(
+                process.isMicrophone
+                    ? .microphone(selectedInputDevice)
+                    : .process(process)
+            )
+        } catch {
+            state = .failed(error.localizedDescription)
+            return
+        }
+        self.source = source
+
         translator?.reset()
         previousSource = ""
         rawTranscripts.removeAll()
-        tracker.reset()
-        _ = phrases.flush()
         subtitles.clear()
         state = .running
 
@@ -266,11 +251,9 @@ public final class Pipeline {
     public func togglePause() {
         guard isRunning else { return }
         isPaused.toggle()
+        source?.isPaused = isPaused
         guard isPaused else { return }
-        _ = segmenter?.flush()
-        tracker.reset()
-        _ = phrases.flush()
-        subtitles.setPartial("")
+        source?.discardInFlight()
     }
 
     /// Para a captura. Os modelos continuam carregados de proposito: religar
@@ -281,10 +264,8 @@ public final class Pipeline {
         worker?.cancel()
         worker = nil
         queue.removeAll()
-        tap?.stop()
-        tap = nil
-        microphone?.stop()
-        microphone = nil
+        source?.stop()
+        source = nil
         isPaused = false
         // A janela do DeepL e o servidor do Hunyuan não se fecham sozinhos, e
         // este app fica aberto o dia todo na barra de menus. A Apple fica —
@@ -295,9 +276,6 @@ public final class Pipeline {
             translator = nil
             loadedTranslator = nil
         }
-        ring = nil
-        resampler = nil
-        segmenter = nil
         subtitles.setPartial("")
         state = .idle
     }
@@ -359,100 +337,11 @@ public final class Pipeline {
     }
 
     private func pump() async {
-        var scratch = [Float](repeating: 0, count: 48_000)
-        var lastRehearsal = Date.distantPast
-
         while !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(50))
-            refreshResamplerIfRateChanged()
-            guard let ring, let resampler, let segmenter else { continue }
-
-            let count = ring.read(into: &scratch, maximum: scratch.count)
-            // Pausado, o anel continua sendo esvaziado e o que sai é jogado
-            // fora. Deixar de ler encheria o anel e, ao retomar, os primeiros
-            // segundos seriam áudio de minutos atrás.
-            if isPaused {
-                lastRehearsal = Date()
-                continue
-            }
-            if count > 0 {
-                if let converted = try? resampler.resample(Array(scratch[0..<count])) {
-                    // Uma pausa real e o unico corte de audio que continua
-                    // existindo: ali nao ha palavra sendo partida.
-                    for segment in segmenter.feed(converted) {
-                        await finishUtterance(segment.samples)
-                    }
-                }
-            }
-
-            // Enquanto a fala corre, o trecho em andamento e re-reconhecido
-            // inteiro. Nada de cortar audio no meio de palavra.
-            if segmenter.isSpeaking,
-               !rehearsing,
-               Date().timeIntervalSince(lastRehearsal) > rehearsalInterval {
-                lastRehearsal = Date()
-                let inFlight = segmenter.inFlight
-                if inFlight.count > 8_000 {  // meio segundo de fala
-                    await rehearse(inFlight)
-                }
-            }
+            await source?.pump()
+            lastTranscribeMs = source?.lastTranscribeMs ?? lastTranscribeMs
         }
-    }
-
-    /// A fonte trocou de taxa em serviço? Refaz o conversor.
-    ///
-    /// Abrir o microfone de um fone Bluetooth joga o aparelho em HFP e a
-    /// captura cai de 48 kHz para 16 kHz — a do microfone E a do aplicativo,
-    /// porque o tap segue o dispositivo. Reamostrar com a razão velha não dá
-    /// erro: dá um terço das amostras e a fala três vezes mais rápida, que
-    /// nenhum reconhecedor entende. Medido em `tradutor-probe duplo`.
-    private func refreshResamplerIfRateChanged() {
-        guard let resampler else { return }
-        guard let rate = tap?.currentSampleRate ?? microphone?.sampleRate, rate > 0 else { return }
-        guard abs(rate - resampler.inputSampleRate) > 1 else { return }
-        guard let fresh = try? Resampler(inputSampleRate: rate) else { return }
-        log.info("a fonte trocou de \(resampler.inputSampleRate) para \(rate) Hz")
-        self.resampler = fresh
-    }
-
-    /// Uma passada de reconhecimento sobre o trecho em andamento.
-    private func rehearse(_ samples: [Float]) async {
-        guard let transcriber else { return }
-        rehearsing = true
-        defer { rehearsing = false }
-
-        let started = Date()
-        guard let hypothesis = try? await transcriber.transcribe(samples),
-              !hypothesis.isEmpty
-        else { return }
-        lastTranscribeMs = Int(Date().timeIntervalSince(started) * 1000)
-
-        let newlyConfirmed = tracker.feed(hypothesis)
-        subtitles.setPartial(Tokens.join(tracker.pending))
-
-        guard !newlyConfirmed.isEmpty else { return }
-        for phrase in phrases.append(newlyConfirmed) {
-            enqueuePhrase(phrase)
-        }
-    }
-
-    /// A fala terminou de verdade: o que sobrou nao vai mudar mais.
-    private func finishUtterance(_ samples: [Float]) async {
-        // Uma ultima passada sobre o trecho completo, que agora inclui o
-        // silencio final e costuma sair melhor que as intermediarias.
-        var remaining: [String]
-        if let transcriber, let hypothesis = try? await transcriber.transcribe(samples),
-           !hypothesis.isEmpty {
-            remaining = tracker.reconcile(hypothesis)
-        } else {
-            remaining = tracker.flush()
-        }
-        var closed = phrases.append(remaining)
-        if let leftover = phrases.flush() { closed.append(leftover) }
-
-        tracker.reset()
-        subtitles.setPartial("")
-        for phrase in closed { enqueuePhrase(phrase) }
     }
 
     private func enqueuePhrase(_ phrase: String) {

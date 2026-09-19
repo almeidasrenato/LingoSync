@@ -19,6 +19,7 @@ struct SettingsView: View {
     var onMakeSubtitles: () -> Void
     var onOpenStudio: () -> Void
     var onNewStudio: () -> Void
+    var onOpenPractice: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -318,6 +319,17 @@ struct SettingsView: View {
             }
             .controlSize(.small)
             .help("Abre mais uma janela de legendas, para outro vídeo")
+
+            // Outro uso, não outra janela de legendas: aqui o vídeo não
+            // existe, a conversa é ao vivo nos dois sentidos.
+            Button {
+                onOpenPractice()
+            } label: {
+                Label("Praticar conversa…", systemImage: "bubble.left.and.bubble.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .help("Ouve um assistente de voz em outro aplicativo e o seu "
+                  + "microfone ao mesmo tempo, para praticar conversação.")
 
             Button {
                 onMakeSubtitles()

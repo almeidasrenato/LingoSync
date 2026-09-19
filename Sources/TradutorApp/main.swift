@@ -25,6 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// ao fechar, e o modelo so vive enquanto a view existir. `windowWillClose`
     /// tira a chave e o par inteiro cai junto.
     private var studios: [NSWindow: SubtitleStudioModel] = [:]
+    /// A prática é uma só — ver `openPractice`.
+    private var practiceWindow: NSWindow?
+    private var practiceModel: ConversationPracticeModel?
     /// Sempre crescente, so para numerar o titulo. Reaproveitar o numero de
     /// uma janela fechada daria duas "Legendas 2" ao mesmo tempo.
     private var studioCounter = 0
@@ -166,7 +169,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             onResetPanel: { [weak self] in self?.panel?.resetToDefaultSize() },
             onMakeSubtitles: { [weak self] in self?.makeSubtitles() },
             onOpenStudio: { [weak self] in self?.openStudio() },
-            onNewStudio: { [weak self] in self?.openStudio(nova: true) }
+            onNewStudio: { [weak self] in self?.openStudio(nova: true) },
+            onOpenPractice: { [weak self] in self?.openPractice() }
         )
     }
 
@@ -219,6 +223,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         studios[window] = model
+    }
+
+    /// A janela de prática de conversa.
+    ///
+    /// Uma só. Duas capturariam o mesmo microfone e disputariam o
+    /// reconhecedor; e, ao contrário das legendas, não há "outro vídeo" para
+    /// justificar a segunda. Chamar de novo levanta a que existe.
+    private func openPractice() {
+        popover.performClose(nil)
+
+        if let window = practiceWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let model = ConversationPracticeModel()
+        model.sourceLanguage = pipeline.sourceLanguage
+        model.targetLanguage = pipeline.targetLanguage
+        model.recognitionEngine = pipeline.recognitionEngine
+        model.translationEngine = pipeline.translationEngine
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 620),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Prática de conversa"
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.contentViewController = NSHostingController(
+            rootView: ConversationPracticeView(model: model)
+        )
+        window.delegate = self
+
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        practiceWindow = window
+        practiceModel = model
     }
 
     private func makeSubtitles() {
@@ -343,7 +387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         Task { @MainActor in
             write("idiomas: \(pipeline.sourceLanguage.rawValue) -> \(pipeline.targetLanguage.rawValue)")
-            write("motor esperado: \(pipeline.sourceLanguage.hasParakeetSupport ? "Parakeet" : "Whisper")")
+            write("motor: \(pipeline.recognitionEngine.rawValue) (ao vivo: \(pipeline.recognitionEngine.forLive.rawValue))")
             write("aguardando os modelos carregarem...")
             let loadStart = Date()
             while !pipeline.isWarm, Date().timeIntervalSince(loadStart) < 180 {
@@ -1429,6 +1473,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow, window === practiceWindow {
+            // Soltar o tap e o microfone aqui: eles não se fecham sozinhos, e
+            // este app fica aberto o dia todo na barra de menus.
+            practiceModel?.stop()
+            practiceModel = nil
+            practiceWindow = nil
+            return
+        }
         guard let window = notification.object as? NSWindow,
               let model = studios.removeValue(forKey: window) else { return }
         // Solta o player e o observador de tempo junto com a janela.
