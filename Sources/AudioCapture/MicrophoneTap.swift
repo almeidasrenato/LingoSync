@@ -7,10 +7,15 @@ import OSLog
 public struct AudioInputDevice: Identifiable, Hashable, Sendable {
     public let id: AudioDeviceID
     public let name: String
+    /// UID do Core Audio. É por ele que a `AVCaptureSession` encontra o mesmo
+    /// dispositivo: `AVCaptureDevice.uniqueID` de áudio é exatamente este
+    /// texto. Sem ele a escolha teria que casar por nome, que repete.
+    public let uid: String
 
-    public init(id: AudioDeviceID, name: String) {
+    public init(id: AudioDeviceID, name: String, uid: String = "") {
         self.id = id
         self.name = name
+        self.uid = uid
     }
 }
 
@@ -41,7 +46,9 @@ public enum AudioInputList {
             // seria capturar a si mesmo.
             guard !name.hasPrefix("Tradutor") else { return nil }
 
-            return AudioInputDevice(id: device, name: name)
+            let uid = (try? audioProperty(device, kAudioDevicePropertyDeviceUID) as CFString)
+                .map { $0 as String } ?? ""
+            return AudioInputDevice(id: device, name: name, uid: uid)
         }
     }
 
@@ -53,39 +60,67 @@ public enum AudioInputList {
         ) as AudioDeviceID else { return nil }
         return all().first { $0.id == id }
     }
+
+    /// O microfone embutido do Mac, quando existe.
+    ///
+    /// É o padrão da janela de prática: o padrão do sistema costuma ser um
+    /// fone Bluetooth, e abrir o microfone dele derruba o perfil do aparelho
+    /// para HFP — 16 kHz na entrada E na saída, o que estraga junto a captura
+    /// do aplicativo. Ver `ProcessTap.currentSampleRate`.
+    public static var builtIn: AudioInputDevice? {
+        let entradas = all()
+        return entradas.first { $0.uid.contains("BuiltIn") }
+            ?? entradas.first { $0.name.contains("MacBook") || $0.name.contains("Built-in") }
+    }
 }
 
 /// Captura do microfone, com a mesma forma do `ProcessTap`.
 ///
-/// `AVAudioEngine` e não o HAL cru de propósito: entrada é o caso que o
-/// framework do sistema resolve bem, e o `ProcessTap` só existe em CoreAudio
-/// puro porque não há API alta para tap de processo. Copiar aquele arquivo
-/// para a entrada seria trezentas linhas para o que aqui são trinta.
+/// `AVCaptureSession`, e não `AVAudioEngine`. Medido em 19/09/2026 com o gate
+/// `tradutor-probe variantes`, 3 s por variante, duas rodadas:
+///
+/// ```
+/// installTap sozinho (o que estava aqui)            0 amostras
+/// installTap + dispositivo por AudioUnitSetProperty  0 amostras
+/// installTap + dispositivo por setDeviceID           0 amostras
+/// entrada ligada ao mixer                            0 / 45056  (não repete)
+/// AVAudioSinkNode                                48000 amostras, padrão só
+/// AVCaptureSession, padrão                       48000 amostras
+/// AVCaptureSession, escolhendo o interno        143872 amostras, 48 kHz
+/// ```
+///
+/// Duas coisas que só a última faz. **Entrega áudio de forma repetível**: com
+/// `installTap` o bloco simplesmente nunca era chamado, sem erro nenhum — o
+/// mesmo modo de falhar silencioso da permissão negada, e foi assim que o
+/// `--selftest-microfone` do app vinha devolvendo `amostras: 0`. E **respeita
+/// a escolha do dispositivo**: pelos três caminhos do `AVAudioEngine` o
+/// formato continuava em 16 kHz (o do fone) mesmo pedindo o microfone interno,
+/// prova de que o pedido era ignorado calado; aqui o interno chega em 48 kHz.
+///
+/// `audioSettings` pede mono Float32, então não há downmix na mão.
 public final class MicrophoneTap {
 
     private let log = Logger(subsystem: "app.tradutor", category: "MicrophoneTap")
-    private let engine = AVAudioEngine()
-    /// O tap do AVAudioEngine roda em tempo real. Um buffer fixo evita que o
-    /// callback realoque um Array enquanto o hardware ainda escreve nele.
-    private let scratch = UnsafeMutablePointer<Float>.allocate(capacity: 8192)
+    private let session = AVCaptureSession()
+    private let queue = DispatchQueue(label: "app.tradutor.microfone")
+    private var receiver: SampleReceiver?
     private var running = false
 
-    /// `nil` significa o dispositivo padrão do sistema — que é o padrão daqui
-    /// também, e o que continua valendo quando o usuário troca de fone no meio
-    /// da reunião.
+    /// `nil` significa o dispositivo padrão do sistema — o que continua valendo
+    /// quando o usuário troca de fone no meio da reunião, porque o padrão
+    /// acompanha e um ID gravado não.
     public let device: AudioInputDevice?
 
-    /// Taxa real da entrada. Preenchida por `start`, como no `ProcessTap`.
-    public private(set) var sampleRate: Double?
+    /// Taxa real da entrada. Sai do formato ativo do dispositivo ao iniciar e
+    /// é corrigida pelo primeiro buffer, que é quem sabe de verdade.
+    public var sampleRate: Double? { receiver?.sampleRate ?? declaredRate }
+    private var declaredRate: Double?
 
     public init(device: AudioInputDevice? = nil) {
         self.device = device
     }
 
-    deinit {
-        stop()
-        scratch.deallocate()
-    }
+    deinit { stop() }
 
     /// Pergunta ao sistema. Negada, a captura entrega silêncio sem erro —
     /// o mesmo modo de falhar da permissão de gravação de tela.
@@ -102,75 +137,114 @@ public final class MicrophoneTap {
     public func start(onSamples: @escaping (UnsafeBufferPointer<Float>) -> Void) throws {
         precondition(!running, "MicrophoneTap ja iniciado")
 
-        let input = engine.inputNode
-        // Tem de ser ANTES de ler o formato: trocar o dispositivo troca a taxa
-        // de amostragem, e um tap instalado com o formato do dispositivo
-        // anterior é rejeitado pelo AVAudioEngine em tempo de execução.
-        if let device, let unit = input.audioUnit {
-            var id = device.id
-            try check(
-                "AudioUnitSetProperty(CurrentDevice)",
-                AudioUnitSetProperty(
-                    unit,
-                    kAudioOutputUnitProperty_CurrentDevice,
-                    kAudioUnitScope_Global,
-                    0,
-                    &id,
-                    UInt32(MemoryLayout<AudioDeviceID>.size)
-                )
-            )
-        }
-
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else {
+        guard let capture = resolveDevice() else {
             throw CaptureError.unsupportedFormat(
-                "entrada sem formato (taxa \(format.sampleRate), \(format.channelCount) canais)"
+                "não achei a entrada \(device?.name ?? "padrão do sistema")"
             )
         }
-        sampleRate = format.sampleRate
 
-        let scratch = self.scratch
-        input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in
-            guard let channels = buffer.floatChannelData else { return }
-            let frames = Int(buffer.frameLength)
-            let count = Int(buffer.format.channelCount)
-            guard frames > 0, count > 0, frames <= 8192 else { return }
-
-            // Em mono nao ha nada para misturar. Entregar o ponteiro do
-            // proprio AVAudioPCMBuffer evita uma copia no caso normal; o
-            // consumidor copia sincronicamente para o RingBuffer.
-            if count == 1, buffer.stride == 1 {
-                onSamples(UnsafeBufferPointer(start: channels[0], count: frames))
-                return
-            }
-
-            // Downmix para mono. `stride` e 1 no formato deintercalado e o
-            // numero de canais no intercalado; ignorá-lo lia canais errados.
-            let stride = buffer.stride
-            for frame in 0..<frames {
-                var sum: Float = 0
-                for channel in 0..<count {
-                    sum += channels[channel][frame * stride]
-                }
-                scratch[frame] = sum / Float(count)
-            }
-            onSamples(UnsafeBufferPointer(start: scratch, count: frames))
+        let input = try AVCaptureDeviceInput(device: capture)
+        guard session.canAddInput(input) else {
+            throw CaptureError.unsupportedFormat("a sessão recusou \(capture.localizedName)")
         }
+        session.addInput(input)
 
-        do {
-            try engine.start()
-        } catch {
-            input.removeTap(onBus: 0)
-            throw error
+        let output = AVCaptureAudioDataOutput()
+        // Mono Float32 na origem: sem isto viria estéreo intercalado e o
+        // downmix voltaria para cá.
+        output.audioSettings = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsNonInterleaved: false,
+            AVNumberOfChannelsKey: 1,
+        ]
+        let receiver = SampleReceiver(onSamples: onSamples)
+        output.setSampleBufferDelegate(receiver, queue: queue)
+        guard session.canAddOutput(output) else {
+            session.removeInput(input)
+            throw CaptureError.unsupportedFormat("a sessão recusou a saída de áudio")
         }
+        session.addOutput(output)
+        self.receiver = receiver
+
+        declaredRate = CMAudioFormatDescriptionGetStreamBasicDescription(
+            capture.activeFormat.formatDescription
+        )?.pointee.mSampleRate
+
+        session.startRunning()
         running = true
-        log.info("microfone ativo: \(self.device?.name ?? "padrão do sistema", privacy: .public)")
+        log.info("microfone ativo: \(capture.localizedName, privacy: .public)")
     }
 
     public func stop() {
         guard running else { return }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        session.stopRunning()
+        for output in session.outputs { session.removeOutput(output) }
+        for input in session.inputs { session.removeInput(input) }
+        receiver = nil
         running = false
+    }
+
+    /// Casa a escolha do Core Audio com o objeto da `AVCaptureSession`.
+    ///
+    /// Pelo UID primeiro: `AVCaptureDevice.uniqueID` de áudio é o UID do Core
+    /// Audio. O nome é a rede de segurança, e repete entre aparelhos iguais.
+    private func resolveDevice() -> AVCaptureDevice? {
+        guard let device else { return AVCaptureDevice.default(for: .audio) }
+        let found = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified
+        ).devices
+        return found.first { $0.uniqueID == device.uid && !device.uid.isEmpty }
+            ?? found.first { $0.localizedName == device.name }
+            ?? AVCaptureDevice.default(for: .audio)
+    }
+}
+
+/// Recebe os buffers da sessão e repassa as amostras.
+private final class SampleReceiver: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
+    private let onSamples: (UnsafeBufferPointer<Float>) -> Void
+    /// Escrita na fila da captura, lida pelo consumidor. `Double` de 64 bits
+    /// não rasga em leitura, e um valor velho por um buffer não muda nada.
+    private(set) var sampleRate: Double?
+
+    init(onSamples: @escaping (UnsafeBufferPointer<Float>) -> Void) {
+        self.onSamples = onSamples
+    }
+
+    func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        if let format = CMSampleBufferGetFormatDescription(sampleBuffer),
+           let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(format),
+           asbd.pointee.mSampleRate != sampleRate {
+            // A taxa muda em serviço quando o aparelho troca de perfil
+            // (Bluetooth entrando em HFP). Quem reamostra precisa saber.
+            sampleRate = asbd.pointee.mSampleRate
+        }
+
+        var list = AudioBufferList()
+        var block: CMBlockBuffer?
+        let status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
+            sampleBuffer,
+            bufferListSizeNeededOut: nil,
+            bufferListOut: &list,
+            bufferListSize: MemoryLayout<AudioBufferList>.size,
+            blockBufferAllocator: nil,
+            blockBufferMemoryAllocator: nil,
+            flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment,
+            blockBufferOut: &block
+        )
+        guard status == noErr else { return }
+
+        let buffers = UnsafeMutableAudioBufferListPointer(&list)
+        guard let first = buffers.first, let raw = first.mData else { return }
+        let count = Int(first.mDataByteSize) / MemoryLayout<Float>.size
+        guard count > 0 else { return }
+        onSamples(UnsafeBufferPointer(
+            start: raw.assumingMemoryBound(to: Float.self), count: count
+        ))
     }
 }

@@ -19,7 +19,41 @@ public final class ProcessTap {
     private var tapUUID: UUID?
 
     /// Formato real entregue pelo tap. Preenchido por `start`.
+    ///
+    /// **É uma foto do início, e a taxa muda em serviço.** Para reamostrar,
+    /// use `currentSampleRate`.
     public private(set) var format: AudioStreamBasicDescription?
+
+    /// A taxa que o tap está entregando AGORA, relida do Core Audio.
+    ///
+    /// Medido em 19/09/2026 (`tradutor-probe duplo`): abrir o microfone de um
+    /// fone Bluetooth joga o aparelho em HFP e o tap passa de 48 kHz para
+    /// 16 kHz. Com o formato lido só no início, o `Resampler` seguia decimando
+    /// 3:1 um áudio que já vinha em 16 kHz — um terço das amostras e a fala
+    /// três vezes mais rápida, sem erro nenhum. O tom de teste de 220 Hz saía
+    /// a 676 Hz com 5 252 amostras/s contra 14 674 sozinho.
+    public var currentSampleRate: Double? {
+        aggregateSampleRate ?? tapFormatSampleRate ?? format?.mSampleRate
+    }
+
+    /// Taxa que o `kAudioTapPropertyFormat` declara agora.
+    public var tapFormatSampleRate: Double? {
+        guard tapID != kAudioObjectUnknown else { return nil }
+        let atual: AudioStreamBasicDescription? = try? audioProperty(
+            tapID, kAudioTapPropertyFormat
+        )
+        return atual?.mSampleRate
+    }
+
+    /// Taxa nominal do aggregate device que hospeda o tap.
+    ///
+    /// Existe porque o formato do tap **não** acompanha a troca de perfil do
+    /// aparelho: medido em 19/09/2026, com o fone em HFP o tap continuava
+    /// declarando 48 kHz enquanto entregava 16 kHz.
+    public var aggregateSampleRate: Double? {
+        guard aggregateID != kAudioObjectUnknown else { return nil }
+        return try? audioProperty(aggregateID, kAudioDevicePropertyNominalSampleRate)
+    }
 
     public let process: AudioProcess
 

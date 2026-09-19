@@ -34,6 +34,8 @@ func usage() -> Never {
 if Bundle.main.bundlePath.hasSuffix(".app"), Bundle.main.bundleIdentifier != nil {
     if arguments.contains("isolamento") { runIsolationTest() }
     if arguments.contains("geral") { runSystemWideTest() }
+    if arguments.contains("duplo") { runDualCaptureTest() }
+    if arguments.contains("variantes") { runMicVariantTest() }
     if arguments.count == 1 { runBundledDiagnostic() }
 }
 

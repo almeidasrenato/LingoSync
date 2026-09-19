@@ -364,6 +364,7 @@ public final class Pipeline {
 
         while !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(50))
+            refreshResamplerIfRateChanged()
             guard let ring, let resampler, let segmenter else { continue }
 
             let count = ring.read(into: &scratch, maximum: scratch.count)
@@ -396,6 +397,22 @@ public final class Pipeline {
                 }
             }
         }
+    }
+
+    /// A fonte trocou de taxa em serviço? Refaz o conversor.
+    ///
+    /// Abrir o microfone de um fone Bluetooth joga o aparelho em HFP e a
+    /// captura cai de 48 kHz para 16 kHz — a do microfone E a do aplicativo,
+    /// porque o tap segue o dispositivo. Reamostrar com a razão velha não dá
+    /// erro: dá um terço das amostras e a fala três vezes mais rápida, que
+    /// nenhum reconhecedor entende. Medido em `tradutor-probe duplo`.
+    private func refreshResamplerIfRateChanged() {
+        guard let resampler else { return }
+        guard let rate = tap?.currentSampleRate ?? microphone?.sampleRate, rate > 0 else { return }
+        guard abs(rate - resampler.inputSampleRate) > 1 else { return }
+        guard let fresh = try? Resampler(inputSampleRate: rate) else { return }
+        log.info("a fonte trocou de \(resampler.inputSampleRate) para \(rate) Hz")
+        self.resampler = fresh
     }
 
     /// Uma passada de reconhecimento sobre o trecho em andamento.

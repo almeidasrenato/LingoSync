@@ -21,6 +21,12 @@ public final class Resampler {
 
     public static let targetSampleRate: Double = 16_000
 
+    /// Taxa com que este conversor foi construído. Quem alimenta precisa dela
+    /// para perceber que o dispositivo trocou de taxa em serviço e refazer o
+    /// conversor — reamostrar com a razão errada não dá erro, dá fala
+    /// acelerada. Ver `ProcessTap.currentSampleRate`.
+    public let inputSampleRate: Double
+
     private let converter: AVAudioConverter
     private let inputFormat: AVAudioFormat
     private let outputFormat: AVAudioFormat
@@ -30,6 +36,7 @@ public final class Resampler {
     private static let chunkFrames: AVAudioFrameCount = 4096
 
     public init(inputSampleRate: Double) throws {
+        self.inputSampleRate = inputSampleRate
         guard let input = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: inputSampleRate,

@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import AudioCapture
 import CoreGraphics
 import Foundation
@@ -310,4 +311,402 @@ func runBundledDiagnostic() -> Never {
         )
     }
     exit(rms > 0.0001 ? 0 : 1)
+}
+
+// MARK: - Duas capturas ao mesmo tempo
+
+/// Uma medida de um lado da captura.
+private struct Medida {
+    var amostras = 0
+    var esperadas = 0
+    var pico: Float = 0
+    var rms: Float = 0
+    /// Taxa lida ao iniciar, e de novo no fim.
+    var taxa: Double = 0
+    var taxaFinal: Double = 0
+    /// Quanto demorou até a primeira amostra chegar. Bluetooth troca de perfil
+    /// ao abrir o microfone e o primeiro segundo pode vir vazio.
+    var primeiraMs: Int = -1
+    /// Frequência dominante por cruzamento de zero. O professor sintético é um
+    /// tom de 220 Hz: se sair perto de 73 Hz, o áudio chegou a 16 kHz e foi
+    /// reamostrado como se fosse 48 kHz — taxa velha, não perda de dados.
+    var freq: Double = 0
+    /// Quantas vezes a fonte trocou de taxa durante a medição.
+    var trocas = 0
+    var estouros = 0
+}
+
+private func frequencia(_ samples: [Float]) -> Double {
+    guard samples.count > 1 else { return 0 }
+    var cruzamentos = 0
+    for indice in 1..<samples.count
+    where (samples[indice - 1] < 0) != (samples[indice] < 0) { cruzamentos += 1 }
+    return Double(cruzamentos) / 2 / (Double(samples.count) / 16_000)
+}
+
+private struct Duplo {
+    var tap = Medida()
+    var mic = Medida()
+    /// Entradas que o sistema oferecia enquanto o tap estava de pé. O próprio
+    /// aggregate device aparece aqui e tem que ser filtrado, senão a prática
+    /// capturaria a si mesma.
+    var entradas: [String] = []
+    var diagnostico: String?
+    var erro: String?
+}
+
+private func estatistica(_ samples: [Float]) -> (pico: Float, rms: Float) {
+    guard !samples.isEmpty else { return (0, 0) }
+    var energia: Float = 0
+    var pico: Float = 0
+    for amostra in samples {
+        energia += amostra * amostra
+        pico = Swift.max(pico, Swift.abs(amostra))
+    }
+    return (pico, (energia / Float(samples.count)).squareRoot())
+}
+
+/// Liga os dois lados e mede os dois ao mesmo tempo.
+///
+/// `tapPrimeiro` existe porque a ordem importa em Core Audio: o tap cria um
+/// aggregate device e o `AVAudioEngine` lê o formato da entrada ao iniciar.
+/// Se só uma das ordens funcionar, é melhor saber agora.
+private func medirJuntos(
+    process: AudioProcess, tapPrimeiro: Bool, segundos: Double,
+    usarTap: Bool = true, usarMic: Bool = true, dispositivo: AudioInputDevice? = nil
+) -> Duplo {
+    var resultado = Duplo()
+
+    let anelApp = RingBuffer()
+    let anelMic = RingBuffer()
+    let tap = ProcessTap(process: process)
+    let mic = MicrophoneTap(device: dispositivo)
+    var tapLigado = false
+    var micLigado = false
+    defer {
+        if tapLigado { tap.stop() }
+        if micLigado { mic.stop() }
+    }
+
+    func ligarTap() -> String? {
+        do {
+            try tap.start { amostras in anelApp.write(amostras) }
+            tapLigado = true
+            return nil
+        } catch {
+            return "tap do app falhou: \(error.localizedDescription)"
+        }
+    }
+    func ligarMic() -> String? {
+        do {
+            try mic.start { amostras in anelMic.write(amostras) }
+            micLigado = true
+            return nil
+        } catch {
+            return "microfone falhou: \(error.localizedDescription)"
+        }
+    }
+
+    var ordem: [() -> String?] = []
+    if usarTap { ordem.append(ligarTap) }
+    if usarMic { ordem.append(ligarMic) }
+    if !tapPrimeiro { ordem.reverse() }
+    for ligar in ordem {
+        if let erro = ligar() {
+            resultado.erro = erro
+            return resultado
+        }
+    }
+
+    let taxaApp = tapLigado ? (tap.format?.mSampleRate ?? 48_000) : 0
+    let taxaMic = micLigado ? (mic.sampleRate ?? 48_000) : 0
+    resultado.tap.taxa = taxaApp
+    resultado.mic.taxa = taxaMic
+    resultado.entradas = AudioInputList.all().map(\.name)
+
+    var converteApp = tapLigado ? try? Resampler(inputSampleRate: taxaApp) : nil
+    var converteMic = micLigado ? try? Resampler(inputSampleRate: taxaMic) : nil
+    if (tapLigado && converteApp == nil) || (micLigado && converteMic == nil) {
+        resultado.erro = "resampler recusou as taxas \(Int(taxaApp)) / \(Int(taxaMic))"
+        return resultado
+    }
+
+    var doApp: [Float] = []
+    var doMic: [Float] = []
+    var scratch = [Float](repeating: 0, count: 48_000)
+    let inicio = Date()
+    let fim = inicio.addingTimeInterval(segundos)
+    while Date() < fim {
+        Thread.sleep(forTimeInterval: 0.05)
+        // A fonte troca de taxa em serviço; reamostrar com a razão velha
+        // acelera a fala sem dar erro. É o defeito que este gate achou.
+        if tapLigado, let atual = tap.currentSampleRate, atual > 0,
+           let atualConversor = converteApp, abs(atual - atualConversor.inputSampleRate) > 1,
+           let novo = try? Resampler(inputSampleRate: atual) {
+            converteApp = novo
+            resultado.tap.trocas += 1
+        }
+        if micLigado, let atual = mic.sampleRate, atual > 0,
+           let atualConversor = converteMic, abs(atual - atualConversor.inputSampleRate) > 1,
+           let novo = try? Resampler(inputSampleRate: atual) {
+            converteMic = novo
+            resultado.mic.trocas += 1
+        }
+
+        if let converteApp {
+            let lidoApp = anelApp.read(into: &scratch, maximum: scratch.count)
+            if lidoApp > 0 {
+                if resultado.tap.primeiraMs < 0 {
+                    resultado.tap.primeiraMs = Int(Date().timeIntervalSince(inicio) * 1000)
+                }
+                doApp.append(contentsOf: (try? converteApp.resample(Array(scratch[0..<lidoApp]))) ?? [])
+            }
+        }
+        if let converteMic {
+            let lidoMic = anelMic.read(into: &scratch, maximum: scratch.count)
+            if lidoMic > 0 {
+                if resultado.mic.primeiraMs < 0 {
+                    resultado.mic.primeiraMs = Int(Date().timeIntervalSince(inicio) * 1000)
+                }
+                doMic.append(contentsOf: (try? converteMic.resample(Array(scratch[0..<lidoMic]))) ?? [])
+            }
+        }
+    }
+
+    // As duas leituras lado a lado: qual delas acompanha a troca de perfil.
+    if tapLigado {
+        resultado.diagnostico = String(
+            format: "taxas do tap no fim: formato %.0f · aggregate %.0f",
+            tap.tapFormatSampleRate ?? 0, tap.aggregateSampleRate ?? 0
+        )
+    }
+    resultado.tap.taxaFinal = tapLigado ? (tap.format?.mSampleRate ?? 0) : 0
+    resultado.mic.taxaFinal = micLigado ? (mic.sampleRate ?? 0) : 0
+
+    let esperadas = Int(segundos * 16_000)
+    let estatApp = estatistica(doApp)
+    let estatMic = estatistica(doMic)
+    resultado.tap.amostras = doApp.count
+    resultado.tap.esperadas = esperadas
+    resultado.tap.pico = estatApp.pico
+    resultado.tap.rms = estatApp.rms
+    resultado.tap.freq = frequencia(doApp)
+    resultado.tap.estouros = anelApp.overflows
+    resultado.mic.amostras = doMic.count
+    resultado.mic.esperadas = esperadas
+    resultado.mic.pico = estatMic.pico
+    resultado.mic.rms = estatMic.rms
+    resultado.mic.freq = frequencia(doMic)
+    resultado.mic.estouros = anelMic.overflows
+    return resultado
+}
+
+/// Pede o microfone sem travar o laço principal.
+///
+/// A caixa do sistema não aparece com a thread principal bloqueada num
+/// semáforo — o pedido fica pendente e o teste "falha" por permissão que
+/// ninguém chegou a recusar.
+private func pedirMicrofone() -> Bool {
+    switch AVCaptureDevice.authorizationStatus(for: .audio) {
+    case .authorized:
+        return true
+    case .notDetermined:
+        var concedido = false
+        var respondeu = false
+        AVCaptureDevice.requestAccess(for: .audio) { permitido in
+            concedido = permitido
+            respondeu = true
+        }
+        // `before: .distantFuture` trava: a resposta chega em outra thread e
+        // nada acorda o laço. Espera curta e repetida, com teto.
+        let limite = Date().addingTimeInterval(60)
+        while !respondeu, Date() < limite {
+            RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
+        }
+        return concedido
+    default:
+        return false
+    }
+}
+
+/// As duas capturas convivem?
+///
+/// O modo de prática ouve o aplicativo (tap do Core Audio, por aggregate
+/// device) e o microfone (`AVAudioEngine`) ao mesmo tempo. Nada no app faz
+/// isso hoje: `Pipeline.start` escolhe UMA fonte. Sem essa convivência não há
+/// feature nenhuma, então ela é medida antes de qualquer interface.
+func runDualCaptureTest() -> Never {
+    let reportPath = "/tmp/tradutor-duplo.txt"
+    var lines: [String] = []
+    func report(_ text: String) {
+        lines.append(text)
+        try? lines.joined(separator: "\n").write(
+            toFile: reportPath, atomically: true, encoding: .utf8
+        )
+    }
+
+    report("duas capturas ao mesmo tempo  \(Date().formatted(date: .abbreviated, time: .standard))")
+    report("")
+
+    let todos = (try? AudioProcessList.all()) ?? []
+    guard let tocando = todos.first(where: {
+        $0.isPlaying && !$0.isSystemWide && !$0.isMicrophone
+            && $0.id != Bundle.main.bundleIdentifier
+    }) else {
+        report("FALHA: nenhum aplicativo tocando som.")
+        report("Comece um áudio (navegador, Música, o que for) e rode de novo —")
+        report("sem som, silêncio do tap não se distingue de tap quebrado.")
+        showResult(
+            title: "Nenhum app tocando som",
+            body: "Comece um áudio em algum aplicativo e rode o teste de novo.",
+            ok: false,
+            filePath: reportPath
+        )
+    }
+
+    report("professor: \(tocando.name)  pids \(tocando.pids.map(String.init).joined(separator: ", "))")
+
+    guard pedirMicrofone() else {
+        report("FALHA: acesso ao microfone negado.")
+        showResult(
+            title: "Microfone negado",
+            body: "Ajustes do Sistema › Privacidade e Segurança › Microfone.",
+            ok: false,
+            filePath: reportPath
+        )
+    }
+    report("microfone: \(AudioInputList.systemDefault?.name ?? "padrão do sistema")")
+    report("")
+
+    func relatar(_ titulo: String, _ resultado: Duplo) {
+        report(titulo)
+        if let erro = resultado.erro {
+            report("  FALHA: \(erro)")
+            return
+        }
+        for (lado, medida) in [("app", resultado.tap), ("mic", resultado.mic)] {
+            report(String(
+                format: "  %@  %5d Hz%@  %6d/%6d amostras  1ª em %@  pico %.5f  rms %.5f%@",
+                lado.padding(toLength: 4, withPad: " ", startingAt: 0),
+                Int(medida.taxa),
+                medida.taxaFinal != medida.taxa
+                    ? " -> \(Int(medida.taxaFinal)) Hz NO FIM" : "",
+                medida.amostras,
+                medida.esperadas,
+                medida.primeiraMs < 0 ? "nunca" : "\(medida.primeiraMs) ms",
+                medida.pico,
+                medida.rms,
+                medida.amostras > 0
+                    ? String(format: "  %.0f Hz", medida.freq)
+                        + (medida.trocas > 0 ? "  \(medida.trocas) troca(s) de taxa" : "")
+                        + (medida.estouros > 0 ? "  \(medida.estouros) estouros" : "")
+                    : ""
+            ))
+        }
+        if let diagnostico = resultado.diagnostico { report("  " + diagnostico) }
+    }
+
+    // Controle do tap sozinho: a régua contra a qual as fases são lidas.
+    let soTap = medirJuntos(process: tocando, tapPrimeiro: true, segundos: 4, usarMic: false)
+    relatar("controle — só o tap do app (4 s)", soTap)
+    report("")
+
+    // Cada entrada é medida sozinha e acompanhada. O fone Bluetooth troca de
+    // perfil (A2DP 48 kHz -> HFP 16 kHz) quando o microfone abre, e a suspeita
+    // é que o tap do app vá junto — com o formato lido no início, já velho.
+    var candidatos: [(AudioInputDevice?, String)] = []
+    if let interno = AudioInputList.builtIn { candidatos.append((interno, interno.name)) }
+    candidatos.append((nil, "padrão do sistema"))
+
+    var juntos: [(String, Duplo)] = []
+    for (dispositivo, nome) in candidatos {
+        let soMic = medirJuntos(
+            process: tocando, tapPrimeiro: false, segundos: 4,
+            usarTap: false, dispositivo: dispositivo
+        )
+        relatar("só o microfone — \(nome) (4 s)", soMic)
+
+        let acompanhado = medirJuntos(
+            process: tocando, tapPrimeiro: true, segundos: 6, dispositivo: dispositivo
+        )
+        relatar("tap + microfone — \(nome) (6 s)", acompanhado)
+        report("")
+        juntos.append((nome, acompanhado))
+    }
+
+    // O aggregate device do tap aparece como entrada enquanto ele está de pé.
+    // `AudioInputList` o descarta pelo prefixo do nome; oferecê-lo seria
+    // capturar a si mesmo.
+    let entradas = soTap.entradas
+    report("entradas visíveis com o tap de pé: \(entradas.joined(separator: ", "))")
+    let vazou = entradas.contains { $0.hasPrefix("Tradutor") }
+    report("")
+
+    var falhas: [String] = []
+
+    func porSegundo(_ medida: Medida) -> Double {
+        medida.esperadas > 0 ? Double(medida.amostras) / (Double(medida.esperadas) / 16_000) : 0
+    }
+    let refTap = porSegundo(soTap.tap)
+    let refFreq = soTap.tap.freq
+    report(String(format: "referência do tap sozinho: %.0f amostras/s · %.0f Hz", refTap, refFreq))
+    report("")
+
+    if let erro = soTap.erro { falhas.append("controle do tap: \(erro)") }
+    if soTap.tap.rms <= 0.0001 {
+        falhas.append("controle: o tap veio em silêncio (permissão de Gravação de Tela?)")
+    }
+
+    for (nome, fase) in juntos {
+        if let erro = fase.erro {
+            falhas.append("\(nome): \(erro)")
+            continue
+        }
+        if fase.mic.amostras == 0 {
+            falhas.append("\(nome): o microfone não entregou amostra nenhuma")
+        } else if fase.mic.pico == 0 {
+            falhas.append("\(nome): o microfone veio com zero exato (permissão negada)")
+        }
+        if fase.tap.amostras == 0 {
+            falhas.append("\(nome): o tap não entregou amostra nenhuma")
+        } else if refTap > 0, porSegundo(fase.tap) < refTap * 0.7 {
+            // Menos amostras com a MESMA fala dentro delas quer dizer taxa
+            // trocada, não áudio perdido: a frequência do tom sobe junto.
+            let trocou = refFreq > 0 && fase.tap.freq > refFreq * 1.5
+            falhas.append(String(
+                format: "%@: o tap caiu para %.0f amostras/s (sozinho: %.0f)%@",
+                nome, porSegundo(fase.tap), refTap,
+                trocou
+                    ? String(format: " e o tom subiu de %.0f para %.0f Hz — a TAXA do tap mudou com o microfone aberto",
+                             refFreq, fase.tap.freq)
+                    : " sem mudar o tom — áudio perdido de verdade"))
+        }
+    }
+    if vazou { falhas.append("o aggregate device do tap está sendo oferecido como microfone") }
+
+    if falhas.isEmpty {
+        report("PASSOU. As duas capturas convivem nas duas ordens.")
+    } else {
+        report("FALHOU:")
+        for falha in falhas { report("  " + falha) }
+    }
+
+    // Não é critério de aprovação — é leitura de eco. Com fone o microfone
+    // fica no ruído de fundo; no alto-falante ele sobe junto com o professor.
+    report("")
+    report(String(
+        format: "eco: rms do microfone com o professor tocando = %.5f%@",
+        juntos.first?.1.mic.rms ?? 0,
+        (juntos.first?.1.mic.rms ?? 0) > 0.01 ? "  (alto — provável alto-falante, não fone)" : "  (baixo)"
+    ))
+
+    showResult(
+        title: falhas.isEmpty ? "As duas capturas convivem" : "Captura dupla falhou",
+        body: falhas.isEmpty
+            ? "Tap e microfone entregaram áudio juntos em \(juntos.count) entrada(s)."
+
+            : falhas.joined(separator: "\n"),
+        ok: falhas.isEmpty,
+        filePath: reportPath
+    )
 }

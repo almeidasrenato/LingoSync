@@ -129,7 +129,16 @@ Diagnóstico da captura:
 open "build/Tradutor Probe.app"                    # a captura funciona?
 open "build/Tradutor Probe.app" --args isolamento  # a seleção é respeitada?
 open "build/Tradutor Probe.app" --args geral       # o tap global funciona?
+open "build/Tradutor Probe.app" --args duplo       # app e microfone juntos?
+open "build/Tradutor Probe.app" --args variantes   # por que o microfone entrega zero?
 ```
+
+`duplo` precisa de um aplicativo tocando som — sem isso, silêncio do tap não se
+distingue de tap quebrado, e ele recusa rodar. Mede cada lado **sozinho antes de
+junto**: sem esse controle não dá para dizer se um lado atrapalha o outro ou se
+o problema é da fonte. Relatórios em `/tmp/tradutor-duplo.txt` e
+`/tmp/tradutor-microfone-variantes.txt`; nenhum dos dois grava áudio, só contam
+amostras, pico, RMS e cruzamentos de zero.
 
 ---
 
@@ -152,7 +161,7 @@ arriscada e precisa compilar e rodar em segundos.
 
 ```
 áudio do app ──▶ Core Audio process tap (todos os processos do app)
-   ou o mic  ──▶ AVAudioEngine na entrada escolhida
+   ou o mic  ──▶ AVCaptureSession na entrada escolhida
              ──▶ 16 kHz mono + VAD de dois limiares
              ──▶ trecho em andamento, re-reconhecido a cada 0,6 s
                    ├──▶ prefixo que ainda oscila ──▶ zona vermelha
@@ -180,19 +189,39 @@ troca o `ProcessTap` por um `MicrophoneTap`. Para o usuário a pergunta é uma s
 mesma coisa duas vezes. **Qual** microfone, aí sim, é outra pergunta, e o
 seletor só aparece depois que a primeira foi respondida.
 
-- **`AVAudioEngine`, não o HAL cru.** Entrada é o caso que o framework do
-  sistema resolve bem; o `ProcessTap` só é CoreAudio puro porque não existe API
-  alta para tap de processo. São 30 linhas contra as 300 daquele arquivo.
+- **`AVCaptureSession`, não `AVAudioEngine`.** Era o engine até 19/09/2026, e
+  ele **não entregava nada**: o bloco do `installTap` simplesmente não era
+  chamado, sem erro nenhum, e o `--selftest-microfone` vinha devolvendo
+  `amostras: 0`. Pior, a escolha do dispositivo era ignorada calada — o formato
+  continuava em 16 kHz (o do fone) mesmo pedindo o microfone interno. Nove
+  variantes medidas em `tradutor-probe variantes`, 3 s cada, duas rodadas:
+
+  ```
+                                                  amostras em 3 s
+  installTap sozinho                                        0
+  + dispositivo por AudioUnitSetProperty                    0
+  + dispositivo por auAudioUnit.setDeviceID                 0
+  entrada ligada ao mixer                          0 / 45056   não repete
+  AVAudioSinkNode                                       48000   só o padrão
+  AVCaptureSession, padrão                              48000
+  AVCaptureSession, escolhendo o interno               143872   48 kHz
+  ```
+
+  Só a última faz as duas coisas: entrega áudio de forma repetível **e**
+  respeita o dispositivo escolhido — o interno chega em 48 kHz, prova de que o
+  pedido valeu. `audioSettings` pede mono Float32 na origem, então não há
+  downmix na mão. `setDeviceID` + mixer dá `-10875` e não serve.
 - **O padrão é "padrão do sistema", e é um `nil`, não um ID gravado.** Gravar o
   ID deixaria o app apontando para o fone anterior depois que o usuário trocasse
-  de fone no meio da reunião.
-- **O dispositivo tem de ser escolhido ANTES de ler o formato**: trocar de
-  entrada troca a taxa de amostragem, e um tap instalado com o formato do
-  dispositivo anterior é recusado em tempo de execução.
-- **Permissão negada falha igual à de gravação de tela**: o engine roda, o tap
-  dispara na cadência certa e todos os quadros vêm zerados. Por isso
-  `--selftest-microfone` mede **pico e RMS** — sala silenciosa tem ruído de
-  fundo, permissão negada tem zero exato.
+  de fone no meio da reunião. `AudioInputList.builtIn` existe para quem precisa
+  do contrário — ver a janela de prática, onde o padrão do sistema é justamente
+  o que estraga a captura.
+- **Permissão negada falha igual à de gravação de tela**: a sessão roda e todos
+  os quadros vêm zerados. Por isso `--selftest-microfone` mede **pico e RMS** —
+  sala silenciosa tem ruído de fundo, permissão negada tem zero exato. E **zero
+  amostras não é permissão negada**: é callback que nunca disparou, que foi
+  exatamente o defeito do `AVAudioEngine`. As duas causas precisam de
+  mensagens diferentes.
 - **O aggregate device do próprio tap aparece como entrada** enquanto a captura
   de aplicativo está ligada. `AudioInputList` o descarta pelo nome; oferecê-lo
   seria capturar a si mesmo.
@@ -1780,6 +1809,34 @@ agrupamento do app). Medições e scripts: `scratchpad/qualidade-2026-09-14`.
   erro: o tap abre, o callback dispara na cadência certa, e todos os quadros
   vêm zerados. `CGPreflightScreenCaptureAccess()` **não** é indicador
   confiável — cobre só uma das duas listas.
+- **`kAudioTapPropertyFormat` é uma foto do início e mente depois.** A taxa do
+  tap muda em serviço e essa propriedade não acompanha. Quem sabe a verdade é
+  `kAudioDevicePropertyNominalSampleRate` do aggregate device
+  (`ProcessTap.currentSampleRate`), e o `Resampler` precisa ser refeito quando
+  ela mudar — reamostrar com a razão velha **não dá erro**, dá fala acelerada.
+  Medido em 19/09/2026 com `tradutor-probe duplo`:
+
+  ```
+  abrir o microfone de um fone Bluetooth joga o aparelho em HFP
+    formato do tap declara     48000 Hz   (mentira)
+    aggregate device declara   16000 Hz   (verdade)
+    lado do app, antes      32 096 / 96 000 amostras, fala 3x mais rápida
+    lado do app, depois     96 640 / 96 000
+  ```
+
+  Com o tom de teste de 220 Hz o erro fica aritmético: saía a 676 Hz com 5 252
+  amostras/s, e 676 × (5252/16000) = 222 Hz — o áudio chegava inteiro, só que a
+  16 kHz. **Com fala, cruzamento de zero não serve de prova** (715 → 1254 Hz é
+  compatível com as duas explicações); é o tom que decide.
+
+  De brinde: **o aggregate fica em 44 100 Hz mesmo sem microfone nenhum** nesta
+  máquina, enquanto o tap declara 48 000. Toda captura vinha com 8,8% de erro
+  de velocidade. A referência do tap sozinho subiu de 14 376 para 15 926
+  amostras/s depois do conserto.
+- **Abrir o microfone do fone Bluetooth estraga a captura do aplicativo**, não
+  só a do microfone: o aparelho inteiro cai para 16 kHz. Com o microfone
+  interno o tap nem oscila (95 840 de 96 000 amostras). É por isso que existe
+  `AudioInputList.builtIn`.
 - **Binário de terminal nunca consegue essa permissão** (o TCC segue o processo
   pai). Só um `.app` assinado, aberto com `open`.
 - **Recompilar pode derrubar a permissão** (assinatura ad-hoc muda a cada
