@@ -2,6 +2,10 @@
 .build/
 build/
 
+# Os vídeos de exemplo e tudo que sai deles — legenda, gabarito de quem fala —
+# são obra de terceiros. Ficam no disco de quem mede; fora do repositório.
+Videos Exemplo/
+
 # Mídia: os vídeos de exemplo e o áudio extraído não entram no histórico.
 # São grandes, binários e não mudam com o código. O `medicoes-claude/v/`
 # do relatório é cópia dos mesmos arquivos.
