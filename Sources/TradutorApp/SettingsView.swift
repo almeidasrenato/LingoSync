@@ -32,7 +32,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Tradutor Instantâneo")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("Áudio ao vivo e legendas de vídeo")
+                    Text("Áudio ao vivo, prática de conversa e legendas")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -41,6 +41,10 @@ struct SettingsView: View {
 
             card("Idiomas e modelos", icon: "character.bubble") { languages }
             card("Ao vivo", icon: "waveform") { liveControls }
+            // Cartão próprio, e não dentro de "Vídeos": aqui não há arquivo
+            // nenhum. É captura ao vivo dos dois lados de uma conversa, então
+            // mora ao lado do "Ao vivo", que é o que ele parece.
+            card("Praticar conversa", icon: "bubble.left.and.bubble.right") { practiceControls }
             card("Vídeos", icon: "film") { videoControls }
 
             HStack {
@@ -289,6 +293,25 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Praticar conversa
+
+    private var practiceControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                onOpenPractice()
+            } label: {
+                Label("Abrir a prática…", systemImage: "bubble.left.and.bubble.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .help("Ouve um assistente de voz em outro aplicativo e o seu "
+                  + "microfone ao mesmo tempo. Se a janela já estiver aberta, "
+                  + "traz ela de volta.")
+
+            caption("Fale com um assistente de voz e acompanhe os dois lados, "
+                    + "com tradução da palavra sob o ponteiro.")
+        }
+    }
+
     // MARK: Vídeos
 
     private var videoControls: some View {
@@ -319,17 +342,6 @@ struct SettingsView: View {
             }
             .controlSize(.small)
             .help("Abre mais uma janela de legendas, para outro vídeo")
-
-            // Outro uso, não outra janela de legendas: aqui o vídeo não
-            // existe, a conversa é ao vivo nos dois sentidos.
-            Button {
-                onOpenPractice()
-            } label: {
-                Label("Praticar conversa…", systemImage: "bubble.left.and.bubble.right")
-                    .frame(maxWidth: .infinity)
-            }
-            .help("Ouve um assistente de voz em outro aplicativo e o seu "
-                  + "microfone ao mesmo tempo, para praticar conversação.")
 
             Button {
                 onMakeSubtitles()

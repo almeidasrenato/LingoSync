@@ -43,6 +43,30 @@ enum LayoutPreview {
                 onResetPanel: {}, onMakeSubtitles: {}, onOpenStudio: {}, onNewStudio: {},
                 onOpenPractice: {}),
                 "menu-\(mode)", width: 372, height: nil, dark: dark)
+
+            // A prática, com falas semeadas: desenha a bolha do professor com
+            // tradução, a do aluno, a última destacada e a tradução escondida
+            // pelo olho — sem captura, sem modelo, sem rede.
+            let pratica = ConversationPracticeModel()
+            pratica.sourceLanguage = .english
+            pratica.targetLanguage = .portuguese
+            await render(ConversationPracticeView(model: pratica),
+                         "pratica-vazia-\(mode)", width: 560, height: 480, dark: dark)
+
+            pratica.turns = [
+                .init(speaker: .professor,
+                      source: "Hello, and welcome to today's conversation practice.",
+                      translated: "Olá, e bem-vindo à prática de conversa de hoje."),
+                .init(speaker: .aluno, source: "Hi! I am ready to start."),
+                .init(speaker: .professor,
+                      source: "Great. How was your day today?",
+                      translated: "Ótimo. Como foi o seu dia hoje?",
+                      translationHidden: true),
+            ]
+            pratica.isProfessorSpeaking = true
+            pratica.professorPartial = "Did you do anything interesting"
+            await render(ConversationPracticeView(model: pratica),
+                         "pratica-conversa-\(mode)", width: 560, height: 520, dark: dark)
             await render(SubtitleStudioView(model: model), "studio-empty-\(mode)",
                          width: 1080, height: 700, dark: dark)
         }

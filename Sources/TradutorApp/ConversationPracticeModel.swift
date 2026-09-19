@@ -33,13 +33,15 @@ final class ConversationPracticeModel {
     }
 
     private(set) var state: State = .idle
-    private(set) var turns: [Turn] = []
-    private(set) var professorPartial = ""
+    /// Sem `private(set)`: o render de QA (`--selftest-layout`) semeia falas
+    /// para desenhar a janela sem captura, modelo nem rede.
+    var turns: [Turn] = []
+    var professorPartial = ""
     private(set) var studentPartial = ""
     /// Acende o losango. Vem do VAD, não de temporizador.
-    private(set) var isProfessorSpeaking = false
+    var isProfessorSpeaking = false
     /// A barra de baixo, "transcrevendo sua resposta".
-    private(set) var isStudentSpeaking = false
+    var isStudentSpeaking = false
 
     var sourceLanguage: Language = .english
     var targetLanguage: Language = .portuguese

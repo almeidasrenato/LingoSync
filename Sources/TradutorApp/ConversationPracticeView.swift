@@ -175,6 +175,7 @@ struct ConversationPracticeView: View {
             }
         }
         .font(.system(size: 11))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -300,10 +301,11 @@ private struct HoverableText: View {
     let gloss: (String) async -> String?
 
     var body: some View {
-        // Escrita densa (japonês, chinês) não tem espaço entre palavras, e
-        // colocar um estragaria a linha.
-        let spacing: CGFloat = text.contains(" ") ? 4 : 0
-        FlowLayout(spacing: spacing, lineSpacing: 3) {
+        // Espaçamento zero: `Tokens.words` devolve cada palavra **com** o
+        // espaço que vinha depois dela, senão o texto na tela deixaria de ser
+        // o texto. Somar espaçamento aqui dava espaço duplo em inglês e
+        // inventava espaço em japonês, que não tem nenhum.
+        FlowLayout(spacing: 0, lineSpacing: 3) {
             ForEach(Array(Tokens.words(text).enumerated()), id: \.offset) { _, token in
                 WordView(token: token, glossary: $glossary, gloss: gloss)
             }
