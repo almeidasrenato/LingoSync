@@ -3,6 +3,34 @@ import AudioCapture
 import SwiftUI
 import TradutorCore
 
+/// Relatorio de autoteste: acumula linhas, grava a cada escrita e conta as
+/// falhas.
+///
+/// Eram cinco copias de `write` e quatro de `expect` soltas dentro dos
+/// autotestes, identicas menos pelo caminho do arquivo. Gravar a cada linha
+/// e de proposito: o autoteste termina em `exit()`, e o que ja passou
+/// precisa estar no disco quando ele terminar.
+final class SelfTestReport {
+    private let path: String
+    private var lines: [String]
+    private(set) var failures = 0
+
+    init(_ path: String, _ title: String) {
+        self.path = path
+        lines = ["\(title)  \(Date().formatted(date: .abbreviated, time: .standard))"]
+    }
+
+    func write(_ text: String) {
+        lines.append(text)
+        try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
+    func expect(_ condition: Bool, _ label: String) {
+        write(condition ? "  ok    \(label)" : "  FALHA \(label)")
+        if !condition { failures += 1 }
+    }
+}
+
 /// App de barra de menus, sem icone no Dock (LSUIElement no Info.plist).
 ///
 /// O painel de traducao so existe enquanto a traducao esta ativa: desligou,
@@ -150,10 +178,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
-    }
-
-    private func rebuildPopover() {
-        popoverHost?.rootView = makeSettingsView()
     }
 
     private func makeSettingsView() -> SettingsView {
@@ -321,12 +345,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// caminho real — tap, VAD, reconhecimento, traducao e loja — sem uma
     /// pessoa clicando.
     private func runLiveSelfTest() {
-        let report = "/tmp/tradutor-live.txt"
-        var lines: [String] = ["teste ao vivo  \(Date().formatted(date: .abbreviated, time: .standard))"]
-        func write(_ text: String) {
-            lines.append(text)
-            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
-        }
+        let relatorio = SelfTestReport("/tmp/tradutor-live.txt", "teste ao vivo")
+        let write = relatorio.write
 
         // Idiomas opcionais na linha de comando: --selftest-live ja pt
         let arguments = CommandLine.arguments
@@ -463,18 +483,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func runSubtitleJobSelfTest(path rawPath: String, source: Language, target: Language) {
         let path = resolvedTestPath(rawPath)
-        let report = "/tmp/tradutor-job.txt"
-        var lines: [String] = ["gerar legenda de um video  \(Date().formatted(date: .abbreviated, time: .standard))"]
-        var failures = 0
+        let relatorio = SelfTestReport("/tmp/tradutor-job.txt", "gerar legenda de um video")
+        let write = relatorio.write
+        let expect = relatorio.expect
 
-        func write(_ text: String) {
-            lines.append(text)
-            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
-        }
-        func expect(_ condition: Bool, _ label: String) {
-            write(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
 
         Task { @MainActor in
             pipeline.sourceLanguage = source
@@ -562,8 +574,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
 
             write("")
-            write(failures == 0 ? "PASSOU" : "\(failures) falhas")
-            exit(failures == 0 ? 0 : 1)
+            write(relatorio.failures == 0 ? "PASSOU" : "\(relatorio.failures) falhas")
+            exit(relatorio.failures == 0 ? 0 : 1)
         }
     }
 
@@ -572,17 +584,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     ///
     /// Nao carrega video nem modelo: roda em milissegundos.
     private func runStudioWindowsSelfTest() {
-        let report = "/tmp/tradutor-janelas.txt"
-        var lines = ["teste das janelas de legendas  \(Date().formatted(date: .abbreviated, time: .standard))"]
-        var failures = 0
-        func write(_ text: String) {
-            lines.append(text)
-            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
-        }
-        func expect(_ condition: Bool, _ label: String) {
-            write(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        let relatorio = SelfTestReport("/tmp/tradutor-janelas.txt", "teste das janelas de legendas")
+        let write = relatorio.write
+        let expect = relatorio.expect
 
         Task { @MainActor in
             openStudio()
@@ -615,8 +619,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(studios.isEmpty, "fechar todas esvazia")
 
             write("")
-            write(failures == 0 ? "PASSOU" : "\(failures) falhas")
-            exit(failures == 0 ? 0 : 1)
+            write(relatorio.failures == 0 ? "PASSOU" : "\(relatorio.failures) falhas")
+            exit(relatorio.failures == 0 ? 0 : 1)
         }
     }
 
@@ -629,17 +633,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// cadência certa e **todos os quadros vêm zerados**. Sem medir o nível não
     /// há como distinguir isso de uma sala silenciosa.
     private func runMicrophoneSelfTest(seconds: Double) {
-        let report = "/tmp/tradutor-microfone.txt"
-        var lines: [String] = ["microfone  \(Date().formatted(date: .abbreviated, time: .standard))"]
-        var failures = 0
-        func write(_ text: String) {
-            lines.append(text)
-            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
-        }
-        func expect(_ condition: Bool, _ label: String) {
-            write(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        let relatorio = SelfTestReport("/tmp/tradutor-microfone.txt", "microfone")
+        let write = relatorio.write
+        let expect = relatorio.expect
 
         Task { @MainActor in
             let entradas = AudioInputList.all()
@@ -649,7 +645,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             guard await MicrophoneTap.requestAccess() else {
                 write("FALHA: acesso ao microfone negado")
-                try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
                 exit(1)
             }
 
@@ -693,25 +688,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 write("  aviso: nível muito baixo (\(String(format: "%.5f", rms))) — fale perto do microfone")
             }
 
-            write(failures == 0 ? "\nPASSOU" : "\n\(failures) falha(s)")
-            exit(failures == 0 ? 0 : 1)
+            write(relatorio.failures == 0 ? "\nPASSOU" : "\n\(relatorio.failures) falha(s)")
+            exit(relatorio.failures == 0 ? 0 : 1)
         }
     }
 
     private func runStudioSelfTest(path rawPath: String, source: Language, target: Language) {
         let path = resolvedTestPath(rawPath)
-        let report = "/tmp/tradutor-studio.txt"
-        var lines: [String] = ["teste da janela de legendas  \(Date().formatted(date: .abbreviated, time: .standard))"]
-        var failures = 0
+        let relatorio = SelfTestReport("/tmp/tradutor-studio.txt", "teste da janela de legendas")
+        let write = relatorio.write
+        let expect = relatorio.expect
 
-        func write(_ text: String) {
-            lines.append(text)
-            try? lines.joined(separator: "\n").write(toFile: report, atomically: true, encoding: .utf8)
-        }
-        func expect(_ condition: Bool, _ label: String) {
-            write(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
 
         Task { @MainActor in
             let model = SubtitleStudioModel()
@@ -896,7 +883,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // O autoteste do item de menu ja conferia as duas linhas; este
             // nao, e era aqui que a terceira linha passava — 4 dos 24 backups
             // da auditoria de 12/09/2026 tinham legenda de tres linhas.
-            let renderizadas = model.cues.indices.map { model.displayText(at: $0) }
             let maiorEmLinhas = model.cues.indices
                 .map { model.displayLines(at: $0).count }.max() ?? 0
             expect(maiorEmLinhas <= 2,
@@ -1423,8 +1409,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             model.stop()
             write("")
-            write(failures == 0 ? "PASSOU" : "\(failures) falhas")
-            exit(failures == 0 ? 0 : 1)
+            write(relatorio.failures == 0 ? "PASSOU" : "\(relatorio.failures) falhas")
+            exit(relatorio.failures == 0 ? 0 : 1)
         }
     }
 

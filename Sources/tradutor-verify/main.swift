@@ -12,6 +12,17 @@ import TradutorCore
 //   tradutor-verify audio <wav>     transcricao + traducao ponta a ponta
 //   tradutor-verify quebra          quebra de linha, sem baixar modelo
 
+/// Contador e impressao dos gates.
+///
+/// Um gate roda por invocacao e sai por `exit`, entao o contador e unico.
+/// Eram catorze copias identicas desta funcao, uma dentro de cada gate.
+private var failures = 0
+
+private func expect(_ condition: Bool, _ label: String) {
+    print(condition ? "  ok    \(label)" : "  FALHA \(label)")
+    if !condition { failures += 1 }
+}
+
 @main
 struct Verify {
     static func main() async {
@@ -347,7 +358,7 @@ struct Verify {
         print("carga inicial: \(loadMs) ms")
         print("preparado depois: \(engine.isPrepared)\n")
 
-        var failures = 0
+        failures = 0
 
         // Troca de idioma dentro da cobertura do Parakeet.
         for language in [Language.portuguese, .spanish, .french, .english] {
@@ -550,11 +561,7 @@ struct Verify {
     // MARK: Leitura de .srt
 
     static func legendaGate() {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("leitura de .srt\n")
 
@@ -647,11 +654,7 @@ struct Verify {
     /// nome tem que passar, e o formato que o sistema nao le tem que ser
     /// recusado com uma mensagem que diz qual formato e.
     static func formatGate() async {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("deteccao de container pelos bytes\n")
 
@@ -740,11 +743,7 @@ struct Verify {
     /// Duas faixas de tom com amplitudes bem diferentes — da para saber qual
     /// delas foi lida so pelo nivel, sem depender de reconhecimento.
     static func trackGate() async {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("faixa de audio por idioma\n")
 
@@ -1010,11 +1009,7 @@ struct Verify {
     }
 
     static func timecodeGate() async {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("a legenda nao apaga a tela no meio da fala\n")
         do {
@@ -1456,11 +1451,7 @@ struct Verify {
     /// A politica LocalAgreement-2: so vai para a tela o prefixo em que duas
     /// passadas consecutivas do reconhecedor concordam.
     static func stablePrefixGate() {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("confirmacao de prefixo estavel\n")
 
@@ -1627,11 +1618,7 @@ struct Verify {
             sentences, from: .english, to: .portuguese)) ?? []
         let batchMs = Int(Date().timeIntervalSince(batchStart) * 1000)
 
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         expect(batch.count == sentences.count, "o lote devolve uma traducao por frase")
         expect(!batch.contains(where: \.isEmpty), "nenhuma traducao volta vazia")
@@ -1656,11 +1643,7 @@ struct Verify {
     // MARK: Corte em frases
 
     static func sentenceGate() {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("tokens especiais do Whisper")
         do {
@@ -2577,11 +2560,7 @@ struct Verify {
     /// O que é nosso no motor Google: repartição, código de idioma e escape.
     /// O JSON alheio não vira teste; a conta que desalinha legenda, sim.
     static func webAPIGate() async {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("tradutor de rede (Google)\n")
 
@@ -2659,11 +2638,7 @@ struct Verify {
     /// So transcrever (sem traduzir) e a exportacao do painel ao vivo.
     @MainActor
     static func captureGate() async {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("So transcrever, e a captura exportada\n")
 
@@ -2783,11 +2758,7 @@ struct Verify {
     }
 
     static func deepLGate() {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("DeepL: blocos e link\n")
 
@@ -2938,11 +2909,7 @@ struct Verify {
     }
 
     static func speakerGate() {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("Identificacao de quem fala\n")
 
@@ -3448,11 +3415,7 @@ struct Verify {
     // MARK: Motores de reconhecimento, sem modelo
 
     static func engineGate() async {
-        var failures = 0
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
+        failures = 0
 
         print("Motores de reconhecimento\n")
 
@@ -3626,7 +3589,7 @@ struct Verify {
         // O contador nasce aqui, e nao no meio: as sondas de tres linhas
         // imprimiam FALHA sem mexer nele, e o gate saia com codigo 0 mesmo
         // reprovando. Auditoria de 12/09/2026.
-        var failures = 0
+        failures = 0
         // A legenda de tres linhas que escapou para o arquivo em 12/09/2026,
         // no video de 9 minutos. Aqui, isolada, `enforceLineLimit` reparte
         // como deve — o defeito esta no caminho, nao nesta funcao, e isto fica
@@ -3711,10 +3674,6 @@ struct Verify {
         // Maiuscula no comeco de frase, que o tradutor nao devolve.
         print("")
         print("maiuscula de comeco de frase")
-        func expect(_ condition: Bool, _ label: String) {
-            print(condition ? "  ok    \(label)" : "  FALHA \(label)")
-            if !condition { failures += 1 }
-        }
         func cue(_ text: String) -> Cue {
             Cue(index: 0, start: 0, end: 1, source: "", translated: text)
         }
@@ -3985,8 +3944,7 @@ extension Verify {
 
     /// Sem modelos: prova a atribuição e que a régua não recebe nivelamento.
     static func coverageSelftest() async {
-        var failures = 0
-        func expect(_ ok: Bool, _ label: String) { print("\(ok ? "ok" : "FALHA") \(label)"); if !ok { failures += 1 } }
+        failures = 0
         let turns: [SpeakerDiarizer.Turn] = [.init(speaker: "A", start: 0, end: 1),
             .init(speaker: "B", start: 1, end: 2), .init(speaker: "A", start: 2, end: 3),
             .init(speaker: "A", start: 0.5, end: 0.8)]

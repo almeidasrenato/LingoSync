@@ -46,31 +46,6 @@ public enum Language: String, CaseIterable, Identifiable, Sendable, Codable {
         }
     }
 
-    /// Nome do idioma escrito nele mesmo. Vai no prompt de traducao, porque
-    /// o modelo responde melhor ao endonimo do que ao nome em portugues.
-    public var endonym: String {
-        switch self {
-        case .portuguese: "português"
-        case .english: "English"
-        case .spanish: "español"
-        case .french: "français"
-        case .german: "Deutsch"
-        case .italian: "italiano"
-        case .dutch: "Nederlands"
-        case .polish: "polski"
-        case .russian: "русский"
-        case .ukrainian: "українська"
-        case .japanese: "日本語"
-        case .chinese: "中文"
-        case .korean: "한국어"
-        case .arabic: "العربية"
-        case .hindi: "हिन्दी"
-        case .turkish: "Türkçe"
-        case .vietnamese: "Tiếng Việt"
-        case .thai: "ไทย"
-        }
-    }
-
     /// Parakeet TDT v3 cobre 25 idiomas europeus e roda perto de 120x tempo
     /// real. Fora dessa lista o Whisper assume, ao custo de uns 240 ms.
     public var hasParakeetSupport: Bool {

@@ -46,7 +46,6 @@ final class SubtitleStudioModel {
         var detail: String = ""
         /// Requisição no ar, sem passos intermediários para relatar.
         var waiting: Bool = false
-        var startedAt: Date = Date()
         /// Só a tradução está rodando: a barra vai de 0 a 1 nela, em vez de
         /// começar nos 48% que a tradução ocupa numa geração inteira.
         var translationOnly = false
