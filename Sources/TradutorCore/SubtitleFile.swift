@@ -797,6 +797,27 @@ public final class SubtitleFileBuilder {
         // A linha da legenda tem a largura do idioma que vai ser lido, não a
         // do que foi falado. É aqui porque é aqui que o destino é conhecido.
         charactersPerLine = Self.lineWidth(for: target)
+
+        // O reconhecimento já acabou e a fala inteira está aqui. Segurá-la
+        // até o primeiro lote traduzido voltar deixa a lista **vazia** o
+        // tempo todo da espera: relatado em 20/09/2026 como "capturou o
+        // áudio com a Apple e não renderizou a captura", e a captura de tela
+        // do autoteste mostra o painel em "Traduzindo 52%" com a lista em
+        // branco. É a Apple que expõe isso — ela reconhece 109 s de áudio em
+        // 0,5 s, então sobram os ~11 s inteiros da tradução sem nada na tela;
+        // com um reconhecedor lento a barra de progresso disfarça.
+        //
+        // A decisão antiga ("só o que já foi traduzido, senão a lista enche
+        // de linhas em branco") partia de uma premissa errada: a legenda sem
+        // tradução **não é branca**, ela tem a fala reconhecida, e a janela
+        // já sabe mostrá-la — `displayText` cai em `cue.source` quando
+        // `translated` está vazio, e `displayLines` usa a largura do idioma
+        // falado nesse caso.
+        //
+        // Sai cru, não por `finalize`: a repartição por largura é da
+        // tradução, e a lista quebra a própria linha.
+        onBatch?(result)
+
         // Quem sabe o tamanho certo é o tradutor, não este código.
         let step = max(1, translator.preferredBatchSize)
 

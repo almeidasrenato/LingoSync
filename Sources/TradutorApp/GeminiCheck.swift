@@ -57,6 +57,8 @@ enum GeminiCheck {
             check(GeminiWeb.parse("0::Oi\n2::Olá", expected: 2) == nil, "recusa índice inválido")
             check(GeminiWeb.parse("1::He said: \"Hi\"!\r\n2::A::B", expected: 2)
                   == ["He said: \"Hi\"!", "A::B"], "preserva aspas, pontuação e dois-pontos")
+            check(GeminiWeb.parse("1::Oi\n1::Oi\n2::Olá", expected: 2) == ["Oi", "Olá"],
+                  "aceita duplicado idêntico")
             let ja = ["今日は二人とも忙しいです。", "私は明日の午後三時に戻ります。"]
             let en = ["We are both busy today.", "I will come back tomorrow."]
             check(GeminiWeb.pareceIntocado(source: ja, translated: ja), "detecta japonês sem tradução")
@@ -66,9 +68,29 @@ enum GeminiCheck {
             let names = ["佐藤雄二", "上村玲香", "Hmm?", "OK!"]
             check(!GeminiWeb.pareceIntocado(source: names, translated: names), "não confunde nomes e interjeições")
             check(!GeminiWeb.pareceIntocado(source: [en[0]], translated: [en[0]]), "mantém proteção para fala isolada")
+            // Lote meio traduzido: a maioria continuava traduzida e a versão
+            // antiga deixava passar, com essas falas indo para o `.srt` no
+            // idioma falado.
+            let parcial = ["We are both busy today.", "I will come back tomorrow.",
+                           "She arrived here yesterday.", "That is my job today, you know."]
+            check(GeminiWeb.pareceIntocado(
+                source: parcial,
+                translated: [parcial[0], "Volto amanhã.", "Ela chegou aqui ontem.", parcial[3]]
+            ), "detecta lote meio traduzido")
+            // Ao vivo o lote é de uma frase só: `pares.count >= 2` nunca se
+            // formava e a rede nunca disparava.
+            let aoVivo = "I will come back here tomorrow at three in the afternoon."
+            check(GeminiWeb.pareceIntocado(source: [aoVivo], translated: [aoVivo]),
+                  "detecta fala isolada longa sem tradução")
+            // Eco com a pontuação trocada é tão não-traduzido quanto o idêntico.
+            check(GeminiWeb.pareceIntocado(
+                source: en, translated: [en[0].replacingOccurrences(of: ".", with: "!"), en[1] + " "]
+            ), "detecta eco quase idêntico")
             let view = WKWebView()
             view.loadHTMLString("""
                 <div id="response"><p><span>1::Ela</span><span style="display:none"> </span><span>veio ontem.</span></p><p>2::Volto às três.<br>3::Olá!</p></div>
+                <div id="editor" contenteditable="true"><p>linha um</p><p>linha dois</p><p><br></p><p>Items:</p></div>
+                <style>.x{color:red}</style><script>function nada(){return 1}</script>
                 """, baseURL: nil)
             var extracted: String?
             for _ in 0..<50 {
@@ -79,6 +101,28 @@ enum GeminiCheck {
                 if extracted?.isEmpty == false { break }
             }
             check(GeminiWeb.parse(extracted ?? "", expected: 3) == ["Ela veio ontem.", "Volto às três.", "Olá!"], "espaços de spans animados, parágrafos e br")
+            // A conferência do prompt lê pelo MESMO script. Por `innerText`
+            // ela devolvia "" num WebView que não está sendo desenhado — sem
+            // janela, app em segundo plano — e recusava 162 de 162 lotes.
+            let editor = (try? await view.evaluateJavaScript(
+                "(\(GeminiWeb.responseTextScript))(document.querySelector('[contenteditable=\"true\"]'))"
+            )) as? String ?? ""
+            let linhasEditor = editor.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            check(linhasEditor == ["linha um", "linha dois", "Items:"], "lê o editor sem depender de layout")
+            // `textContent` inclui <script>/<style>, `innerText` não: sem
+            // tirá-los o dump de falha da página saía com JavaScript no lugar
+            // do texto que diria o que aconteceu.
+            let comScript = (try? await view.evaluateJavaScript(
+                "(\(GeminiWeb.responseTextScript))(document.body)"
+            )) as? String ?? ""
+            check(!comScript.contains("function") && comScript.contains("linha um"),
+                  "não traz script nem style para o texto")
+            // O editor do site troca aspa reta por curva enquanto se digita:
+            // comparar cru recusava todo lote em inglês, que quase sempre tem
+            // apóstrofo.
+            check(GeminiWeb.semTipografia("39) look at what I\u{2019}ve \u{201C}done\u{201D}\u{2026}")
+                  == "39) look at what I've \"done\"...", "tolera a tipografia do editor")
         }
         record("\(failures) falhas")
         exit(failures == 0 ? 0 : 1)

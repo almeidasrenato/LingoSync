@@ -798,6 +798,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // Verdadeiro se a interface chegou a anunciar que estava
             // esperando a resposta do tradutor.
             nonisolated(unsafe) var viuEspera = false
+            // Quantas legendas havia na tela enquanto o tradutor era
+            // esperado. Ficava em zero: o reconhecimento terminava e a lista
+            // continuava vazia ate o primeiro lote voltar — com a Apple, que
+            // reconhece em meio segundo, e a espera inteira em branco.
+            nonisolated(unsafe) var legendasNaEspera = -1
 
             // Registra cada mudanca de etapa com o tempo, para saber onde o
             // trabalho fica preso em vez de so ver "travou".
@@ -813,7 +818,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     }
                     // A espera pela resposta do tradutor tem de aparecer:
                     // sem isso a barra fica parada e parece travamento.
-                    if passo.waiting { viuEspera = true }
+                    if passo.waiting {
+                        viuEspera = true
+                        if legendasNaEspera < 0 { legendasNaEspera = model.cues.count }
+                    }
                     let atual = passo.kind.rawValue + (passo.waiting ? " (aguardando)" : "")
                     if atual != ultimo {
                         write(String(format: "  [%5.1fs] %@ %@",
@@ -860,12 +868,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             write("legendas: \(model.cues.count)")
             expect(!model.cues.isEmpty, "a geracao produz legendas")
             expect(viuEspera, "a interface anuncia a espera pela resposta do tradutor")
+            expect(legendasNaEspera > 0,
+                   "a fala reconhecida aparece antes da traducao chegar (\(legendasNaEspera) na tela)")
             if model.diarizeSpeakers {
                 let comLocutor = model.cues.filter { $0.speaker != nil }
                 write("locutores: \(Set(comLocutor.compactMap(\.speaker)).sorted().joined(separator: ", "))")
                 expect(!comLocutor.isEmpty,
                        "com locutores ligado, as legendas ganham quem fala (\(comLocutor.count) de \(model.cues.count))")
             }
+            // Fotografa AGORA, antes de o proprio teste exportar qualquer
+            // coisa: `export` grava `savedSRT`, e a conferencia de "gerar nao
+            // grava .srt sozinho" la embaixo passou a ler o que ESTE teste
+            // gravou, nao o que a geracao gravou. Reprovava desde 18/09/2026,
+            // quando a exportacao do original entrou aqui no meio.
+            let gravouSozinho = model.savedSRT
             let originalCheck = FileManager.default.temporaryDirectory
                 .appendingPathComponent("original-gerado-\(UUID().uuidString).srt")
             model.export(to: originalCheck, track: .original)
@@ -938,7 +954,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 to: destinoParaTeste, atomically: true, encoding: .utf8)
             // A janela só grava ao exportar. Antes cada geração deixava um
             // .srt ao lado do vídeo sem ninguém pedir.
-            expect(model.savedSRT == nil, "gerar nao grava .srt sozinho")
+            expect(gravouSozinho == nil, "gerar nao grava .srt sozinho")
             expect(!FileManager.default.fileExists(atPath: srtAoLado.path),
                    "nenhum .srt aparece ao lado do video sem exportar")
 
@@ -1072,9 +1088,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             expect(!vazioDurante, "a lista nunca fica vazia durante a retraducao")
             write("retraducao em \(String(format: "%.1f", model.elapsed))s")
-            expect(model.cues.count == textoAntes.count,
-                   "retraduzir devolve a mesma quantidade de legendas "
-                   + "(\(model.cues.count) de \(textoAntes.count))")
+            // A contagem sai do MESMO rascunho, mas `enforceLineLimit` reparte
+            // pela largura da linha: com tradutor que nao repete, uma traducao
+            // um pouco mais longa vira duas legendas onde antes era uma. Com
+            // deterministico a exigencia continua exata; com os outros, o que
+            // se cobra e que o corte nao desande. Visto em 20/09/2026 no video
+            // de 9 minutos pelo Gemini: 116 contra 117.
+            if model.translationEngine == .apple {
+                expect(model.cues.count == textoAntes.count,
+                       "retraduzir devolve a mesma quantidade de legendas "
+                       + "(\(model.cues.count) de \(textoAntes.count))")
+            } else {
+                let folga = max(1, textoAntes.count / 20)
+                expect(abs(model.cues.count - textoAntes.count) <= folga,
+                       "retraduzir mantem a quantidade de legendas dentro de \(folga) "
+                       + "(\(model.cues.count) de \(textoAntes.count))")
+            }
             // Igualdade estrita so vale para tradutor deterministico. O DeepL
             // e um site e nao repete: medido, uma terceira passada mudou 5 de
             // 20 legendas do mesmo texto. Onde o motor varia, o que se exige e

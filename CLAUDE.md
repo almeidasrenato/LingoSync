@@ -95,6 +95,7 @@ padrão.
 | `TRADUTOR_PAUSA_MINIMA` | liga o corte de trecho por silêncio (gate `srt`) |
 | `TRADUTOR_IDIOMA`, `TRADUTOR_MOSTRA_CUES`, `TRADUTOR_MOSTRA_CRUZAMENTO` | detalhes de saída dos gates |
 | `TRADUTOR_MEASURE_POPOVER` | desenha o painel em `/tmp/painel.png` |
+| `TRADUTOR_GEMINI_DEBUG` | imprime cada leitura de estado do Gemini |
 
 ### Autotestes do app inteiro
 
@@ -283,6 +284,47 @@ ordem em que se usam — quem vai apagar a tela costuma querer guardar antes.
 - **Sem tradução, a fala não sai duas vezes** — nem no arquivo nem na tela: o
   bloco tem `source == translated`, e tanto `CaptureExport` quanto a âncora
   apagada do painel comparam os dois antes de escrever.
+
+### A fala reconhecida entra na lista antes da tradução
+
+Relatado em 20/09/2026: "capturou o áudio com a Apple e não renderizou a
+captura". A captura do autoteste mostra o painel em **"Traduzindo 52%" com a
+lista completamente vazia** — o reconhecimento já tinha acabado.
+
+É a Apple que expõe isso: ela reconhece 109 s de áudio em **0,5 s**, então
+sobram os ~11 s inteiros da tradução sem nada na tela. Com um reconhecedor
+lento (Qwen, Whisper) a barra de progresso disfarça, porque a espera está no
+passo que a barra está mostrando.
+
+A decisão antiga — "só o que já foi traduzido: entregar as legendas ainda em
+branco encheria a lista de linhas vazias" — partia de uma premissa errada:
+**a legenda sem tradução não é branca**, ela tem a fala reconhecida. E a
+janela já sabia mostrá-la: `displayText` cai em `cue.source` quando
+`translated` está vazio, e `displayLines` usa a largura do idioma falado
+nesse caso. `SubtitleFileBuilder.translate` emite o rascunho por `onBatch`
+antes do primeiro lote, cru (a repartição por largura é da tradução, e a
+lista quebra a própria linha).
+
+`retranslate` não muda: a janela não passa `onBatch` ali de propósito — o que
+está na tela não sai enquanto a nova tradução é feita.
+
+O autoteste da janela mede: `a fala reconhecida aparece antes da traducao
+chegar (43 na tela)`, lido no primeiro instante em que a interface anuncia
+estar esperando o tradutor. Ficava em zero.
+
+### Dois defeitos do próprio autoteste da janela
+
+Nenhum dos dois era do app, e os dois reprovavam desde 18/09/2026:
+
+- **`gerar nao grava .srt sozinho`** lia `model.savedSRT` **depois** de o
+  próprio teste ter exportado o original duas verificações antes — `export`
+  grava `savedSRT`. Agora o valor é fotografado logo após a geração.
+- **`retraduzir devolve a mesma quantidade de legendas`** exigia igualdade
+  exata com qualquer tradutor. A contagem sai do mesmo rascunho, mas
+  `enforceLineLimit` reparte pela largura da linha: uma tradução um pouco
+  mais longa vira duas legendas onde era uma. Com o Gemini no vídeo de 9
+  minutos deu 116 contra 117. Exato continua valendo para tradutor
+  determinístico; para os outros, a folga é 5%.
 
 ### A lista de falas, o divisor e as setas
 
@@ -866,16 +908,177 @@ Limites:
 
 ### Gemini: motor de chat travestido de motor de tradução
 
-**Atualização de 17/09/2026:** as operações Quill continuam linha/parágrafo,
-mas são agrupadas numa chamada ao WebKit. O editor é conferido antes de
-enviar; truncamento repete a digitação serial e só envia texto completo.
-`TRADUTOR_GEMINI_INSERCAO_SERIAL=1` permite comparar com o caminho serial.
-O ganho medido foi pequeno (~100 ms de inserção), sem alterar o prompt.
-Parser recusa duplicados/vazios e a detecção de origem sem tradução cobre
-CJK. A leitura usa texto do DOM com quebras de parágrafo, pois `innerText`
-podia colar palavras durante animações. Testes: `--selftest-gemini` (local),
-`--selftest-gemini --online --batch40` (site). Medições e limites em
-`scratchpad/gemini-performance-2026-09-17/README.md`.
+### A conferência do prompt lia por `innerText`, e isso matou o Gemini
+
+Em 17/09/2026 a inserção ganhou uma conferência do editor antes de enviar —
+ideia certa, leitura errada. Ela usava `innerText`, que é texto **renderizado**
+e devolve `""` quando o WKWebView não está sendo desenhado: sem janela, app
+`.accessory` em segundo plano, que é como este app roda. A conferência então
+nunca batia e o motor **recusava todo lote**:
+
+```
+/tmp/tradutor-gemini-erro.txt, 20/09/2026 10:37–10:43 (captura ao vivo)
+  162 falhas · 100% "não consegui enviar (inserir=false, enviar=-)"
+    0 de qualquer outro tipo
+```
+
+Ao vivo, tradução que falha não comita bloco nenhum (`Pipeline
+.translateAndCommit`), então o painel fica só com o original reconhecido — foi
+o que o usuário viu como "as legendas saem no idioma original".
+
+Medido no DOM do site com a resposta pronta, 18 leituras: `textContent`
+devolveu o texto nas 18, `innerText` devolveu `""` nas 18. Descartado por
+medição: tamanho do prompt (6 599 caracteres, 55 linhas, num WKWebView sem
+janela — inserção idêntica ao esperado).
+
+A conferência passou a usar o mesmo `GeminiWeb.responseTextScript` da leitura
+da resposta, e o dump de falha também — metade dos dumps daquele dia saiu
+vazia pelo mesmo motivo, justo os que diriam se foi limite de uso ou anti-robô.
+(`responseTextScript` tira `script` e `style` antes de ler: `textContent` os
+inclui e `innerText` não, e sem isso o dump vinha com 4 KB de JavaScript
+minificado no lugar do texto.)
+
+**E a conferência tinha um segundo defeito, esse só visível em inglês.** Ela
+comparava as strings cruas, e o editor do site normaliza a tipografia
+enquanto o texto entra: aspa reta vira curva. Gerando legenda dos dois vídeos
+ingleses, 20/09/2026:
+
+```
+editor: 39) Then you come here and look at what I’ve
+prompt: 39) Then you come here and look at what I've
+              e mais nada diferente em 53 linhas
+```
+
+Uma linha divergente recusa o lote inteiro. **Quase toda legenda inglesa tem
+apóstrofo**, então todo lote em inglês caía aqui; japonês quase não tem, e
+por isso passava às vezes — o que fazia o defeito parecer intermitente em vez
+de sistemático. `GeminiWeb.semTipografia` dobra aspas curvas, travessão,
+reticências e espaço não-separável antes de comparar.
+
+**`aguardarCampo` achava o campo cedo demais.** O `[contenteditable="true"]`
+existe na casca que o servidor manda, antes de o app Angular hidratar: o campo
+está lá, `execCommand` não reclama, e o texto se perde. Medido em 20/09/2026
+logo depois do Qwen 1.7B, com o dump da página **vazio de texto, só
+`<script>`** — que é a casca. `inserir` passou a tentar até
+`insertDeadline` (12 s) em vez de duas vezes; o campo aceitar escrita é o
+único sinal de prontidão que não depende do DOM do Google.
+
+Junto, quatro consertos no mesmo caminho:
+
+- **`inserirLinha` devolvia `"ok"` sempre.** `execCommand` recusado é
+  indistinguível de escrita boa, e a conferência era a única que enxergava —
+  sem saber dizer "editor vazio" de "leitura indisponível". Agora o retorno do
+  `execCommand` sobe, com o tamanho do campo junto.
+- **O agrupamento das operações Quill numa chamada saiu.** Comprava ~100 ms
+  num ciclo de 3 a 6 s, uma execução por variante, e dobrava o custo do
+  caminho de falha. Voltou a ser linha por linha, com a conferência.
+  `TRADUTOR_GEMINI_INSERCAO_SERIAL` deixou de existir.
+- **Falha seguida agora tem freio.** Cada falha recarregava a página, e ao
+  vivo chega fala nova a cada poucos segundos: 162 cargas da sessão anônima em
+  seis minutos é o que acorda o anti-robô, e o problema passa a se alimentar
+  sozinho. Três falhas seguidas pausam o motor por um minuto
+  (`GeminiWebError.pausedAfterFailures`); um lote que dá certo zera a conta.
+- **O log de erro é acrescentado, não reescrito.** Eram 4 KB de dump por
+  falha, relendo e regravando o arquivo inteiro a cada uma — 352 KB ao custo
+  do quadrado.
+
+**O espaço colado continua sem conserto medido.** Era o que o commit de
+17/09 dizia ter resolvido ao trocar `innerText` por `textContent`, e não
+resolveu — reproduzido em 20/09/2026 pelo `--selftest-gemini --online`, 2 de 6
+linhas do mesmo lote:
+
+```
+彼女は昨日ここに来ました。   → Elaveioaqui ontem.
+私は明日の午後三時に戻ります。 → Euvoltoamanhã às três da tarde.
+```
+
+Não é a função de extração, é ler cedo demais: durante a animação de revelação
+o texto fica **estável sem os espaços**, então `gerando=false` mais três
+leituras iguais a 300 ms se satisfazem dentro do defeito.
+A linha de debug `texto mudou Xms depois de gerando=false` existe para medir
+quanto a revelação dura de verdade — ver "A palavra colada continua aberta"
+acima para o que já foi medido e recusado.
+
+**`GeminiWeb.parse` aceita duplicado idêntico.** Recusar o item repetido com o
+**mesmo** texto derrubava 40 legendas por um parágrafo remontado pelo DOM.
+Texto diferente continua sendo erro, e índice fora da faixa também: um item a
+mais é sinal de que o modelo partiu uma fala e renumerou o resto, e aceitar
+isso daria legenda plausível e deslocada.
+
+**`GeminiWeb.pareceIntocado` tinha três buracos**, todos fechados: exigia
+*maioria* (lote meio traduzido passava calado e saía no idioma falado);
+exigia duas linhas elegíveis, e o lote ao vivo tem uma só — **nunca disparava
+ao vivo**; e comparava as strings cruas, deixando passar o eco com a pontuação
+trocada. Hoje: um terço intocado com pelo menos duas linhas, ou uma única
+linha longa devolvida igual, comparando sem espaço nem pontuação.
+
+Testes: `--selftest-gemini` (22 verificações locais, sem rede),
+`--selftest-gemini --online --batch40` (site), e os cinco vídeos de exemplo
+pelo caminho de verdade (`--selftest-job <video> <orig> pt --tradutor gemini`,
+com `open -n`). Medições de 17/09 em
+`scratchpad/gemini-performance-2026-09-17/README.md`; as de ganho de inserção
+não valem mais, o caminho agrupado saiu.
+
+Os cinco vídeos, 20/09/2026, reconhecimento pelo Qwen3-ASR 1.7B:
+
+```
+                              legendas   tempo   lotes   falhas do Gemini
+en · conversa de pessoas 2         43      28 s     2            0
+en · conversa de pessoas           54      30 s     2            0
+ja · perda de fala                 11      15 s     1            0
+ja · conversa mais complexa        22      18 s     1            0
+ja · conversa de pessoas (9 min)  108      61 s     3            0
+```
+
+Dez lotes, `inseriu=true` nos dez, nenhuma reinserção, nenhuma palavra colada
+nas 306 linhas geradas. Antes do conserto da tipografia os dois vídeos
+ingleses falhavam **sempre**, com `1 lote não foi traduzido — essas legendas
+saíram no idioma original`.
+
+E pela janela de legendas (`--selftest-studio ... --motor apple --tradutor
+gemini`), que é o caminho de "Assistir com legenda":
+
+```
+                              legendas   na tela antes   tempo   falhas
+                                         da traducao
+en · conversa de pessoas 2         43          42         30 s      0
+en · conversa de pessoas           51          47        130 s      1*
+ja · perda de fala                  7           6         18 s      0
+ja · conversa mais complexa        18          18         21 s      0
+ja · conversa de pessoas (9 min)  117         116         42 s      0
+```
+
+Os cinco passaram. `*` um timeout de 90 s numa retradução, recuperado na
+tentativa seguinte — ver abaixo.
+
+**A palavra colada continua aberta.** De vez em quando uma linha volta sem um
+espaço — `Elaveioaqui ontem.`, `Esséomeutrabalho.` Reproduzido em 20/09/2026
+pelo `--selftest-gemini --online`, 1 a 4 linhas de 6, **sempre no lote
+japonês, nunca no inglês do mesmo par**. O DOM da resposta, medido no mesmo
+dia, recorta o texto em `<span class="pending">` em pontos arbitrários, e a
+suspeita é que o corte que cai num espaço perde o espaço.
+
+Três consertos medidos e **recusados**, para ninguém repetir:
+
+```
+innerText → textContent (17/09)     o defeito voltou igual
+esperar 1 s apos gerando=false      voltou em 4 de 6 linhas
+esperar .pending/aria-busy sumirem  nunca somem — 25 s de leitura a cada
+                                    250 ms, com a resposta parada, e igual
+                                    com o WKWebView dentro de uma janela
+                                    visivel. Custava 8 s por lote
+```
+
+Falta capturar o `innerHTML` de uma resposta **com** o defeito (as capturas de
+hoje saíram todas de respostas boas) para ver se o espaço está em CSS ou se
+sumiu mesmo. O comentário em `GeminiWeb` guarda o mesmo registro.
+
+**Timeout de 90 s acontece.** Nos testes da janela de legendas, o vídeo inglês
+maior falhou duas vezes na retradução com três timeouts seguidos
+(`inseriu=true`, `enviou=ok`, resposta nunca chegou). O mesmo vídeo passou em
+outras execuções, e os outros quatro passaram. É a sessão anônima recusando
+serviço, não o app: a falha sobe como erro, com botão de tentar de novo, e a
+pausa por falhas seguidas impede o martelo.
 
 `GeminiWeb.swift`. Mesma família do DeepL (`WKWebView`, `.nonPersistent()`, sem
 API paga, sem conta) mas o site é um chat, não um campo de tradução — não há

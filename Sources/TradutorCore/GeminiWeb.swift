@@ -122,7 +122,16 @@ public enum GeminiWeb {
             guard let corte = aparada.range(of: "::") else { continue }
             guard let numero = Int(aparada[aparada.startIndex..<corte.lowerBound]) else { continue }
             let texto = String(aparada[corte.upperBound...]).trimmingCharacters(in: .whitespaces)
-            guard (1...expected).contains(numero), achadas[numero] == nil, !texto.isEmpty else { return nil }
+            guard (1...expected).contains(numero), !texto.isEmpty else { return nil }
+            if let anterior = achadas[numero] {
+                // O mesmo item repetido com o **mesmo** texto não é
+                // ambiguidade nenhuma — o DOM da resposta é remontado
+                // enquanto ela chega, e derrubar 40 legendas por um parágrafo
+                // repetido é caro à toa. Com texto diferente continua sendo
+                // erro: escolher um dos dois seria legenda plausível e errada.
+                guard anterior == texto else { return nil }
+                continue
+            }
             achadas[numero] = texto
         }
         guard achadas.count == expected else { return nil }
@@ -135,17 +144,49 @@ public enum GeminiWeb {
         return saida
     }
 
-    /// innerText depende da animação dos spans do site e pode omitir espaços.
-    /// Lê o texto completo, preservando as quebras dos parágrafos e de <br>.
+    /// innerText depende da animação dos spans do site e pode omitir espaços,
+    /// e devolve `""` inteiro quando o WKWebView não está sendo desenhado —
+    /// sem janela, app em segundo plano, que é como este app roda. Lê o texto
+    /// completo, preservando as quebras dos parágrafos e de `<br>`.
+    ///
+    /// `script` e `style` saem antes: `textContent` os inclui e `innerText`
+    /// não, e sem tirá-los o dump de falha da página vinha com 4 KB de
+    /// JavaScript minificado no lugar do texto que diria o que aconteceu.
     public static let responseTextScript = """
         (element) => {
           if (!element) return '';
           const copy = element.cloneNode(true);
+          copy.querySelectorAll('script, style, noscript, template').forEach(e => e.remove());
           copy.querySelectorAll('br').forEach(e => e.replaceWith('\\n'));
           copy.querySelectorAll('p, li').forEach(e => e.append('\\n'));
           return copy.textContent || '';
         }
         """
+
+    /// Tira a tipografia que o editor do site aplica sozinho enquanto o texto
+    /// entra.
+    ///
+    /// O Quill do Gemini normaliza a digitação: aspa reta vira curva
+    /// (`I've` → `I’ve`), reticências viram `…`, espaço pode virar
+    /// não-separável. O texto que chega ao modelo é o mesmo, mas comparar as
+    /// strings cruas na conferência do prompt recusava o envio por causa
+    /// disso — e **todo lote em inglês caía aqui**, porque quase toda legenda
+    /// inglesa tem apóstrofo. Medido em 20/09/2026 gerando legenda dos dois
+    /// vídeos ingleses: `39) ... look at what I’ve` contra
+    /// `39) ... look at what I've`, e mais nada diferente em 53 linhas.
+    /// O japonês quase não tem apóstrofo, e por isso passava às vezes — o que
+    /// fazia o defeito parecer intermitente em vez de sistemático.
+    public static func semTipografia(_ texto: String) -> String {
+        var saida = texto
+        for (de, para) in [
+            ("\u{2018}", "'"), ("\u{2019}", "'"), ("\u{201A}", "'"), ("\u{2032}", "'"),
+            ("\u{201C}", "\""), ("\u{201D}", "\""), ("\u{201E}", "\""), ("\u{2033}", "\""),
+            ("\u{2013}", "-"), ("\u{2014}", "-"), ("\u{2026}", "..."), ("\u{00A0}", " ")
+        ] {
+            saida = saida.replacingOccurrences(of: de, with: para)
+        }
+        return saida
+    }
 
     /// A resposta bateu em formato e contagem, mas é a própria origem
     /// devolvida como se fosse tradução?
@@ -161,20 +202,41 @@ public enum GeminiWeb {
     ///
     /// Frase curta (interjeição, nome, "Hmm?") pode legitimamente ficar
     /// igual depois de traduzida — por isso só conta linha com mais de três
-    /// palavras (oito letras em CJK), e só desconfia quando a **maioria**
-    /// de pelo menos duas linhas elegíveis ficou intocada.
+    /// palavras (oito unidades em CJK).
+    ///
+    /// Três buracos que a primeira versão deixava passar, todos fechados aqui:
+    ///
+    /// - **Lote meio traduzido**: exigir a *maioria* intocada deixa passar o
+    ///   bloco em que só parte das falas voltou na origem, e essas saem no
+    ///   `.srt` no idioma falado, sem aviso nenhum. Um terço já é defeito;
+    ///   duas linhas continuam sendo o mínimo, para uma coincidência sozinha
+    ///   não derrubar a geração.
+    /// - **Ao vivo nunca disparava**: o lote ao vivo é uma a três frases, e
+    ///   `pares.count >= 2` quase nunca se formava. Com uma única linha
+    ///   elegível a régua passa a ser o tamanho — frase longa devolvida
+    ///   idêntica não é nome próprio nem interjeição.
+    /// - **Eco quase idêntico**: comparar as strings cruas deixa passar o
+    ///   texto devolvido com a pontuação trocada ou um espaço a mais, que é
+    ///   tão não-traduzido quanto o idêntico. A comparação ignora espaço e
+    ///   pontuação.
     public static func pareceIntocado(source: [String], translated: [String]) -> Bool {
         func achatada(_ texto: String) -> String {
-            texto.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            texto.lowercased().filter { !$0.isWhitespace && !$0.isPunctuation && !$0.isSymbol }
+        }
+        func denso(_ origem: String) -> Bool {
+            origem.contains { $0.isLetter && Tokens.isDense($0) }
+        }
+        func unidades(_ origem: String) -> Int {
+            Tokens.split(origem).filter { $0.contains(where: \.isLetter) }.count
         }
         let pares = zip(source, translated).filter { origem, _ in
-            let dense = origem.contains { $0.isLetter && Tokens.isDense($0) }
-            let units = Tokens.split(origem).filter { $0.contains(where: \.isLetter) }
-            return units.count > (dense ? 8 : 3)
+            unidades(origem) > (denso(origem) ? 8 : 3)
         }
-        guard pares.count >= 2 else { return false }
-        let iguais = pares.filter { origem, traduzido in achatada(origem) == achatada(traduzido) }.count
-        return iguais * 2 > pares.count
+        guard !pares.isEmpty else { return false }
+        let iguais = pares.filter { origem, traduzido in achatada(origem) == achatada(traduzido) }
+        guard !iguais.isEmpty else { return false }
+        guard pares.count == 1 else { return iguais.count >= 2 && iguais.count * 3 >= pares.count }
+        return iguais.contains { origem, _ in unidades(origem) > (denso(origem) ? 16 : 6) }
     }
 }
 
@@ -254,6 +316,9 @@ public enum GeminiWebError: LocalizedError {
     /// Resposta veio no formato certo, mas devolveu a própria origem em vez
     /// de traduzir — ver `GeminiWeb.pareceIntocado`.
     case untranslated(String)
+    /// Falhou seguidas vezes e o motor parou de insistir — ver
+    /// `GeminiDriver.maxFalhasSeguidas`. Segundo valor: segundos que faltam.
+    case pausedAfterFailures(String, Int)
 
     public var errorDescription: String? {
         switch self {
@@ -263,6 +328,8 @@ public enum GeminiWebError: LocalizedError {
             "O Gemini devolveu uma resposta fora do formato esperado (\(bloco)). Log em /tmp/tradutor-gemini-erro.txt."
         case let .untranslated(bloco):
             "O Gemini devolveu o texto sem traduzir (\(bloco)). Pode ser limite de uso do site. Log em /tmp/tradutor-gemini-erro.txt."
+        case let .pausedAfterFailures(bloco, segundos):
+            "O Gemini falhou várias vezes seguidas; o app parou de insistir por \(max(segundos, 1))s (\(bloco)). Log em /tmp/tradutor-gemini-erro.txt."
         }
     }
 }
@@ -283,6 +350,38 @@ final class GeminiDriver {
     /// pronta. A resposta aparece aos poucos (streaming); sem isto, uma
     /// pausa no meio da geração passaria por "terminou".
     private static let stableReads = 3
+    // MARK: - Aberto: a palavra colada
+    //
+    // De vez em quando uma linha volta sem um espaço — `Elaveioaqui ontem.`,
+    // `Esséomeutrabalho.` Reproduzido em 20/09/2026 pelo
+    // `--selftest-gemini --online`, 1 a 4 linhas de 6, sempre no lote
+    // japonês, nunca no inglês do mesmo par de lotes.
+    //
+    // O DOM da resposta, medido no mesmo dia:
+    //
+    //     <div class="markdown ... animate" aria-busy="true"
+    //          style="--animation-duration: 400ms">
+    //       <p class="pending"><span class="pending">1::</span>
+    //                          <span class="pending">Today both of us…</span>…
+    //
+    // O texto é recortado em `<span>` em pontos arbitrários, e a suspeita é
+    // que o corte que cai num espaço perde o espaço.
+    //
+    // **Três consertos medidos e recusados**, para ninguém repetir:
+    //
+    // - Trocar `innerText` por `textContent` (17/09/2026). Era o que o commit
+    //   daquele dia dizia ter resolvido; o defeito voltou igual.
+    // - Esperar por relógio depois de `gerando=false` (`settleAfterDone`,
+    //   1 s). Com ele ligado o defeito apareceu em 4 de 6 linhas.
+    // - Esperar `.pending`/`aria-busy` sumirem. **Eles nunca somem**: 25 s de
+    //   leitura a cada 250 ms, com a resposta completa e parada, `pending`
+    //   continuava — e igual com o WKWebView dentro de uma janela visível,
+    //   então não é a animação estar parada por falta de quadros. Custava
+    //   8 s por lote e não consertava nada.
+    //
+    // O que falta medir: capturar o `innerHTML` de uma resposta **com** o
+    // defeito (as capturas de hoje saíram todas de respostas boas) para ver
+    // se o espaço está em CSS ou se sumiu mesmo.
     /// Onde o log de erro fica — para poder colar de volta quando falhar.
     private static let errorLogPath = "/tmp/tradutor-gemini-erro.txt"
     /// Depois de quantos lotes a conversa é jogada fora e recomeça do zero.
@@ -302,6 +401,18 @@ final class GeminiDriver {
     /// E também por tempo, para a sessão ao vivo — que manda poucos lotes
     /// mas por horas — não passar batido do limite de lotes.
     private static let maxConversationAge: TimeInterval = 600
+    /// Quantas falhas seguidas antes de parar de insistir, e por quanto tempo.
+    ///
+    /// Cada falha derruba `conversationLoaded`, e a tentativa seguinte
+    /// recarrega a página inteira. Ao vivo chega fala nova a cada poucos
+    /// segundos, então uma falha que não se resolve vira martelo: em
+    /// 20/09/2026 foram **162 falhas e outras tantas cargas da sessão anônima
+    /// em seis minutos**, que é justamente o que acorda o desafio anti-robô —
+    /// o problema passa a se alimentar sozinho. Depois de três falhas
+    /// seguidas o motor recusa na hora, sem tocar no site, por um minuto; um
+    /// lote que dá certo zera a contagem.
+    private static let maxFalhasSeguidas = 3
+    private static let cooldown: TimeInterval = 60
 
     private var webView: WKWebView?
     /// Se a conversa já está carregada. Uma vez carregada, os lotes
@@ -312,6 +423,8 @@ final class GeminiDriver {
     private var conversationLoaded = false
     private var lotesNestaConversa = 0
     private var conversaComecouEm: Date?
+    private var falhasSeguidas = 0
+    private var pausadoAte: Date?
     private let log = Logger(subsystem: "app.tradutor", category: "Gemini")
 
     /// Criado fora do main actor — quem chama é um `Translator`, que não é
@@ -327,6 +440,8 @@ final class GeminiDriver {
         conversationLoaded = false
         lotesNestaConversa = 0
         conversaComecouEm = nil
+        falhasSeguidas = 0
+        pausadoAte = nil
     }
 
     /// Se é hora de recomeçar a conversa — ver o comentário de
@@ -373,14 +488,27 @@ final class GeminiDriver {
     /// caracteres enviados, e a mensagem saía cortada no meio de uma regra.
     /// Inserir linha por linha, do jeito que alguém digitando faria, não
     /// truncou nenhuma vez depois disso.
+    /// Devolver `"ok"` sempre escondia a falha: `execCommand` recusado num
+    /// editor que não aceita entrada é indistinguível de escrita bem-sucedida,
+    /// e aí a única coisa que enxergava era a conferência de `inserir` — que
+    /// não sabe dizer "editor vazio" de "leitura indisponível". Agora o
+    /// retorno do `execCommand` sobe, com o tamanho do campo junto.
+    ///
+    /// Linha vazia não passa por `insertText`: com string vazia o comando
+    /// pode recusar legitimamente, e o prompt tem uma linha em branco antes
+    /// de `Items:`.
     private static func inserirLinha(_ linha: String, quebra: Bool) -> String {
-        """
+        let insercao = linha.isEmpty
+            ? "var escreveu = true;"
+            : "var escreveu = document.execCommand('insertText', false, \(DeepLWeb.jsLiteral(linha)));"
+        return """
         (function () {
           var campo = document.querySelector('[contenteditable="true"]');
           if (!campo) return "sem-campo";
           campo.focus();
-          document.execCommand('insertText', false, \(DeepLWeb.jsLiteral(linha)));
-          \(quebra ? "document.execCommand('insertParagraph', false, null);" : "")
+          \(insercao)
+          if (!escreveu) return 'recusado:' + (campo.textContent || '').length;
+          \(quebra ? "if (!document.execCommand('insertParagraph', false, null)) return 'sem-quebra';" : "")
           return "ok";
         })();
         """
@@ -426,10 +554,34 @@ final class GeminiDriver {
         })();
         """
 
+    /// Conta falha seguida e, passado o teto, para de tocar no site por um
+    /// minuto — ver `maxFalhasSeguidas`.
     func translate(
         _ lines: [String], from source: Language, to target: Language, label: String
     ) async throws -> [String] {
-        try await traduzir(lines, from: source, to: target, label: label, recarregou: false)
+        if let pausadoAte, Date() < pausadoAte {
+            throw GeminiWebError.pausedAfterFailures(label, Int(pausadoAte.timeIntervalSinceNow.rounded(.up)))
+        }
+        do {
+            let traduzidas = try await traduzir(
+                lines, from: source, to: target, label: label, recarregou: false
+            )
+            falhasSeguidas = 0
+            pausadoAte = nil
+            return traduzidas
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            falhasSeguidas += 1
+            if falhasSeguidas >= Self.maxFalhasSeguidas {
+                // Solta a página junto: insistir sobre um WKWebView que já
+                // falhou três vezes seguidas é o mesmo caminho de novo.
+                close()
+                pausadoAte = Date().addingTimeInterval(Self.cooldown)
+                log.error("Gemini: \(Self.maxFalhasSeguidas, privacy: .public) falhas seguidas, pausando \(Int(Self.cooldown), privacy: .public)s")
+            }
+            throw error
+        }
     }
 
     /// Uma linha de diagnóstico por leitura seria demais em uso normal — o
@@ -440,34 +592,85 @@ final class GeminiDriver {
         FileHandle.standardError.write(Data("[gemini] \(mensagem())\n".utf8))
     }
 
-    /// As mesmas operações de edição, numa ida ao WebKit. Confere o texto
-    /// após o editor processar os eventos; se truncou, repete linha a linha.
-    /// Nunca envia um prompt parcial, nem depois da segunda tentativa.
+    /// Limpa e digita o prompt linha por linha, conferindo o que ficou no
+    /// editor antes de enviar. Nunca envia um prompt parcial.
+    ///
+    /// **A leitura é a mesma da resposta** (`responseTextScript`), e isso é o
+    /// ponto todo: `innerText` é texto *renderizado* e devolve `""` quando o
+    /// WKWebView não está sendo desenhado — sem janela, app em segundo plano,
+    /// que é exatamente como este app roda. Conferir por `innerText` recusava
+    /// **todo** lote: 162 de 162 em 20/09/2026, seis minutos de captura ao
+    /// vivo sem uma única legenda traduzida, todas com
+    /// `não consegui enviar (inserir=false)`. Medido no DOM do site com a
+    /// resposta pronta: `textContent` devolvia o texto em 18 de 18 leituras,
+    /// `innerText` devolvia `""` nas 18.
+    ///
+    /// Agrupar os `execCommand` numa chamada só (17/09/2026) comprou ~100 ms
+    /// num ciclo de 3 a 6 s, numa execução por variante, e dobrava o custo do
+    /// caminho de falha — agrupado, depois serial, dois `sleep` no meio. Saiu.
+    ///
+    /// **Tenta até `insertDeadline`, não duas vezes.** `aguardarCampo` acha o
+    /// `[contenteditable="true"]` na casca que o servidor manda antes de o
+    /// app Angular hidratar: o campo existe, `execCommand` não reclama, e o
+    /// texto se perde. Medido em 20/09/2026 gerando legenda do vídeo inglês
+    /// depois do Qwen 1.7B — duas falhas seguidas com o dump da página
+    /// **vazio de texto**, só `<script>`, que é a casca. Esperar o campo
+    /// aceitar escrita é o único sinal que não depende do DOM do Google.
+    private static let insertDeadline: TimeInterval = 12
     private func inserir(_ view: WKWebView, texto: String) async throws -> Bool {
         let linhas = texto.components(separatedBy: "\n")
-        let comandos = linhas.enumerated().map {
-            Self.inserirLinha($0.element, quebra: $0.offset < linhas.count - 1)
+        func normalizado(_ value: String) -> [String] {
+            GeminiWeb.semTipografia(value).components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         }
-        let serial = ProcessInfo.processInfo.environment["TRADUTOR_GEMINI_INSERCAO_SERIAL"] != nil
-        for individual in serial ? [true] : [false, true] {
+        let limite = Date().addingTimeInterval(Self.insertDeadline)
+        var tentativa = 0
+        repeat {
+            tentativa += 1
+            if tentativa > 1 { try await Task.sleep(for: .milliseconds(300)) }
             try Task.checkCancellation()
-            guard (try? await view.evaluateJavaScript(Self.limpar)) as? String == "ok" else { return false }
-            for comando in individual ? comandos : [comandos.joined(separator: "\n")] {
-                try Task.checkCancellation()
-                guard (try? await view.evaluateJavaScript(comando)) as? String == "ok" else { return false }
+            let limpou = (try? await view.evaluateJavaScript(Self.limpar)) as? String
+            guard limpou == "ok" else {
+                Self.debug("limpar devolveu \(limpou ?? "nil")")
+                continue
             }
+            var recusou = false
+            for (indice, linha) in linhas.enumerated() {
+                try Task.checkCancellation()
+                let resultado = (try? await view.evaluateJavaScript(
+                    Self.inserirLinha(linha, quebra: indice < linhas.count - 1)
+                )) as? String
+                guard resultado == "ok" else {
+                    Self.debug("linha \(indice) recusada: \(resultado ?? "nil")")
+                    recusou = true
+                    break
+                }
+            }
+            guard !recusou else { continue }
             // Quill/Angular pode atualizar o campo depois de execCommand retornar.
             try await Task.sleep(for: .milliseconds(100))
             let lido = (try? await view.evaluateJavaScript(
-                "document.querySelector('[contenteditable=\"true\"]')?.innerText || ''"
+                "(\(GeminiWeb.responseTextScript))(document.querySelector('[contenteditable=\"true\"]'))"
             )) as? String ?? ""
-            func normalizado(_ value: String) -> [String] {
-                value.components(separatedBy: .newlines)
-                    .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            let noEditor = normalizado(lido), esperado = normalizado(texto)
+            if noEditor == esperado { return true }
+            Self.debug("prompt incompleto (tentativa \(tentativa)): \(lido.count)/\(texto.count), linhas \(noEditor.count)/\(esperado.count)")
+            // Sem a linha que diverge, "incompleto" não diz se faltou texto ou
+            // se o editor trocou um caractere — foi o que custou a rodada de
+            // 20/09/2026.
+            if tentativa == 1 {
+                for i in 0..<max(noEditor.count, esperado.count)
+                where i >= noEditor.count || i >= esperado.count || noEditor[i] != esperado[i] {
+                    Self.debug("""
+                        diverge na linha \(i)
+                          editor: \(i < noEditor.count ? noEditor[i] : "(ausente)")
+                          prompt: \(i < esperado.count ? esperado[i] : "(ausente)")
+                        """)
+                    break
+                }
             }
-            if normalizado(lido) == normalizado(texto) { return true }
-            Self.debug("prompt incompleto: \(lido.count)/\(texto.count), serial=\(individual)")
-        }
+        } while Date() < limite
+        Self.debug("desisti da inserção depois de \(tentativa) tentativas")
         return false
     }
 
@@ -571,6 +774,7 @@ final class GeminiDriver {
         var anterior = ""
         var iguais = 0
         var apareceu = false
+        var terminouEm: Date?
 
         while Date() < limite {
             try await Task.sleep(for: .milliseconds(300))
@@ -590,9 +794,15 @@ final class GeminiDriver {
             if estado.gerando {
                 iguais = 0
                 anterior = estado.ultima
+                terminouEm = nil
                 continue
             }
 
+            let recemTerminou = terminouEm == nil
+            if recemTerminou { terminouEm = Date() }
+            if !recemTerminou, estado.ultima != anterior, let inicio = terminouEm {
+                Self.debug("texto mudou \(Int(Date().timeIntervalSince(inicio) * 1000))ms depois de gerando=false")
+            }
             iguais = estado.ultima == anterior ? iguais + 1 : 0
             anterior = estado.ultima
             guard iguais >= Self.stableReads, !estado.ultima.isEmpty else { continue }
@@ -642,8 +852,16 @@ final class GeminiDriver {
     /// diferencia um do outro, e "não respondeu a tempo" sozinho não diz
     /// qual foi.
     private func registrarFalha(_ view: WKWebView, motivo: String, label: String) async {
+        // Pelo mesmo motivo de `inserir`: `innerText` some quando o WebView
+        // não está sendo desenhado, e metade dos dumps de 20/09/2026 saiu
+        // vazia — justo os que diriam se foi limite de uso ou anti-robô.
+        // Do FIM da página, não do começo: o prompt enviado fica no começo e
+        // come os 4000 caracteres inteiros, enquanto o que interessa — a
+        // resposta que veio, o aviso de limite de uso, o desafio anti-robô —
+        // está no fim. Visto em 20/09/2026 num timeout: o dump não passava
+        // da regra 11 do prompt.
         let pagina = (try? await view.evaluateJavaScript(
-            "(document.body.innerText || '').slice(0, 4000)"
+            "(\(GeminiWeb.responseTextScript))(document.body).slice(-4000)"
         )) as? String ?? "(não consegui ler a página)"
         anexarLog("""
             === \(label) · \(motivo) ===
@@ -655,11 +873,19 @@ final class GeminiDriver {
         log.error("Gemini: \(motivo, privacy: .public) em \(label, privacy: .public); log em \(Self.errorLogPath, privacy: .public)")
     }
 
+    /// Acrescenta no fim. Ler o arquivo inteiro e reescrevê-lo a cada falha
+    /// custa o quadrado do número de falhas, e cada uma carrega 4 KB de dump:
+    /// as 162 de 20/09/2026 reescreveram até 352 KB, uma por vez.
     private func anexarLog(_ bloco: String) {
         let carimbo = ISO8601DateFormatter().string(from: Date())
-        let anterior = (try? String(contentsOfFile: Self.errorLogPath, encoding: .utf8)) ?? ""
-        try? (anterior + "\n\(carimbo) " + bloco + "\n")
-            .write(toFile: Self.errorLogPath, atomically: true, encoding: .utf8)
+        guard let dados = ("\n\(carimbo) " + bloco + "\n").data(using: .utf8) else { return }
+        if let arquivo = FileHandle(forWritingAtPath: Self.errorLogPath) {
+            defer { try? arquivo.close() }
+            _ = try? arquivo.seekToEnd()
+            try? arquivo.write(contentsOf: dados)
+        } else {
+            try? dados.write(to: URL(fileURLWithPath: Self.errorLogPath))
+        }
     }
 
     private struct Estado: Decodable {
