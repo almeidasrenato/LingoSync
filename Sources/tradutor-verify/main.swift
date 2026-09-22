@@ -1367,6 +1367,18 @@ struct Verify {
             translated: "Olá a todos, este é um supermercado e hoje vamos fazer compras aqui dentro dele com calma."
         )
         let partesPont = builder.enforceLineLimit([comPontuacao])
+        expect(partesPont.map(\.source).joined() == comPontuacao.source,
+               "repartir preserva pontuação japonesa sem inserir espaços")
+        for original in [
+            "Are you sure? Yes, really! Wait; please: don't go.",
+            "São quinze? Não, cinquenta! Espere; por favor: não feche.",
+        ] {
+            let partes = builder.enforceLineLimit([
+                Cue(index: 1, start: 0, end: 6, source: original, translated: traducaoComprida),
+            ])
+            expect(partes.count > 1 && partes.map(\.source).joined(separator: " ") == original,
+                   "repartir conserva palavras, pontuação e espaços do original")
+        }
         if partesPont.count > 1 {
             expect(partesPont.allSatisfy { !$0.source.contains("、、") },
                    "a pontuacao japonesa serve de fronteira")

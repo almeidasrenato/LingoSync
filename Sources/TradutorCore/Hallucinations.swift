@@ -64,7 +64,7 @@ public enum Hallucinations {
     }
 
     /// Só candidatos pagam outra transcrição. Sem o idioma instalado, mantém
-    /// o descarte anterior; não instala modelo nem usa rede. Medido em en/ja.
+    /// o descarte anterior; não instala modelo nem usa rede. Medido em en/ja/pt.
     public static func filter(
         _ pieces: [TimedText], samples: [Float], language: Language
     ) async throws -> [TimedText] {
@@ -72,7 +72,7 @@ public enum Hallucinations {
         let suspects = pieces.indices.filter { isIsolatedFiller(pieces[$0].text) }
         guard !suspects.isEmpty else { return pieces }
         var rejected = Set(suspects)
-        guard #available(macOS 26.0, *), language == .english || language == .japanese else {
+        guard #available(macOS 26.0, *), [.english, .japanese, .portuguese].contains(language) else {
             return pieces.enumerated().filter { !rejected.contains($0.offset) }.map(\.element)
         }
         let apple = AppleSpeechTranscriber(language: language)

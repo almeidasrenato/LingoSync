@@ -1060,10 +1060,20 @@ public final class SubtitleFileBuilder {
         let clean = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard count > 1, !clean.isEmpty else { return [clean] }
 
-        let boundaries = CharacterSet(charactersIn: " 、。，,;；:：!！?？")
-        let pieces = clean
-            .components(separatedBy: boundaries)
-            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        let boundaries = " 、。，,;；:：!！?？"
+        // A fronteira pertence ao texto: descartar o separador apagava
+        // vírgulas/perguntas e a junção com espaço alterava o japonês.
+        var pieces: [String] = []
+        var current = ""
+        for character in clean {
+            if let previous = current.last,
+               boundaries.contains(previous), !boundaries.contains(character) {
+                pieces.append(current)
+                current = ""
+            }
+            current.append(character)
+        }
+        if !current.isEmpty { pieces.append(current) }
 
         guard pieces.count >= count else {
             // Sem onde cortar sem mutilar palavra: original só na primeira.
@@ -1074,11 +1084,9 @@ public final class SubtitleFileBuilder {
         var result = [String](repeating: "", count: count)
         for (index, piece) in pieces.enumerated() {
             let slot = min(index * count / pieces.count, count - 1)
-            result[slot] = result[slot].isEmpty
-                ? piece
-                : result[slot] + " " + piece
+            result[slot] += piece
         }
-        return result
+        return result.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
 
     /// Reparte o texto em `count` pedaços de tamanho parecido, cortando em

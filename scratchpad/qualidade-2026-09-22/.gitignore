@@ -1,0 +1,4 @@
+audio/*.f32
+audio/*.audio.json
+results/
+__pycache__/

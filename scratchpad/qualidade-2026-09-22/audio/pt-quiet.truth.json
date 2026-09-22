@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Bom dia! A reunião começa às nove horas.",
+    "start": 0.5,
+    "end": 3.714,
+    "voice": "Luciana"
+  },
+  {
+    "text": "Você enviou o relatório?",
+    "start": 4.164,
+    "end": 5.9329375,
+    "voice": "Rocko (Português (Brasil))"
+  },
+  {
+    "text": "Ainda não. Vou enviar amanhã, depois do almoço.",
+    "start": 6.0829375,
+    "end": 9.675375,
+    "voice": "Luciana"
+  },
+  {
+    "text": "Não são quinze caixas, são cinquenta.",
+    "start": 10.175375,
+    "end": 13.2149375,
+    "voice": "Rocko (Português (Brasil))"
+  },
+  {
+    "text": "Certo.",
+    "start": 13.4649375,
+    "end": 14.1641875,
+    "voice": "Luciana"
+  },
+  {
+    "text": "O pagamento foi de cento e vinte e três reais e cinquenta centavos.",
+    "start": 14.2841875,
+    "end": 18.65825,
+    "voice": "Rocko (Português (Brasil))"
+  },
+  {
+    "text": "Por favor, não feche a janela!",
+    "start": 19.05825,
+    "end": 21.4231875,
+    "voice": "Luciana"
+  },
+  {
+    "text": "Entendi. Obrigado por avisar.",
+    "start": 21.6731875,
+    "end": 24.0546875,
+    "voice": "Rocko (Português (Brasil))"
+  },
+  {
+    "text": "Se chover amanhã, vamos adiar a viagem para sexta-feira.",
+    "start": 24.5546875,
+    "end": 28.921375,
+    "voice": "Luciana"
+  },
+  {
+    "text": "Combinado. Até logo!",
+    "start": 29.221375,
+    "end": 31.2035,
+    "voice": "Rocko (Português (Brasil))"
+  }
+]

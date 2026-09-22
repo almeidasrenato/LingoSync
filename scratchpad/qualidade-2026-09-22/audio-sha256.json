@@ -1,0 +1,20 @@
+{
+  "en-conversa.prepared.f32": "b6346da3338008cbad7544c8acfb8530d44066526c7d222dfc35f452aca008a3",
+  "pt-quiet.prepared.f32": "f84fbf2f3bd48065dd9e091f17ab9ff2e275068e1d3f5fc3504f04e862cfa48f",
+  "ja-longo.prepared.f32": "8cf1d23e2e69305ecda2c156b54f02549dee8b39aa0b3d672d2cfa45d6bf142a",
+  "pt-quiet.raw.f32": "84420d5a0a9f609a3c215439eed62ded2a1e8ec438cbffb3205b01e5da341b13",
+  "en-conversa.raw.f32": "192b95473cedcc1bdca9cd87d8c2b25a3becfd9502c8feecf45d374cd9843d72",
+  "ja-musica.raw.f32": "25d43c16a4c6455a1a8b06749eafbec10c2eab3c61b1c80ee1b2c1ceaec52d59",
+  "pt-thanks-rocko.prepared.f32": "26732f6e0cda0b0da49e7862772c10fb652a5f9196d657292f6e01d41e5e669d",
+  "ja-dificil.prepared.f32": "a2135aa62d4f84bb717bfb701850f197145788c406c9d5e1cf78f805f4c3df0b",
+  "en-dialogo.prepared.f32": "aba3868f306cab779989ef2e924e70fbd466ff852c67d01fd3c697508de02c85",
+  "ja-dificil.raw.f32": "6bedd1be22cd97b931c04535a1aa956e5697fc75d8f927788ddc190a2284688c",
+  "pt-thanks.prepared.f32": "bdf0cf922b818b1072f28a428c271a25a107851b1706bcb8f7167d2f9874dcb7",
+  "en-dialogo.raw.f32": "e5bbb4768b2715147be134791f13263d2728cd99c132600b9402f473426886fc",
+  "pt-clean.prepared.f32": "a2d8a173fc377ce18222a16307849e1379aa7d8e2e2f09df4133fcabd2a8a48a",
+  "pt-clean.raw.f32": "7e94f5ff389724b03e354d86d472456805dddb2128992c05e2a68ba892eb6834",
+  "pt-thanks-rocko.raw.f32": "26732f6e0cda0b0da49e7862772c10fb652a5f9196d657292f6e01d41e5e669d",
+  "ja-longo.raw.f32": "0fd0ffc390362bd59f7f2060d2fe996453fe3107372ec78121226f4710ba56b4",
+  "ja-musica.prepared.f32": "ed237b25eb332535f7c3a715f84c3feb0afea37b39c042c46c817602c474740e",
+  "pt-thanks.raw.f32": "bdf0cf922b818b1072f28a428c271a25a107851b1706bcb8f7167d2f9874dcb7"
+}

@@ -1275,10 +1275,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             // Regerar tem que limpar o que estava la.
             model.generate()
-            try? await Task.sleep(for: .milliseconds(400))
+            // Conferir antes de ceder o executor: a Apple pode reconhecer
+            // tudo em menos de 400 ms e já publicar o NOVO original.
             expect(model.cues.isEmpty, "regerar limpa as legendas antigas")
             expect(model.activeIndex == nil, "regerar limpa a legenda marcada")
             expect(model.isWorking, "regerar entra em trabalho")
+            try? await Task.sleep(for: .milliseconds(400))
 
             // E cancelar tem que parar de verdade.
             model.cancelGeneration()

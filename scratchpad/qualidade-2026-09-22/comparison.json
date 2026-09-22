@@ -1,0 +1,9 @@
+{
+  "frozen_replays": 27,
+  "source_punctuation_lost_before": 30,
+  "source_punctuation_lost_after": 0,
+  "positive_capture_tests_before": 0,
+  "positive_capture_tests_after": 6,
+  "negative_controls_rejected": 4,
+  "timing_and_displayed_translation_unchanged": true
+}

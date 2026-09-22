@@ -1,0 +1,22 @@
+[
+  {
+    "sample": "pt",
+    "engine": "apple",
+    "passed": true
+  },
+  {
+    "sample": "pt",
+    "engine": "whisper",
+    "passed": true
+  },
+  {
+    "sample": "pt",
+    "engine": "qwenLarge",
+    "passed": true
+  },
+  {
+    "sample": "ja",
+    "engine": "qwenLarge",
+    "passed": true
+  }
+]
