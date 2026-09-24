@@ -73,7 +73,11 @@ final class SubtitleStudioModel {
     private var translatedLanguage: Language?
     // As faixas importadas mantêm seus blocos; só a exibição combina os tempos.
     private var importedTranslation: [Cue]?
-    private var originalWasImported = false
+    /// O original tem tempos e blocos que não se mexem: veio de um `.srt`
+    /// importado ou da leitura da imagem. Traduzir não o reparte, e exportá-lo
+    /// não passa por `enforceLineLimit` — sem isso a legenda lida da imagem
+    /// perdia o instante em que aparece e some.
+    private var keepsOriginalTiming = false
 
     var originalCues: [Cue] { builder?.draft ?? [] }
     var translatedCues: [Cue] { importedTranslation ?? cues.filter { !$0.translated.isEmpty } }
@@ -104,8 +108,65 @@ final class SubtitleStudioModel {
     private(set) var jobStartedAt: Date?
     private(set) var elapsed: TimeInterval = 0
 
+    /// De onde vem o texto da legenda.
+    enum TextSource: String, CaseIterable, Identifiable {
+        /// Reconhece o que é falado no áudio.
+        case speech
+        /// Lê a legenda que já está desenhada no vídeo.
+        case image
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .speech: "Fala"
+            case .image: "Imagem"
+            }
+        }
+    }
+
+    /// Começa em fala, que é o que a janela sempre fez.
+    var textSource: TextSource = .speech
+
     var sourceLanguage: Language = .japanese
     var targetLanguage: Language = .portuguese
+
+    /// O idioma do texto desenhado no vídeo, que não é o falado.
+    ///
+    /// Próprio deste modo, e guardado à parte: no vídeo de exemplo a fala é
+    /// japonesa e a legenda inglesa, e herdar o idioma falado dava a dica
+    /// errada ao leitor — medido, 249 de 386 leituras mudavam, com erro de
+    /// verdade (`Yes, lam!`).
+    var imageLanguage: Language {
+        didSet { preferences?.set(imageLanguage.rawValue, forKey: Self.imageLanguageKey) }
+    }
+    private static let imageLanguageKey = "idiomaDoTextoNaImagem"
+
+    /// Onde ler a legenda desenhada, normalizada ao quadro com origem em cima
+    /// à esquerda. `nil` é a faixa de baixo, com o filtro de centro.
+    ///
+    /// Do vídeo aberto, não preferência: cada vídeo põe a legenda num lugar, e
+    /// uma área herdada leria o lugar errado do próximo sem ninguém perceber.
+    var imageArea: CGRect?
+    /// O vídeo está esperando o arrasto que desenha `imageArea`.
+    var drawsImageArea = false {
+        didSet {
+            // Desenhar é sobre um quadro parado: a legenda que se quer cercar
+            // não pode sumir no meio do arrasto.
+            if drawsImageArea, isPlaying { togglePlay() }
+        }
+    }
+
+    /// Onde a janela guarda o que é preferência de quem usa. `nil` no
+    /// autoteste: teste nunca escreve em dado do usuário.
+    private let preferences: UserDefaults?
+
+    init(preferences: UserDefaults? = .standard) {
+        self.preferences = preferences
+        imageLanguage = preferences?.string(forKey: Self.imageLanguageKey)
+            .flatMap(Language.init(rawValue:)) ?? .english
+    }
+
     /// Começa com o do menu; trocar aqui vale só para esta janela.
     var recognitionEngine: RecognitionEngine = .preferred
     /// Quem traduz. Também começa com o do menu e vale só para esta janela.
@@ -272,7 +333,7 @@ final class SubtitleStudioModel {
                     speaker: cue.speaker
                 )
             }
-            if track == .original, !originalWasImported {
+            if track == .original, !keepsOriginalTiming {
                 // O rascunho ainda contém frases longas; exportar o original
                 // também precisa do limite de duas linhas. SRT importado
                 // conserva seus próprios tempos e blocos.
@@ -299,12 +360,14 @@ final class SubtitleStudioModel {
     func open(_ url: URL) {
         stop()
         videoURL = url
+        imageArea = nil
+        drawsImageArea = false
         cues = []
         activeIndex = nil
         savedSRT = nil
         loadedFromFile = false
         importedTranslation = nil
-        originalWasImported = false
+        keepsOriginalTiming = false
         originalLanguage = nil
         translatedLanguage = nil
         origin = nil
@@ -640,7 +703,7 @@ final class SubtitleStudioModel {
         savedSRT = nil
         loadedFromFile = false
         importedTranslation = nil
-        originalWasImported = false
+        keepsOriginalTiming = false
         originalLanguage = nil
         translatedLanguage = nil
         origin = nil
@@ -657,6 +720,14 @@ final class SubtitleStudioModel {
 
         builder?.finish()
         builder = nil
+        if textSource == .image {
+            // A tradução fica para o clique, como no original importado.
+            originalLanguage = imageLanguage
+            translatedLanguage = nil
+            update(.readingImage, 0, "carregando o leitor", true)
+            job = Task { await runImageReading(url) }
+            return
+        }
         originalLanguage = sourceLanguage
         translatedLanguage = translationEngine.destination(from: sourceLanguage, to: targetLanguage)
         update(.extracting)
@@ -698,7 +769,7 @@ final class SubtitleStudioModel {
                     progress: { [weak self] step, fraction, detail, waiting in
                         Task { @MainActor in self?.advance(step, fraction, detail, waiting) }
                     },
-                    preserveCueTiming: self.originalWasImported
+                    preserveCueTiming: self.keepsOriginalTiming
                 )
                 guard !Task.isCancelled else { return }
                 self.importedTranslation = nil
@@ -772,12 +843,14 @@ final class SubtitleStudioModel {
                 }
                 builder?.finish()
                 builder = SubtitleFileBuilder(draft: original)
-                originalLanguage = sourceLanguage
-                originalWasImported = true
+                // O idioma do arquivo, não o do seletor de fala: esse nasce em
+                // inglês, e o `.srt` japonês ia ao tradutor como inglês.
+                originalLanguage = Language.detect(in: original.map(\.source)) ?? sourceLanguage
+                keepsOriginalTiming = true
             } else {
                 builder?.finish()
                 importedTranslation = parsed
-                translatedLanguage = targetLanguage
+                translatedLanguage = Language.detect(in: parsed.map(\.translated)) ?? targetLanguage
             }
             cues = Self.combineTracks(original: originalCues, translation: translatedCues)
             savedSRT = url
@@ -849,6 +922,34 @@ final class SubtitleStudioModel {
         let next = order.firstIndex(of: kind) ?? 0
         guard next > current || (next == current && within >= step.withinStep) else { return }
         update(kind, within, detail, waiting)
+    }
+
+    /// Lê a legenda desenhada no vídeo e a deixa como original de tempos
+    /// fixos.
+    ///
+    /// Não toca em áudio nem em modelo de fala: é outra fonte, não um desvio
+    /// da geração. E não traduz sozinha — importar original também não
+    /// traduz (18/09/2026); traduzir é o botão, com `keepsOriginalTiming`.
+    private func runImageReading(_ url: URL) async {
+        guard !Task.isCancelled else { return }
+        let language = imageLanguage
+        do {
+            notice = nil
+            let reading = try await BurnedSubtitle.read(from: url, language: language, area: imageArea) { [weak self] fraction, detail, waiting in
+                Task { @MainActor in self?.advance(.readingImage, fraction, detail, waiting) }
+            }
+            guard !Task.isCancelled else { return }
+            builder?.finish()
+            builder = SubtitleFileBuilder(draft: reading.cues, recognitionName: BurnedSubtitle.engineName)
+            keepsOriginalTiming = true
+            cues = reading.cues
+            origin = Origin(recognition: BurnedSubtitle.engineName, translation: "")
+            activeIndex = index(at: currentTime)
+            finishJob(.done)
+        } catch {
+            guard !Task.isCancelled else { return }
+            finishJob(.failed(error.localizedDescription))
+        }
     }
 
     private func runGeneration(_ url: URL) async {

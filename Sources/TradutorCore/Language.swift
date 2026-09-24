@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 /// Idiomas que o app oferece, com o que cada motor precisa saber sobre eles.
 public enum Language: String, CaseIterable, Identifiable, Sendable, Codable {
@@ -57,5 +58,29 @@ public enum Language: String, CaseIterable, Identifiable, Sendable, Codable {
              .vietnamese, .thai:
             false
         }
+    }
+}
+
+extension Language {
+    /// O idioma de um texto que já existe — uma legenda importada.
+    ///
+    /// Era o seletor de fala, que nasce em inglês e não é gravado: um `.srt`
+    /// japonês importado como original ia ao tradutor "from English" (visto
+    /// no registro do Gemini de 22/09/2026) e seria exportado como `.en.srt`.
+    /// Aqui o texto está inteiro na mão, e o detector do sistema acerta:
+    /// medido, 1,000 no japonês, 0,999 a 1,000 nos três `.pt.srt` de exemplo,
+    /// 0,994 no inglês.
+    ///
+    /// - Returns: `nil` abaixo de 0,8 de certeza — uma legenda de uma palavra
+    ///   só ("OK" deu 0,29) — ou fora dos idiomas do app; quem chama fica
+    ///   com o seletor.
+    public static func detect(in texts: [String]) -> Language? {
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(texts.joined(separator: "\n"))
+        guard let (found, certainty) = recognizer.languageHypotheses(withMaximum: 1).first,
+              certainty >= 0.8
+        else { return nil }
+        let code = Locale.Language(identifier: found.rawValue).languageCode
+        return allCases.first { Locale.Language(identifier: $0.rawValue).languageCode == code }
     }
 }

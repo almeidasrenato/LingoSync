@@ -163,6 +163,24 @@ public enum GeminiWeb {
         }
         """
 
+    /// Marca o documento que está na tela antes de carregar a página de
+    /// novo.
+    ///
+    /// Depois de `load`, a página velha continua de pé até a nova assumir, e
+    /// o que se lê nesse meio-tempo é dela: o campo de texto existe, e a
+    /// contagem de respostas é a da conversa velha. O app esperava a conversa
+    /// nova passar desse número, o que nunca acontece — tempo esgotado com a
+    /// resposta completa na tela. Reproduzido em 22/09/2026 com um `.srt` de
+    /// 640 falas: 15 lotes certos, a renovação da conversa no 16º leu
+    /// `antes=15` na página velha, e a tradução inteira caiu (0 de 640). O
+    /// mesmo buraco pegava toda nova tentativa depois de uma falha — era o
+    /// "não respondeu a tempo" dos registros daquele dia.
+    public static let markStaleScript = "window.__tradutorPaginaVelha = true; 'ok'"
+
+    /// O campo de texto de uma página que não é a marcada.
+    public static let freshFieldScript =
+        "!window.__tradutorPaginaVelha && !!document.querySelector('[contenteditable=\"true\"]')"
+
     /// Tira a tipografia que o editor do site aplica sozinho enquanto o texto
     /// entra.
     ///
@@ -693,6 +711,9 @@ final class GeminiDriver {
             guard let url = URL(string: "https://gemini.google.com/app?hl=pt-BR") else {
                 throw GeminiWebError.timedOut(label)
             }
+            // O campo e a contagem de respostas têm de ser os da página nova —
+            // ver `markStaleScript`.
+            _ = try? await view.evaluateJavaScript(GeminiWeb.markStaleScript)
             view.load(URLRequest(url: url))
             let achouCampo = try await aguardarCampo(view, prazo: 15)
             Self.debug("achouCampo=\(achouCampo)")
@@ -812,14 +833,12 @@ final class GeminiDriver {
         throw GeminiWebError.timedOut(label)
     }
 
-    /// Espera o campo de entrada existir, depois da carga da página.
+    /// Espera o campo de entrada da página **nova** existir, depois da carga.
     private func aguardarCampo(_ view: WKWebView, prazo: TimeInterval) async throws -> Bool {
         let limite = Date().addingTimeInterval(prazo)
         while Date() < limite {
             try Task.checkCancellation()
-            let achou = (try? await view.evaluateJavaScript(
-                "!!document.querySelector('[contenteditable=\"true\"]')"
-            )) as? Bool
+            let achou = (try? await view.evaluateJavaScript(GeminiWeb.freshFieldScript)) as? Bool
             if achou == true { return true }
             try await Task.sleep(for: .milliseconds(200))
         }

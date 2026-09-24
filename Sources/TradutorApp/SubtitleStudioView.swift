@@ -151,11 +151,44 @@ struct SubtitleStudioView: View {
                 }
                 .accessibilityValue(showsGenerationOptions ? "Expandidas" : "Recolhidas")
                 .help("Idiomas, modelos e tradução. Clique para expandir ou recolher.")
+                // A fonte do texto à vista, não dentro de "Opções": o cabeçalho
+                // abre recolhido, e escolha escondida ninguém acha — a lição dos
+                // controles de locutor.
+                Picker("Fonte do texto", selection: $model.textSource) {
+                    ForEach(SubtitleStudioModel.TextSource.allCases) { Text($0.displayName).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .disabled(isWorking)
+                .help("De onde vem o texto: da fala, reconhecendo o áudio, ou da imagem, "
+                      + "lendo a legenda que já está desenhada no vídeo")
+                if readsImage, model.player != nil {
+                    Button { model.drawsImageArea.toggle() } label: {
+                        Label("Área", systemImage: model.imageArea == nil ? "rectangle.dashed" : "rectangle.inset.filled")
+                    }
+                    .disabled(isWorking)
+                    // Esc desliga o desenho pelo próprio botão: o vídeo não
+                    // tem foco de teclado para receber a tecla.
+                    .keyboardShortcut(model.drawsImageArea ? KeyboardShortcut.cancelAction : nil)
+                    .help(model.drawsImageArea
+                          ? "Arraste sobre o vídeo em volta da legenda. Esc cancela."
+                          : "Desenhar onde a legenda aparece. Sem área, lê a faixa de baixo do vídeo.")
+                    if model.imageArea != nil {
+                        Button { model.imageArea = nil } label: {
+                            Image(systemName: "arrow.uturn.backward")
+                        }
+                        .disabled(isWorking)
+                        .accessibilityLabel("Área padrão")
+                        .help("Voltar à área padrão: a faixa de baixo do vídeo")
+                    }
+                }
                 Button {
                     showsGenerationOptions = false
                     model.generate()
                 } label: {
-                    Label("Gerar legenda", systemImage: "text.badge.plus")
+                    Label(readsImage ? "Ler legenda" : "Gerar legenda",
+                          systemImage: readsImage ? "text.viewfinder" : "text.badge.plus")
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
@@ -171,14 +204,23 @@ struct SubtitleStudioView: View {
             if showsGenerationOptions {
                 Divider()
                 HStack(alignment: .bottom, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        toolbarCaption("Reconhecimento")
-                        EnginePicker(selection: $model.recognitionEngine)
-                    }
-                    VStack(alignment: .leading, spacing: 5) {
-                        toolbarCaption("Idioma original")
-                        SourceLanguagePicker(selection: $model.sourceLanguage,
-                                             engine: model.recognitionEngine, width: 108)
+                    if readsImage {
+                        // O idioma do texto na tela, que não é o falado — e a
+                        // lista é a do leitor de texto, não a do reconhecimento.
+                        VStack(alignment: .leading, spacing: 5) {
+                            toolbarCaption("Idioma do texto")
+                            ImageLanguagePicker(selection: $model.imageLanguage, width: 108)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 5) {
+                            toolbarCaption("Reconhecimento")
+                            EnginePicker(selection: $model.recognitionEngine)
+                        }
+                        VStack(alignment: .leading, spacing: 5) {
+                            toolbarCaption("Idioma original")
+                            SourceLanguagePicker(selection: $model.sourceLanguage,
+                                                 engine: model.recognitionEngine, width: 108)
+                        }
                     }
                     Image(systemName: "arrow.right")
                         .font(.system(size: 10, weight: .medium))
@@ -197,7 +239,7 @@ struct SubtitleStudioView: View {
                         toolbarCaption("Tradução")
                         TranslationEnginePicker(selection: $model.translationEngine)
                     }
-                    if model.recognitionEngine.supportsDiarization {
+                    if !readsImage, model.recognitionEngine.supportsDiarization {
                         Menu {
                             Toggle("Identificar quem fala", isOn: $model.diarizeSpeakers)
                             Picker("Modelo de vozes", selection: $model.speakerModel) {
@@ -214,7 +256,7 @@ struct SubtitleStudioView: View {
                         .help("Identificação, modelo e cores dos locutores")
                     }
                     Spacer(minLength: 8)
-                    if model.duration > 0, !isWorking {
+                    if model.duration > 0, !isWorking, !readsImage {
                         Label(TranslatorFactory.estimate(forVideoOf: model.duration, using: model.translationEngine),
                               systemImage: "clock")
                             .font(.system(size: 11))
@@ -227,7 +269,9 @@ struct SubtitleStudioView: View {
                         Label("Traduzir", systemImage: "character.bubble")
                     }
                     .disabled(!model.canRetranslate)
-                    .help("Traduz o original com o tradutor escolhido, sem reconhecer o áudio novamente")
+                    .help(readsImage
+                          ? "Traduz o texto lido da imagem, sem ler o vídeo de novo e sem mudar os tempos"
+                          : "Traduz o original com o tradutor escolhido, sem reconhecer o áudio novamente")
                 }
                 .disabled(isWorking)
                 .fixedSize(horizontal: false, vertical: true)
@@ -264,13 +308,16 @@ struct SubtitleStudioView: View {
             // dos seletores: trocar o seletor não muda a legenda que já saiu,
             // e o Parakeet vira Whisper em idioma que ele não cobre.
             if let origem = model.origin {
-                Text("\(origem.recognition) → \(origem.translation)")
+                // Lido da imagem e ainda sem tradução, não há seta para nada.
+                Text(origem.translation.isEmpty
+                     ? origem.recognition : "\(origem.recognition) → \(origem.translation)")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .help("Reconhecido por \(origem.recognition), "
-                          + "traduzido por \(origem.translation)")
+                    .help((origem.recognition == BurnedSubtitle.engineName
+                           ? "Lido da imagem" : "Reconhecido por \(origem.recognition)")
+                          + (origem.translation.isEmpty ? "" : ", traduzido por \(origem.translation)"))
             }
             Spacer()
             if model.isPartial {
@@ -440,8 +487,8 @@ struct SubtitleStudioView: View {
                     .controlSize(.small)
                     .disabled(!model.canGenerate)
                     .help(model.canRetranslate
-                          ? "Refaz só a tradução, sem reconhecer o áudio de novo"
-                          : "Gera a legenda de novo")
+                          ? "Refaz só a tradução, sem reconhecer o áudio nem ler o vídeo de novo"
+                          : (readsImage ? "Lê a legenda de novo" : "Gera a legenda de novo"))
             }
             .padding(.vertical, 7)
             .padding(.horizontal, 9)
@@ -458,14 +505,15 @@ struct SubtitleStudioView: View {
             case .empty:
                 Text("Escolha um vídeo para começar.")
             case .ready:
-                Text("Vídeo carregado. Clique em Gerar legenda.")
+                Text(readsImage ? "Vídeo carregado. Clique em Ler legenda."
+                                : "Vídeo carregado. Clique em Gerar legenda.")
             case .working:
                 EmptyView()          // o painel de progresso cuida disso
             case .failed:
                 // A faixa acima da lista já diz o que houve, e traz o botão.
                 EmptyView()
             case .cancelled:
-                Text("Geração cancelada.")
+                Text(readsImage ? "Leitura cancelada." : "Geração cancelada.")
             case .done:
                 Text("Nenhuma legenda gerada.")
             }
@@ -546,14 +594,16 @@ struct SubtitleStudioView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
-                    .help(step.waiting
+                    .help(step.kind == .readingImage
+                          ? "Na primeira vez o sistema prepara o leitor de texto, e isso leva alguns segundos"
+                          : step.waiting
                           ? "O tradutor do sistema responde o lote inteiro de uma vez, sem passos no meio"
                           : step.detail)
                 }
 
                 // Os quatro passos em miniatura: dizem onde o trabalho está
-                // sem precisar ler nada.
-                HStack(spacing: 3) {
+                // sem precisar ler nada. A leitura da imagem é passo único.
+                if step.kind != .readingImage { HStack(spacing: 3) {
                     ForEach(Self.stepOrder, id: \.self) { kind in
                         Capsule()
                             .fill(
@@ -564,7 +614,7 @@ struct SubtitleStudioView: View {
                             )
                             .frame(height: 3)
                     }
-                }
+                } }
 
                 HStack {
                     Text(Self.clock(model.elapsed))
@@ -593,8 +643,9 @@ struct SubtitleStudioView: View {
         }
     }
 
-    /// Sem "Gravando o arquivo": a janela não grava, só exporta.
-    private static let stepOrder = GenerationStep.allCases.filter { $0 != .saving }
+    /// Sem "Gravando o arquivo": a janela não grava, só exporta. E sem a
+    /// leitura da imagem, que não é passo da geração pela fala.
+    private static let stepOrder = GenerationStep.allCases.filter { $0 != .saving && $0 != .readingImage }
 
     private static func clock(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds))
@@ -800,6 +851,7 @@ struct SubtitleStudioView: View {
             if let player = model.player {
                 PlayerSurface(player: player)
                     .onTapGesture { model.togglePlay() }
+                if readsImage { ImageAreaOverlay(model: model, player: player) }
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(.black.opacity(0.85))
@@ -894,6 +946,8 @@ struct SubtitleStudioView: View {
 
     private var isWorking: Bool { model.isWorking }
 
+    private var readsImage: Bool { model.textSource == .image }
+
     private func loadSRT() {
         let panel = NSOpenPanel()
         panel.title = "Abrir legenda"
@@ -966,5 +1020,84 @@ struct SubtitleStudioView: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         model.open(url)
+    }
+}
+
+/// A área onde a legenda desenhada é lida, sobre o vídeo, e o arrasto que a
+/// desenha.
+///
+/// O retângulo é o do **quadro**, não o da view: o player mostra em
+/// `.resizeAspect`, com tarja preta em volta, e a área é normalizada ao
+/// quadro — senão a mesma área leria lugares diferentes conforme a janela.
+private struct ImageAreaOverlay: View {
+    @Bindable var model: SubtitleStudioModel
+    let player: AVPlayer
+    @State private var dragging: CGRect?
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = player.currentItem?.presentationSize ?? .zero
+            let bounds = CGRect(origin: .zero, size: geometry.size)
+            let video = size.width > 0 && size.height > 0
+                ? AVMakeRect(aspectRatio: size, insideRect: bounds) : bounds
+            ZStack(alignment: .topLeading) {
+                if model.drawsImageArea {
+                    Color.black.opacity(0.25)
+                    // A faixa padrão, apagada, para quem desenha ver o que
+                    // estaria trocando.
+                    frame(BurnedSubtitle.defaultArea, in: video)
+                        .stroke(.white.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+                }
+                if let area = dragging ?? model.imageArea.map({ denormalized($0, in: video) }) {
+                    Rectangle()
+                        .path(in: area)
+                        .stroke(.yellow, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                }
+            }
+            .contentShape(Rectangle())
+            .allowsHitTesting(model.drawsImageArea)
+            .gesture(
+                // `startLocation` e `location`, não o deslocamento somado —
+                // a armadilha do divisor.
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        dragging = CGRect(p1: clamp(value.startLocation, to: video),
+                                          p2: clamp(value.location, to: video))
+                    }
+                    .onEnded { value in
+                        let drawn = CGRect(p1: clamp(value.startLocation, to: video),
+                                           p2: clamp(value.location, to: video))
+                        dragging = nil
+                        model.drawsImageArea = false
+                        // Clique sem arrasto não apaga a área que já havia.
+                        guard drawn.width >= video.width * 0.02, drawn.height >= video.height * 0.02 else { return }
+                        model.imageArea = CGRect(
+                            x: (drawn.minX - video.minX) / video.width,
+                            y: (drawn.minY - video.minY) / video.height,
+                            width: drawn.width / video.width,
+                            height: drawn.height / video.height)
+                    }
+            )
+            .pointerStyle(model.drawsImageArea ? .rectSelection : nil)
+        }
+    }
+
+    private func frame(_ area: CGRect, in video: CGRect) -> Path {
+        Rectangle().path(in: denormalized(area, in: video))
+    }
+
+    private func denormalized(_ area: CGRect, in video: CGRect) -> CGRect {
+        CGRect(x: video.minX + area.minX * video.width, y: video.minY + area.minY * video.height,
+               width: area.width * video.width, height: area.height * video.height)
+    }
+
+    private func clamp(_ point: CGPoint, to video: CGRect) -> CGPoint {
+        CGPoint(x: min(max(point.x, video.minX), video.maxX), y: min(max(point.y, video.minY), video.maxY))
+    }
+}
+
+private extension CGRect {
+    init(p1: CGPoint, p2: CGPoint) {
+        self.init(x: min(p1.x, p2.x), y: min(p1.y, p2.y), width: abs(p1.x - p2.x), height: abs(p1.y - p2.y))
     }
 }

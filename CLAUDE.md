@@ -44,6 +44,9 @@ Sem áudio no argumento, não carregam modelo e rodam em milissegundos.
 | `webapi` | Google: repartição por bytes de URL, código, escape |
 | `vivo <audio>` | o que o VAD do tempo real deixa passar |
 | `captura` | só transcrever, exportação, lista de captura e de microfones |
+| `imagem` | legenda desenhada no vídeo: filtros de linha, montagem, instante exato |
+| `japones` | palavra partida, hesitação, pontuação do Qwen, repartição na vírgula |
+| `frase` | tradução por frase: o que junta, o que não junta, como reparte |
 
 Com áudio ou vídeo:
 
@@ -62,6 +65,11 @@ tradutor-verify treslinhas <video>                    # caça legenda de 3 linha
 tradutor-verify repescagem <audio> [motor] [idioma] [motor2]
 tradutor-verify audio <wav> [orig] [dest] [motor]     # VAD + reconhecimento + tradução
 tradutor-verify prefixo-ab <video> ...                # tradução com e sem rótulo
+tradutor-verify imagem <video> [idioma] [--gabarito <txt>] [--oraculo] [--faixa 0.76,1.0] [--area x,y,l,a]
+tradutor-verify referencia <video> <legenda.srt> [idioma] [motor] [--saida <srt>] [--diff]
+                                                      # contra legenda feita por gente
+tradutor-verify referencia --srt <gerada.srt> <legenda.srt>   # só compara
+                                                      # lê a legenda desenhada no vídeo
 ```
 
 `cobertura` aceita `--audio-referencia <wav>` (PCM original, nunca o tratado),
@@ -96,6 +104,8 @@ padrão.
 | `TRADUTOR_IDIOMA`, `TRADUTOR_MOSTRA_CUES`, `TRADUTOR_MOSTRA_CRUZAMENTO` | detalhes de saída dos gates |
 | `TRADUTOR_MEASURE_POPOVER` | desenha o painel em `/tmp/painel.png` |
 | `TRADUTOR_GEMINI_DEBUG` | imprime cada leitura de estado do Gemini |
+| `TRADUTOR_TRADUZ_POR_LEGENDA` | traduz legenda por legenda, sem juntar a frase |
+| `TRADUTOR_COM_HESITACAO` | não tira `まあ`, `えー`, "um" da legenda de arquivo |
 
 ### Autotestes do app inteiro
 
@@ -105,6 +115,8 @@ open build/Tradutor.app --args --selftest-studio video.mp4 ja pt  # → /tmp/tra
 open build/Tradutor.app --args --selftest-job video.mp4 ja pt     # → /tmp/tradutor-job.txt
 open -n build/Tradutor.app --args --selftest-janelas              # → /tmp/tradutor-janelas.txt
 open -n build/Tradutor.app --args --selftest-microfone 4          # → /tmp/tradutor-microfone.txt
+open -n build/Tradutor.app --args --selftest-imagem video.mp4 en  # → /tmp/tradutor-imagem.txt, .png
+open -n build/Tradutor.app --args --selftest-traduzir-srt legenda.srt gemini  # → /tmp/tradutor-traduzir-srt.txt
 ```
 
 Bandeiras: `--motor <parakeet|whisper|qwen|qwenLarge>`, `--tradutor
@@ -177,7 +189,8 @@ vídeo ──▶ faixa do idioma escolhido ──▶ áudio 16 kHz ──▶ niv
       ──▶ quem fala, quando pedido (fronteiras de voz)
       ──▶ reconhecimento com marcação de tempo
       ──▶ agrupa em frases (150 chars, pausa > 0,8 s, teto 7 s)
-      ──▶ traduz em lotes (40 na Apple, DeepL e Google; 20 no Hunyuan)
+      ──▶ traduz por frase, em lotes (40 na Apple, DeepL e Google; 20 no Hunyuan)
+      ──▶ reparte a tradução da frase pelas legendas dela
       ──▶ reparte em legendas de 2 linhas × 42 chars (20 se o destino é CJK)
       ──▶ .srt
 ```
@@ -569,10 +582,14 @@ O processo precisa de `HF_HOME` dentro da pasta (senão o modelo vai para
 `~/.cache`) e `HF_HUB_OFFLINE=1` (senão há consulta ao Hugging Face por
 legenda).
 
-**O 0.6B não pontua em inglês**: zero sinais em 161 s, contra 63 do Parakeet,
-73 da Apple e 73 do próprio 1.7B. Por isso o inglês saiu de
-`QwenTranscriber.languages(for: .small)`. Em japonês o mesmo modelo pontua
-normal — é por idioma.
+**O "0.6B não pontua em inglês" era o pacote, não o modelo.** Eram zero
+sinais em 161 s, e o inglês saiu do 0.6B. O texto do mesmo arquivo tem 65: o
+SRT do `mlx-qwen3-asr` reaplica a pontuação ao alinhador e, no primeiro
+caractere que não casa (`TED Talks` no texto, `TEDTalks` no alinhador),
+devolve tudo sem pontuação. O app agora lê `-f json` e faz isso ele mesmo —
+ver "Legenda japonesa contra a legenda do TED". Pelo caminho do app o 0.6B dá
+66 sinais contra 72 do 1.7B, texto a 1,7–3,1% do 1.7B, em 7–9 s; o inglês
+voltou.
 
 **0.6B ou 1.7B** (`--grande` acrescenta 3,4 GB):
 
@@ -634,6 +651,162 @@ vinha de métrica enviesada — contava perdido quando nenhuma peça tinha o
 quase todos abaixo de 0,5 s.
 
 ---
+
+### Legenda japonesa contra a legenda do TED (23/09/2026)
+
+A palestra `TEDにもの申す… | Masahiko Abe | TEDxWasedaU` (16 min) vem com a
+legenda oficial do TED, e `tradutor-verify referencia` compara o `.srt` do app
+com ela: CER sem pontuação nem espaço, CER pela leitura (romaji do
+`CFStringTokenizer`, para `喋る`/`しゃべる` e `良い`/`いい` não contarem como
+erro), fronteiras de oração e de legenda casadas por alinhamento, tempo, e
+palavra partida entre legendas e entre linhas. Scripts e saídas em
+`scratchpad/transcricao-ted/`.
+
+```
+                  CER       leitura    oração P/C   legenda P/C   palavra partida
+                antes→depois                         (legenda / linha)
+Apple         10,2 → 8,5   5,6 → 4,4   85/53→85/54  68/59→68/64   52/115 → 0/0
+Whisper        8,0 → 7,9   3,7 → 3,5   90/41→87/42  83/66→76/64   26/117 → 0/0
+Qwen 0.6B     11,7 → 9,9   6,6 → 5,1   58/28→84/52  40/34→67/66   84/144 → 1/0
+Qwen 1.7B     10,1 → 8,3   5,7 → 4,3   77/46→86/52  60/56→70/67   51/115 → 1/0
+```
+
+Código final, sem o teto de 40 (ver abaixo). A precisão de legenda do
+Whisper cai (83 → 76, 205 → 216 legendas): é o preço de não partir palavra
+em 117 linhas — sem fim de palavra perto, a linha sobra para uma terceira e
+`enforceLineLimit` reparte a legenda.
+
+A legenda humana dá 18 "palavras partidas" entre legendas pela mesma régua:
+é o ruído da heurística, não defeito dela. Cinco mudanças:
+
+- **Palavra partida.** A repartição da legenda e a quebra de linha cortavam
+  japonês por caractere: `…一人でブ` / `ツブツ…`, 115 a 144 linhas por vídeo.
+  `Tokens.phrases` dá pedaços que não partem palavra (morfema do
+  `NLTokenizer`, com partícula e auxiliar grudados na palavra de antes,
+  `お`/`ご` na seguinte, katakana e nome latino inteiros), e
+  `SubtitleFileBuilder.mendSplitWords` devolve ao vizinho o pedaço de palavra
+  que o reconhecedor cortou no teto de 7 s ou numa pausa (`…思っていま` /
+  `す。`) — **inclusive entre locutores**: a fronteira de voz, que erra
+  ±100 ms e é adiantada 0,5 s, era quem mais partia palavra (`です / か` →
+  "K."). O pedaço vai para quem disse o resto da palavra. Auxiliares depois
+  de `て` (`やがる`, `ちゃう`, `しまう`) também não abrem pedaço. Sem fim de palavra antes de `earliest`, a linha sobra para uma
+  terceira — que `enforceLineLimit` reparte — em vez de partir `テッドックス`.
+  O sistema **não tem classe gramatical para japonês** (`NLTagger` só dá
+  `OtherWord`); a lista de partículas é o que existe.
+- **Hesitação** (`Hesitations`, só em arquivo): a legenda do TED não tem
+  `えー` e guarda 3 dos 46 `まあ` da Apple. `まあ` era hesitação em 89%, `あの`
+  em 92%, `こう` em 67% e `で、` inicial em 60%. Saem `まあ` (fora de `まあまあ`),
+  `えー`/`えっと`/`うーん`, `あのー`, e `あの` só antes de pausa ou de outra
+  hesitação — antes de substantivo `あの` hesitação e `あの` "aquele" têm a
+  mesma cara. `こう` e `で、` ficam. Em inglês, "um"/"uh". O Whisper já não
+  escreve hesitação. `TRADUTOR_COM_HESITACAO=1` desliga.
+- **Qwen lê o JSON.** Além do inglês acima, o 0.6B tinha 201 sinais no texto
+  e **0** no SRT do vídeo inteiro, e a legenda saía cortada pela largura.
+  `QwenTranscriber.punctuated` reaplica a pontuação tolerando o que não casa,
+  e `phrases` agrupa pelo tempo de cada palavra (ponto, pausa de 0,5 s, teto
+  de 5/7 s) — e agora respeita as fronteiras de voz, que o SRT pronto
+  ignorava.
+- **Um teto de 40 caracteres antes de traduzir foi medido e desfeito.**
+  Na transcrição era neutro (Whisper 75/63 → 79/68 nas legendas), mas em
+  japonês o verbo vem no fim: a metade sem ele ia sozinha ao tradutor ("…é
+  Ambos provavelmente", "protagonista Não acho"). Às cegas, 16 × 12 a favor
+  de não ter o teto. A frase vai inteira; quem reparte é `enforceLineLimit`,
+  depois da tradução.
+- **A repartição escolhe o corte**, com desconto de um terço do alvo para
+  vírgula e ponto: `…勤めていて、長らく` / `北米の…` virou `…勤めていて、` /
+  `長らく北米の…`, como a legenda humana. Vale em inglês também:
+  `…who would / lie, and he…` virou `…who would lie, / and he…`.
+
+**E a tradução?** Não há tradução humana desta palestra (o TED só tem a
+legenda japonesa). A régua foi: mesmo tradutor determinístico antes e
+depois, trechos que mudaram sorteados e julgados às cegas contra a legenda
+japonesa oficial (`scratchpad/transcricao-ted/traducao.py`; o cegamento é
+parcial, `まあ` no original denuncia a versão):
+
+```
+                                   depois   antes   empate
+TED · Apple → Apple                   17       4        9
+TED · Qwen 0.6B → Apple               13       7       10
+TED · Qwen 1.7B → Google              14       4       12
+4 outros vídeos · Apple → Apple       18      10        7
+4 outros vídeos · Qwen 1.7B → Apple   18       5       10
+```
+
+Nos outros vídeos boa parte da diferença é a própria Apple reconhecendo
+diferente entre execuções. O que ganha de forma sistemática: palavra partida
+virava nome inventado (`ブ / ツブツ` → "Tsubutinkin", `本 / 当` → "Livro"),
+hesitação virava "Bem," (28 → 2 legendas no TED), e o Qwen 0.6B mandava ao
+tradutor 161 de 178 legendas partidas no meio da oração (hoje 56 de 195).
+**Traduzir por frase, repartir por pausa.** A pausa medida de 0,8 s fecha a
+legenda — é o que aproximou a transcrição da humana —, e o tradutor da Apple
+traduzia cada legenda sozinha: `例えば英語 | ペラペラに…` virou "seria bom se
+eu ficasse desleixada". Hoje `translate` junta as legendas seguidas da mesma
+frase (a anterior não fecha com ponto, pausa até 1,5 s, mesma pessoa, até 4
+legendas e 150 caracteres), manda a frase inteira, e reparte a tradução pelas
+mesmas legendas na proporção do original de cada uma, preferindo vírgula e
+fim de palavra (`splitEvenly(weights:wholeWords:)`). Os tempos não mudam.
+Tradução curta demais para repartir funde as legendas da frase — legenda
+vazia mostraria o original. Fora: "Só transcrever" e faixa de tempo fixo
+(`.srt` importado, legenda lida da imagem).
+
+Medido sobre o **mesmo rascunho** (`gerar --ab`: gera, grava, e retraduz o
+rascunho legenda por legenda), julgado às cegas **por frase inteira**:
+
+```
+                                     por frase   por legenda   empate
+TED · Apple                              17            2          6
+TED · Whisper                            12            1          7
+TED · Qwen 0.6B                          15            2          3
+9 min · Qwen 1.7B + Sortformer            8            1          4
+inglês (2 vídeos)                         2            1          0
+```
+
+Nenhuma legenda fundida, acima de 7 s ou vazia nos quatro casos longos; no
+TED as legendas finais caem de 279 para 255, porque a tradução repartida
+estoura menos as 2 linhas. Em inglês quase nada muda: a frase quase sempre
+fecha com ponto.
+
+**O preço é sincronia.** O português reordena a frase japonesa, e a legenda
+pode trazer um pedaço dito na vizinha — as duas derrotas do TED com a Apple
+são isso ("tudo tão claro assim, eu ficaria…" no começo da frase seguinte).
+É a troca de toda legendagem profissional, e aqui ela saiu 54 × 7. A outra
+derrota: reticências no fim de uma parte fazem `capitalizeSentences` pôr
+maiúscula na seguinte ("…é Dragão" → "…É Macaco D Dragão").
+
+**Quem fala, revisto.** Contra os gabaritos, legendas finais:
+
+```
+                              Sortformer   agrupamento   legenda com duas pessoas
+9 min, 2 pessoas · Apple         97%           83–93%     2 sem identificar → 0
+9 min, 2 pessoas · Qwen 1.7B     93%           90%        7 → 4
+inglês, 5 pessoas · Apple        72%           42%        3 → 3
+inglês, 5 pessoas · Qwen 1.7B    70%           37%        10 → 10
+anime, 10 pessoas                47%           53%        —
+TED, 1 pessoa                    1 voz         1 voz      CER 8,5% nos três
+```
+
+A "mistura" do Qwen no inglês é quase toda de relógio: fala curta esticada até
+o mínimo de 1 s invade a seguinte, e o gabarito foi marcado sobre os tempos da
+Apple. **Para a tradução a identificação não ajudava**: com a Apple, empate
+(6 × 5); com o Qwen 1.7B, 7 × 1 contra — o rascunho sobe de 136 para 185
+legendas e o tradutor perdia o contexto. Era a mesma frase picada da pausa;
+com a tradução por frase, o mesmo caso dá 8 × 1 **a favor** de juntar
+(sem identificação × com não foi medido de novo).
+
+Duas coisas do ambiente que custaram uma rodada: o Qwen 1.7B estoura a
+memória da GPU (`kIOGPUCommandBufferCallbackErrorOutOfMemory`) quando a
+máquina está carregada, e logo depois a tradução do sistema (`translationd`)
+ficou minutos recusando tudo — no binário antigo também. Refazer resolveu.
+
+Medidos e descartados: tirar `で、` no começo de frase (60% de acerto) e
+`こう` (67%). Não mexidos: nome próprio (`阿部公彦` sai `阿部雅彦` na Apple e
+`安倍晋三` no Qwen 1.7B) e katakana no lugar de latino (`テッドトークス`).
+
+**Outros vídeos, antes × depois** (binário do commit `57e4c82` numa worktree,
+`scratchpad/transcricao-ted/regressao.sh`): nos dois ingleses e nos três
+japoneses, o texto só muda por hesitação removida, corte de legenda e pela
+variação do próprio reconhecedor — o binário antigo rodado duas vezes na
+Apple em inglês também troca `Papa`/`Pop`. Nenhuma palavra partida.
 
 ## Tradução
 
@@ -1012,7 +1185,7 @@ ao vivo**; e comparava as strings cruas, deixando passar o eco com a pontuação
 trocada. Hoje: um terço intocado com pelo menos duas linhas, ou uma única
 linha longa devolvida igual, comparando sem espaço nem pontuação.
 
-Testes: `--selftest-gemini` (22 verificações locais, sem rede),
+Testes: `--selftest-gemini` (24 verificações locais, sem rede),
 `--selftest-gemini --online --batch40` (site), e os cinco vídeos de exemplo
 pelo caminho de verdade (`--selftest-job <video> <orig> pt --tradutor gemini`,
 com `open -n`). Medições de 17/09 em
@@ -1076,9 +1249,29 @@ sumiu mesmo. O comentário em `GeminiWeb` guarda o mesmo registro.
 **Timeout de 90 s acontece.** Nos testes da janela de legendas, o vídeo inglês
 maior falhou duas vezes na retradução com três timeouts seguidos
 (`inseriu=true`, `enviou=ok`, resposta nunca chegou). O mesmo vídeo passou em
-outras execuções, e os outros quatro passaram. É a sessão anônima recusando
-serviço, não o app: a falha sobe como erro, com botão de tentar de novo, e a
-pausa por falhas seguidas impede o martelo.
+outras execuções, e os outros quatro passaram. A primeira falha pode ser a
+sessão anônima; **as seguintes eram do app**, até 22/09/2026 — ver abaixo.
+
+**Nova tentativa lia a página velha.** Depois de `load`, o documento anterior
+continua de pé até o novo assumir, e `aguardarCampo` achava o campo nele — e
+`antes` contava as respostas da conversa velha. O app então esperava a
+conversa nova passar desse número, o que nunca acontece: tempo esgotado com
+a resposta completa na tela. Toda recarga passava por aqui — depois de
+qualquer falha (formato, `pareceIntocado`, envio) e na renovação a cada 15
+lotes ou 10 minutos. Reproduzido com um `.srt` de 640 falas pela janela:
+
+```
+antes do conserto   15 lotes certos; no 16º, "renovando conversa", antes=15,
+                    tempo esgotado, nova tentativa com antes=1, esgotado de
+                    novo — "1 lote não foi traduzido", 0 de 640, 252 s
+depois              renovação lê antes=0 na página nova; 640 de 640, 75 s
+```
+
+`GeminiWeb.markStaleScript` marca o documento antes de recarregar e
+`freshFieldScript` só aceita campo de página sem a marca. O registro de
+22/09/2026 que levou a isto: resposta de 40 linhas completa e certa na tela,
+e "não respondeu a tempo"; e um `6::` no lugar de `36::` que derrubou o lote e
+mandou para a nova tentativa, que não tinha como dar certo.
 
 `GeminiWeb.swift`. Mesma família do DeepL (`WKWebView`, `.nonPersistent()`, sem
 API paga, sem conta) mas o site é um chat, não um campo de tradução — não há
@@ -2152,10 +2345,20 @@ Exportação nunca substitui uma faixa ausente pela outra: original usa
 blocos intactos, não os intervalos combinados de exibição. Retraduzir
 explicitamente substitui a tradução importada pelo resultado novo.
 Os idiomas do conteúdo são guardados independentemente dos seletores.
-`originalWasImported` controla a preservação de tempos e blocos originais:
+`keepsOriginalTiming` controla a preservação de tempos e blocos originais:
 importar apenas a tradução não pode alterar o tratamento do original gerado.
 
-`--selftest-srt` verifica 27 casos sem vídeo, modelo ou rede, antes
+**O idioma de cada faixa importada sai do texto dela** (`Language.detect`,
+NaturalLanguage do sistema), não dos seletores. Era o seletor de fala, que
+nasce em inglês e não é gravado: o `.srt` japonês ia ao Gemini como
+"Translate … from English" (registro de 22/09/2026) e seria exportado como
+`.en.srt`. Medido nos arquivos de exemplo: japonês 1,000; os três `.pt.srt`
+0,999 a 1,000; inglês 0,994. Abaixo de 0,8 — uma legenda de uma palavra só,
+"OK" deu 0,29 — vale o seletor. O DeepL e o Gemini traduziam mesmo com a
+origem errada (o site detecta, o modelo entende); a Apple e o Google não têm
+essa rede.
+
+`--selftest-srt` verifica 28 casos sem vídeo, modelo ou rede, antes
 da inicialização normal do app; relatório `/tmp/tradutor-srt.txt`. O gate
 `legendas` verifica também japonês e ida e volta exata dos milissegundos.
 
@@ -2184,3 +2387,119 @@ e comandos: `scratchpad/qwen-performance-2026-09-17/README.md`; regressão de
 configuração: `python3 scratchpad/qwen-performance-2026-09-17/check_wired.py`.
 Não reintroduzir especulativa, sincronização rápida ou laço async: não trouxeram
 ganho consistente suficiente nesta máquina.
+
+---
+
+## Legenda desenhada no vídeo (22/09/2026)
+
+A janela de legendas tem duas fontes de texto, escolhidas no cabeçalho, à
+vista mesmo recolhido: **Fala** (o reconhecimento de sempre) e **Imagem**, que
+lê a legenda já queimada no vídeo com o Vision do sistema, com o instante em
+que ela aparece e some. `BurnedSubtitle`, em `TradutorCore`. Plano, sonda e
+medições brutas em `scratchpad/legenda-na-imagem/`.
+
+```
+vídeo ──▶ AVAssetReader em 420v, em ordem
+      ──▶ todo quadro: a faixa de baixo (0,76–1,0) do plano Y, num anel curto
+      ──▶ a cada 0,25 s: a faixa em cinza vai ao Vision .accurate, 4 em voo
+      ──▶ linhas visuais ▸ centro ▸ escrita do idioma ▸ altura ▸ Tokens.join
+      ──▶ mesma legenda ou outra (sem caixa nem pontuação; tremor A A' A)
+      ──▶ na troca, o quadro exato pelos pixels de letra
+      ──▶ Cue como original importado: tradução só no clique, tempos fixos
+```
+
+Medido nos dois vídeos de exemplo que têm legenda queimada, pelo caminho do
+app. Gabaritos feitos à mão contra o quadro, ao lado dos vídeos
+(`*.legenda-na-imagem.txt`); o oráculo do instante é o OCR de todo quadro entre
+as duas amostras de cada troca (`--oraculo`):
+
+```
+                              legendas   texto literal   quadro exato   velocidade
+vídeo 2, inglês, 96 s             27        27 de 27      54 de 54 pontas    16×
+9 min, japonês, 540 s             81        19 de 20     159 de 162           9×
+```
+
+**O idioma é o do texto na tela, não o falado.** No vídeo 2 a fala é japonesa
+e a legenda inglesa; com a dica errada, 249 de 386 leituras mudam, com erro de
+verdade (`Yes, lam!`). Por isso `SubtitleStudioModel.imageLanguage` é próprio
+do modo, guardado à parte (`idiomaDoTextoNaImagem`), e a lista vem do Vision —
+`SourceLanguagePicker` filtra pelo motor de fala e troca a escolha sozinho.
+Com o idioma errado, o erro diz o motivo ("encontrei texto, mas não em
+japonês").
+
+Decisões, cada uma com o número que a obrigou:
+
+- **O OCR é o detector de troca, não a diferença de pixels.** Com a legenda
+  parada, o fundo que se mexe atrás dela dá diferença de faixa acima de 17,8 em
+  1% dos quadros; as trocas reais têm mediana 12,1, 10% abaixo de 5,9. Uma
+  máscara de "claro com contorno escuro" na faixa inteira também não separa: o
+  traço preto do anime é contorno escuro.
+- **`420v`, não `32BGRA`**: 2650 contra 700 quadros por segundo em 1080p.
+- **A faixa vai ao Vision como imagem cinza do plano Y recortado**, não como
+  região de interesse no quadro colorido: 27 de 27 contra 26 de 27 — "I'm"
+  saía "Im" em 9 de 9 leituras.
+- **4 leituras em voo**: 65 ms por leitura uma de cada vez, 13 ms com quatro,
+  texto idêntico. `.fast` não é alternativa: só lê seis idiomas latinos.
+- **O texto da legenda é o mais lido entre as amostras dela**: o leitor
+  tremula numa amostra isolada (`iS`, `Everyone..`), e votar não custa nada.
+- **Caixas na mesma altura e do mesmo tamanho são uma linha visual.**
+  `え？　同じです。` vem em duas caixas; ordenadas só pela altura, a ordem
+  alternava e criava legenda falsa de fração de segundo — e `はい。` de
+  `はい。　ありがとうございます。` sumia sozinho pelo filtro de centro.
+- **Centro por linha visual, 0,05, tirando a ponta mais afastada.** Falas
+  entre 0,48 e 0,51; marca d'água do vídeo 2 em 0,88; placa de cardápio do de
+  9 minutos entre 0,27 e 0,30 — com 0,2 de folga ela virava legenda.
+- **Escrita do idioma e altura**: japonês escolhido fica só com a linha
+  japonesa, sem romaji nem inglês; furigana sai por ter menos de metade da
+  altura da maior linha. Romaji e inglês são ambos latinos e não se separam.
+- **O instante vem dos pixels de letra — núcleo claro cercado de contorno
+  escuro —, e só dos que a outra amostra não repete.** Comparar a caixa
+  inteira entre as duas amostras deixava o corte de cena mandar: 5 de 54
+  pontas 3 quadros atrasadas (`Hello?!` some no quadro 122, a cena corta no
+  125). A letra inteira deixava a fala nova, no mesmo lugar, "segurar" a
+  velha: até 6 quadros atrasado e 7 adiantado no vídeo de 9 minutos. Núcleo
+  "cercado" porque céu claro encostado no contorno passava por núcleo, e um
+  corte de cena atrás de legenda parada parecia a legenda sumindo.
+
+Resíduos medidos, sem conserto:
+
+- `れいか先輩・・・。` sai `れいか先輩・・`: o leitor perde pontinhos. É a única
+  fala errada das 47 conferidas.
+- 1 ponta de 216 a 2 quadros: caixa escura semitransparente cujo fundo clareia
+  atrás dela antes da troca — o "contorno" ali é a caixa.
+- A primeira leitura depois de instalar ou de atualizar o macOS leva ~24 s: o
+  Vision compila no cache do processo, a pasta que o `CacheCleanup` administra.
+  Não é motivo para mexer em `modelSetVersion`.
+
+Fora, por não haver vídeo que meça: faixa em cima, retângulo arrastado,
+legenda fora do centro, karaokê e letreiro. Vídeo girado dá erro claro em vez
+de ler a faixa errada.
+
+### A área desenhada (23/09/2026)
+
+O botão **Área**, ao lado de Fala | Imagem, pausa o vídeo e deixa arrastar um
+retângulo sobre ele; a seta volta à faixa padrão. A área é normalizada ao
+**quadro** (`AVMakeRect` tira a tarja do `.resizeAspect`), e `copyBand`
+recorta linhas e colunas. Vale **só para o vídeo aberto**: `open` a zera,
+porque cada vídeo põe a legenda num lugar e uma área herdada leria o lugar
+errado calada.
+
+- **O filtro de centro continua, medido no quadro, não na área.** Sem ele, a
+  faixa de baixo desenhada no vídeo 2 deu 63 legendas em vez de 27 (marca
+  d'água, `Crunchyroll®`, `EI`). No centro da área não serve: ninguém desenha
+  simétrico, e 0,05–0,85 deixava as falas a 0,05 do meio. Área que nem
+  contém o meio do quadro é legenda de canto por escolha: aí o filtro sai.
+- **Área apertada custa texto**: 0,2–0,76 cortou `…as always!` em `…as alw`, e
+  recortes diferentes mudam a leitura do Vision (`I'm` → `Im`, `is` → `iS`),
+  o mesmo efeito medido entre faixa cinza e região de interesse. Área padrão
+  desenhada à mão dá 27 de 27, como o padrão.
+- Recorte abaixo de 16 px em qualquer lado é recusado com erro claro.
+
+`tradutor-verify imagem <video> --area x,y,l,a` e `--selftest-imagem ... --area
+x,y,l,a` leem com a área desenhada; o autoteste também confere que abrir
+outro vídeo volta ao padrão.
+
+`tradutor-verify imagem` sem vídeo cobre filtros, montagem e instante com
+dados fabricados dos dois vídeos; `--selftest-imagem` confere pela janela que
+nenhum passo de áudio roda, que as setas andam nas legendas lidas, que traduzir
+não move tempo nenhum e que o original exportado sai com os blocos lidos.

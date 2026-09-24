@@ -159,6 +159,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     ? Language(rawValue: arguments[index + 3]) ?? .portuguese : .portuguese
             )
         }
+
+        // Importa um .srt como original e traduz pelo caminho da janela, com o
+        // tradutor de verdade:
+        //   open -n build/Tradutor.app --args --selftest-traduzir-srt <srt> <tradutor> [--origem ja]
+        if let index = CommandLine.arguments.firstIndex(of: "--selftest-traduzir-srt"),
+           CommandLine.arguments.count > index + 2 {
+            let arguments = CommandLine.arguments
+            runImportedTranslationSelfTest(
+                path: arguments[index + 1],
+                engine: TranslationEngine(rawValue: arguments[index + 2]) ?? .apple
+            )
+        }
+
+        // A leitura da legenda desenhada no video, pela janela de verdade:
+        //   open -n build/Tradutor.app --args --selftest-imagem <video> <idioma> [--gabarito <txt>]
+        if let index = CommandLine.arguments.firstIndex(of: "--selftest-imagem"),
+           CommandLine.arguments.count > index + 1 {
+            let arguments = CommandLine.arguments
+            runImageSelfTest(
+                path: arguments[index + 1],
+                language: arguments.count > index + 2
+                    ? Language(rawValue: arguments[index + 2]) ?? .english : .english
+            )
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -689,6 +713,238 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
 
             write(relatorio.failures == 0 ? "\nPASSOU" : "\n\(relatorio.failures) falha(s)")
+            exit(relatorio.failures == 0 ? 0 : 1)
+        }
+    }
+
+    /// Importar um `.srt` como original e traduzir, pelo modelo da janela e
+    /// com o tradutor de verdade — o caminho de quem só quer traduzir uma
+    /// legenda, sem reconhecer fala nenhuma. Relatório em
+    /// `/tmp/tradutor-traduzir-srt.txt`.
+    private func runImportedTranslationSelfTest(path rawPath: String, engine: TranslationEngine) {
+        let path = resolvedTestPath(rawPath)
+        let relatorio = SelfTestReport("/tmp/tradutor-traduzir-srt.txt", "traduzir um .srt importado")
+        let write = relatorio.write
+        let expect = relatorio.expect
+
+        Task { @MainActor in
+            let model = SubtitleStudioModel(preferences: nil)
+            // A janela nasce com os idiomas do painel, como em `openStudio`.
+            model.sourceLanguage = pipeline.sourceLanguage
+            model.targetLanguage = pipeline.targetLanguage
+            if let flag = CommandLine.arguments.firstIndex(of: "--origem"),
+               CommandLine.arguments.count > flag + 1,
+               let origem = Language(rawValue: CommandLine.arguments[flag + 1]) {
+                model.sourceLanguage = origem
+            }
+            model.translationEngine = engine
+            write("srt: \(URL(fileURLWithPath: path).lastPathComponent), seletor de origem: "
+                  + "\(model.sourceLanguage.displayName), destino: \(model.targetLanguage.displayName), "
+                  + "tradutor: \(engine.displayName)")
+
+            model.loadSubtitles(from: URL(fileURLWithPath: path), as: .original)
+            write("importadas: \(model.cues.count) falas; idioma do original: "
+                  + "\(model.subtitleLanguage(for: .original).displayName)")
+            expect(model.canRetranslate, "o original importado pode ser traduzido")
+
+            let inicio = Date()
+            model.retranslate()
+            var passos: [String] = []
+            let limite = Date().addingTimeInterval(900)
+            while Date() < limite {
+                if case let .working(passo) = model.stage {
+                    let rotulo = "\(passo.kind.rawValue) \(passo.detail)"
+                    if passos.last != rotulo {
+                        passos.append(rotulo)
+                        write(String(format: "  %5.1fs  %@", Date().timeIntervalSince(inicio), rotulo))
+                    }
+                } else if !model.isWorking {
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            write(String(format: "terminou em %.1fs: %@", Date().timeIntervalSince(inicio),
+                         model.failureMessage.map { "FALHOU — \($0)" } ?? "\(model.stage)"))
+            let traduzidas = model.cues.filter { !$0.translated.isEmpty && $0.translated != $0.source }
+            write("traduzidas: \(traduzidas.count) de \(model.cues.count)")
+            for cue in model.cues.prefix(6) { write("  \(cue.source)  →  \(cue.translated)") }
+            expect(model.failureMessage == nil, "a traducao termina sem erro")
+            expect(traduzidas.count == model.cues.count, "todas as falas saem traduzidas")
+            write("")
+            write(relatorio.failures == 0 ? "traducao do srt importado ok" : "\(relatorio.failures) falhas")
+            exit(relatorio.failures == 0 ? 0 : 1)
+        }
+    }
+
+    /// A leitura da legenda desenhada no vídeo pela janela, sem ninguém clicar.
+    ///
+    /// Confere o que o gate não alcança: que a janela chega lá pela fonte
+    /// "Imagem", que nenhum passo de áudio entra no caminho, que as setas
+    /// andam nas legendas lidas, que traduzir não move tempo nenhum e que o
+    /// original exportado sai com os blocos lidos. Relatório em
+    /// `/tmp/tradutor-imagem.txt`, a janela em `/tmp/tradutor-imagem.png`.
+    private func runImageSelfTest(path rawPath: String, language: Language) {
+        let path = resolvedTestPath(rawPath)
+        let relatorio = SelfTestReport("/tmp/tradutor-imagem.txt", "leitura da legenda na imagem")
+        let write = relatorio.write
+        let expect = relatorio.expect
+
+        Task { @MainActor in
+            // Sem preferências: o idioma que o teste escolhe não pode sobrar
+            // gravado como escolha do usuário.
+            let model = SubtitleStudioModel(preferences: nil)
+            model.textSource = .image
+            model.imageLanguage = language
+
+            // A janela de verdade, com as opções abertas: é ela que mostra a
+            // escolha Fala | Imagem e o idioma do texto no lugar do motor.
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 1120, height: 660),
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Legendas (teste da imagem)"
+            window.center()
+            window.isReleasedWhenClosed = false
+            window.contentViewController = NSHostingController(
+                rootView: SubtitleStudioView(model: model, showsGenerationOptions: true)
+            )
+            window.orderFrontRegardless()
+            studios[window] = model
+
+            model.open(URL(fileURLWithPath: path))
+            for _ in 0..<40 where model.duration == 0 {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            // `--area x,y,l,a`: a área desenhada, normalizada ao quadro. Depois
+            // de `open`, que a zera.
+            if let flag = CommandLine.arguments.firstIndex(of: "--area"),
+               CommandLine.arguments.count > flag + 1 {
+                let p = CommandLine.arguments[flag + 1].split(separator: ",").compactMap { Double($0) }
+                if p.count == 4 { model.imageArea = CGRect(x: p[0], y: p[1], width: p[2], height: p[3]) }
+            }
+            write("video: \(model.videoName), idioma do texto: \(language.displayName), area: "
+                  + (model.imageArea.map { "\($0)" } ?? "padrao"))
+            expect(model.duration > 1, String(format: "a duracao do video e lida (%.1fs)", model.duration))
+
+            model.generate()
+            var passos = Set<String>()
+            let deadline = Date().addingTimeInterval(900)
+            while Date() < deadline {
+                if case let .working(passo) = model.stage { passos.insert(passo.kind.rawValue) }
+                if case .done = model.stage { break }
+                if case let .failed(message) = model.stage {
+                    write("FALHA na leitura: \(message)")
+                    exit(1)
+                }
+                try? await Task.sleep(for: .milliseconds(40))
+            }
+            guard case .done = model.stage else {
+                write("FALHA: a leitura nao terminou em 15 min")
+                exit(1)
+            }
+            write(String(format: "leitura em %.1fs: %d legendas", model.elapsed, model.cues.count))
+            for cue in model.cues.prefix(3) {
+                write("  \(SRTWriter.timecode(cue.start)) --> \(SRTWriter.timecode(cue.end))  \(cue.source)")
+            }
+            expect(!model.cues.isEmpty, "a leitura produz legendas")
+            expect(passos == [GenerationStep.readingImage.rawValue],
+                   "nenhum passo de audio no caminho (\(passos.sorted().joined(separator: ", ")))")
+            expect(model.origin?.recognition == BurnedSubtitle.engineName
+                   && model.origin?.translation.isEmpty == true,
+                   "o cabecalho diz que veio da imagem, sem tradutor")
+            expect(model.cues.allSatisfy(\.translated.isEmpty), "ler nao traduz sozinho")
+
+            if let flag = CommandLine.arguments.firstIndex(of: "--gabarito"),
+               CommandLine.arguments.count > flag + 1 {
+                let linhas = ((try? String(contentsOfFile: resolvedTestPath(CommandLine.arguments[flag + 1]),
+                                           encoding: .utf8)) ?? "").components(separatedBy: .newlines)
+                let limite = linhas.first.flatMap { primeira -> Double? in
+                    guard primeira.hasPrefix("# ate ") else { return nil }
+                    return Double(primeira.dropFirst(6).trimmingCharacters(in: .whitespaces))
+                } ?? .infinity
+                let esperadas = linhas.map { $0.trimmingCharacters(in: .whitespaces) }
+                    .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+                let lidas = model.cues.filter { $0.start < limite }.map(\.source)
+                let diferencas = lidas.difference(from: esperadas)
+                for mudanca in diferencas {
+                    switch mudanca {
+                    case let .remove(_, fala, _): write("  esperada: \(fala)")
+                    case let .insert(_, fala, _): write("  lida:     \(fala)")
+                    }
+                }
+                expect(!esperadas.isEmpty && diferencas.isEmpty,
+                       "as falas lidas sao as do gabarito, literais e na ordem (\(esperadas.count))")
+            }
+
+            // As setas andam de legenda em legenda nas legendas lidas: é a
+            // janela velha, sem atalho novo.
+            if model.cues.count >= 2 {
+                model.seek(to: 0)
+                model.jumpToNextCue()
+                expect(model.activeIndex == 0 && abs(model.currentTime - (model.cues[0].start + 0.02)) < 0.001,
+                       "-> vai ao comeco da primeira legenda lida")
+                model.jumpToNextCue()
+                expect(model.activeIndex == 1 && abs(model.currentTime - (model.cues[1].start + 0.02)) < 0.001,
+                       "-> de novo vai a segunda")
+                model.jumpToPreviousCue()
+                expect(model.activeIndex == 0, "<- volta a primeira")
+            }
+
+            // Traduzir nao pode mover o instante em que a legenda aparece e
+            // some — e o autoteste nao chama rede: "so transcrever" passa por
+            // `retranslate` e `finalize` como qualquer tradutor.
+            let tempos = model.cues.map { [$0.start, $0.end] }
+            model.translationEngine = .transcriptionOnly
+            model.retranslate()
+            let limiteTraducao = Date().addingTimeInterval(120)
+            while Date() < limiteTraducao {
+                if case .done = model.stage, !model.cues.contains(where: \.translated.isEmpty) { break }
+                if case let .failed(message) = model.stage {
+                    write("FALHA na traducao: \(message)")
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(40))
+            }
+            expect(model.cues.map { [$0.start, $0.end] } == tempos,
+                   "traduzir nao move nenhum inicio nem fim (\(model.cues.count) legendas)")
+            expect(model.origin?.recognition == BurnedSubtitle.engineName
+                   && model.origin?.translation.isEmpty == false,
+                   "depois de traduzir o cabecalho continua dizendo Imagem (\(model.origin?.recognition ?? "-") -> \(model.origin?.translation ?? "-"))")
+
+            // O original exportado sai com os blocos lidos, sem repartir.
+            let arquivo = FileManager.default.temporaryDirectory
+                .appendingPathComponent("imagem-\(UUID().uuidString).srt")
+            model.export(to: arquivo, track: .original)
+            let relidas = (try? SRTParser.parse(contentsOf: arquivo)) ?? []
+            try? FileManager.default.removeItem(at: arquivo)
+            let mesmos = relidas.count == model.originalCues.count && zip(relidas, model.originalCues).allSatisfy {
+                abs($0.start - $1.start) < 0.001 && abs($0.end - $1.end) < 0.001 && $0.translated == $1.source
+            }
+            expect(mesmos, "o original exportado tem os blocos e os tempos lidos (\(relidas.count))")
+            expect(model.suggestedSRTName(for: .original).hasSuffix(".\(language.rawValue).srt"),
+                   "o arquivo do original leva o idioma do texto (\(model.suggestedSRTName(for: .original)))")
+
+            window.contentView?.layoutSubtreeIfNeeded()
+            try? await Task.sleep(for: .milliseconds(500))
+            if let content = window.contentView,
+               let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                content.cacheDisplay(in: content.bounds, to: bitmap)
+                if let png = bitmap.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: "/tmp/tradutor-imagem.png"))
+                }
+            }
+
+            // A área é do vídeo aberto: abrir de novo volta ao padrão.
+            model.imageArea = CGRect(x: 0.1, y: 0.1, width: 0.5, height: 0.2)
+            model.drawsImageArea = true
+            model.open(URL(fileURLWithPath: path))
+            expect(model.imageArea == nil && !model.drawsImageArea,
+                   "abrir um video volta a area padrao e sai do desenho")
+
+            write("")
+            write(relatorio.failures == 0 ? "leitura da imagem ok" : "\(relatorio.failures) falhas")
             exit(relatorio.failures == 0 ? 0 : 1)
         }
     }
@@ -1267,8 +1523,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let originalExportText = (try? String(contentsOf: originalExport, encoding: .utf8)) ?? ""
             expect(originalExportText.contains("Hello from SRT."),
                    "exportacao original escreve o idioma falado")
-            expect(model.suggestedSRTName(for: .original).hasSuffix(".\(model.sourceLanguage.rawValue).srt"),
-                   "nome da exportacao original usa o idioma falado")
+            // O idioma do original importado sai do texto dele (22/09/2026),
+            // nao do seletor: "Hello from SRT." e ingles mesmo com o video em
+            // japones. Com video ingles as duas regras davam o mesmo nome, e o
+            // teste so reprovava rodando com video de outro idioma.
+            expect(model.suggestedSRTName(for: .original).hasSuffix(".en.srt"),
+                   "nome da exportacao original usa o idioma do texto importado (\(model.suggestedSRTName(for: .original)))")
             try? FileManager.default.removeItem(at: originalExport)
             model.translationEngine = motorAntesDoImport
             try? FileManager.default.removeItem(at: originalImport)

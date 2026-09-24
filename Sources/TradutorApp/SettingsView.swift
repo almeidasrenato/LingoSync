@@ -300,7 +300,8 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
             }
             .help("Gera a legenda e reproduz o vídeo com ela, com navegação por "
-                  + "fala. Se já houver uma janela aberta, traz ela de volta.")
+                  + "fala — pelo áudio ou lendo a legenda que já está desenhada no "
+                  + "vídeo. Se já houver uma janela aberta, traz ela de volta.")
 
             // Visível sempre, inclusive sem janela nenhuma aberta. Escondida
             // atrás de uma condição, ninguém a acharia — é a mesma lição dos

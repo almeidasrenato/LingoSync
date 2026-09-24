@@ -118,6 +118,32 @@ enum GeminiCheck {
             )) as? String ?? ""
             check(!comScript.contains("function") && comScript.contains("linha um"),
                   "não traz script nem style para o texto")
+            // Recarregar a página deixava a velha de pé por um instante, e o
+            // campo e a contagem de respostas eram lidos nela: a conversa nova
+            // nunca passava da contagem velha. A página marcada não conta.
+            let velha = WKWebView()
+            velha.loadHTMLString("""
+                <model-response><message-content>1::Oi</message-content></model-response>
+                <div contenteditable="true"></div>
+                """, baseURL: nil)
+            var campoNaVelha: Bool?
+            for _ in 0..<50 {
+                try? await Task.sleep(for: .milliseconds(20))
+                campoNaVelha = (try? await velha.evaluateJavaScript(GeminiWeb.freshFieldScript)) as? Bool
+                if campoNaVelha == true { break }
+            }
+            check(campoNaVelha == true, "acha o campo numa página que ninguém marcou")
+            _ = try? await velha.evaluateJavaScript(GeminiWeb.markStaleScript)
+            let depoisDeMarcar = (try? await velha.evaluateJavaScript(GeminiWeb.freshFieldScript)) as? Bool
+            check(depoisDeMarcar == false, "a página marcada não serve, mesmo com o campo lá")
+            velha.loadHTMLString("<div contenteditable=\"true\"></div>", baseURL: nil)
+            var campoNaNova: Bool?
+            for _ in 0..<50 {
+                try? await Task.sleep(for: .milliseconds(20))
+                campoNaNova = (try? await velha.evaluateJavaScript(GeminiWeb.freshFieldScript)) as? Bool
+                if campoNaNova == true { break }
+            }
+            check(campoNaNova == true, "a página nova, carregada por cima, serve")
             // O editor do site troca aspa reta por curva enquanto se digita:
             // comparar cru recusava todo lote em inglês, que quase sempre tem
             // apóstrofo.

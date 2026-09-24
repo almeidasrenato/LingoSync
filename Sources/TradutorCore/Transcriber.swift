@@ -69,7 +69,10 @@ extension Transcriber {
         // até em três segundos de zeros; não use limiar que corte voz baixa.
         guard samples.contains(where: { $0 != 0 }) else { return [] }
         let pieces = try await transcribeTimed(samples, progress: progress)
-        return try await Hallucinations.filter(pieces, samples: samples, language: language)
+        let kept = try await Hallucinations.filter(pieces, samples: samples, language: language)
+        // Legenda omite hesitação; ver `Hesitations`.
+        guard ProcessInfo.processInfo.environment["TRADUTOR_COM_HESITACAO"] == nil else { return kept }
+        return Hesitations.strip(kept, language: language)
     }
 }
 

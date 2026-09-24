@@ -335,6 +335,7 @@ public enum LineBreaker {
 
         var lines: [String] = []
         var rest = Substring(clean)
+        let dense = clean.contains { $0.isLetter && Tokens.isDense($0) }
 
         while rest.count > maximum {
             let window = rest.prefix(maximum)
@@ -345,7 +346,13 @@ public enum LineBreaker {
             // começando por "japoneses,".
             let needed = (rest.count + maximum - 1) / maximum
             let earliest = rest.count - maximum * (needed - 1)
-            let cut = breakPoint(in: window, notBefore: earliest) ?? window.endIndex
+            // Em escrita densa o espaço só aparece entre palavras latinas
+            // (`TED Talks`): cortar ali parte o nome. Vale a palavra.
+            let cut = dense
+                ? (breakPoint(in: window, notBefore: earliest, spaces: false)
+                    ?? phraseBreak(in: rest, maximum: maximum, notBefore: earliest)
+                    ?? window.endIndex)
+                : (breakPoint(in: window, notBefore: earliest) ?? window.endIndex)
             let line = String(rest[rest.startIndex..<cut]).trimmingCharacters(in: .whitespaces)
             if line.isEmpty { break }
             lines.append(line)
@@ -359,12 +366,14 @@ public enum LineBreaker {
 
     /// - Parameter earliest: menor posição (em caracteres) aceitável para o
     ///   corte. Pontuação e conjunção antes dela são ignoradas.
-    private static func breakPoint(in window: Substring, notBefore earliest: Int) -> Substring.Index? {
+    private static func breakPoint(in window: Substring, notBefore earliest: Int,
+                                   spaces: Bool = true) -> Substring.Index? {
         func allowed(_ index: Substring.Index) -> Bool {
             window.distance(from: window.startIndex, to: index) >= earliest
         }
-        // 1. pontuacao: o corte mais natural
-        if let index = window.lastIndex(where: { ",;:—".contains($0) }),
+        // 1. pontuacao: o corte mais natural. `、` e `。` sao a virgula e o
+        // ponto japoneses; texto latino nunca os tem, entao nada muda ali.
+        if let index = window.lastIndex(where: { ",;:—、。，！？".contains($0) }),
            allowed(window.index(after: index)) {
             return window.index(after: index)
         }
@@ -380,6 +389,25 @@ public enum LineBreaker {
         }
         if let best { return best }
         // 3. ultimo espaco
-        return window.lastIndex(of: " ")
+        return spaces ? window.lastIndex(of: " ") : nil
+    }
+
+    /// Escrita densa sem pontuação nem espaço onde cortar: o fim de palavra
+    /// mais à direita que caiba. Sem isto a linha cortava no caractere 20,
+    /// no meio da palavra.
+    private static func phraseBreak(in rest: Substring, maximum: Int, notBefore earliest: Int) -> Substring.Index? {
+        var offset = 0
+        var best: Int?
+        var fits: Int?
+        for phrase in Tokens.phrases(String(rest)) {
+            offset += phrase.count
+            guard offset <= maximum, offset < rest.count else { break }
+            fits = offset
+            if offset >= earliest { best = offset }
+        }
+        // Sem fim de palavra depois de `earliest`, uma linha a mais: quem
+        // conta as linhas (`enforceLineLimit`) reparte a legenda, e isso é
+        // melhor que partir `テッドックス` em `テッドッ` / `クス`.
+        return (best ?? fits).map { rest.index(rest.startIndex, offsetBy: $0) }
     }
 }

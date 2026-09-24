@@ -41,6 +41,10 @@ public enum GenerationStep: String, CaseIterable, Sendable {
     case loadingTranslator = "Carregando o tradutor"
     case translating = "Traduzindo"
     case saving = "Gravando o arquivo"
+    /// A leitura da legenda desenhada no vídeo. Passo único, fora da ordem
+    /// dos outros: ela não extrai áudio nem reconhece fala, e mostrar a barra
+    /// na fatia do reconhecimento faria parecer que o Whisper está rodando.
+    case readingImage = "Lendo a legenda na imagem"
 
     /// Quanto do total cada passo costuma ocupar, medido na prática.
     public var share: ClosedRange<Double> {
@@ -54,6 +58,7 @@ public enum GenerationStep: String, CaseIterable, Sendable {
         case .loadingTranslator: 0.48...0.52
         case .translating: 0.52...0.97
         case .saving: 0.97...1.00
+        case .readingImage: 0.00...1.00
         }
     }
 
@@ -141,6 +146,25 @@ public final class SubtitleFileBuilder {
     /// quem medir com outro tradutor.
     public var contextOverlap = 0
 
+    /// Traduz por frase e reparte a tradução pelas legendas da frase.
+    ///
+    /// A legenda fecha na pausa medida (0,8 s), e a legenda humana do
+    /// TEDxWasedaU também — é o que aproximou a transcrição dela. Mas o
+    /// tradutor da Apple traduz cada legenda sozinha, e a frase partida na
+    /// pausa voltava em dois pedaços sem sentido: `例えば英語 | ペラペラに…`
+    /// virou "…seria bom se eu ficasse desleixada". Em japonês é pior porque
+    /// o verbo vem no fim e a primeira metade vai sem ele. Juntar antes de
+    /// traduzir e repartir depois mantém os tempos da pausa e dá ao tradutor
+    /// a frase inteira. `TRADUTOR_TRADUZ_POR_LEGENDA=1` volta ao antigo.
+    public var translatesBySentence =
+        ProcessInfo.processInfo.environment["TRADUTOR_TRADUZ_POR_LEGENDA"] == nil
+
+    /// Pausa acima disto é fim de frase mesmo sem ponto: o Whisper em japonês
+    /// quase não pontua, e sem esse corte a frase emendaria na seguinte.
+    public static let sentenceGap: TimeInterval = 1.5
+    /// Mais legendas que isto numa frase e repartir a tradução vira sorteio.
+    public static let sentenceCues = 4
+
     /// Silêncios medidos no áudio, usados como fronteira de legenda.
     ///
     /// O trecho pode fechar na pausa e os dois pedaços saírem **contíguos**
@@ -188,8 +212,12 @@ public final class SubtitleFileBuilder {
 
     private let log = Logger(subsystem: "app.tradutor", category: "SubtitleFile")
 
-    public init(draft: [Cue] = []) {
+    /// - Parameter recognitionName: quem produziu o rascunho, quando não foi
+    ///   um reconhecimento que roda aqui — a leitura da imagem. Sem ele, o
+    ///   cabeçalho da janela dizia "SRT →" depois de traduzir.
+    public init(draft: [Cue] = [], recognitionName: String? = nil) {
         self.draft = draft
+        self.recognitionName = recognitionName
     }
 
     // MARK: - Passo a passo
@@ -261,7 +289,9 @@ public final class SubtitleFileBuilder {
     }
 
     /// Link temporário com extensão `.mp4` apontando para o arquivo original.
-    private static func mp4Alias(for url: URL) throws -> URL {
+    ///
+    /// Quem chama apaga a pasta do link quando termina.
+    static func mp4Alias(for url: URL) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("tradutor-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -509,7 +539,7 @@ public final class SubtitleFileBuilder {
         // reconhecedor corta se sobrepõem nas bordas e os trechos não saem
         // ordenados. Sem isto, a entrada antecipada mede o recuo contra a
         // legenda errada.
-        let ordered = timed.sorted { $0.start < $1.start }
+        let ordered = Self.mendSplitWords(timed.sorted { $0.start < $1.start })
 
         var cues: [Cue] = []
         var buffer: [TimedText] = []
@@ -582,6 +612,73 @@ public final class SubtitleFileBuilder {
             fixOverlaps(mergeTinyCues(fixOverlaps(clamp(cues, to: mediaDuration))))
         )
     }
+
+    /// Devolve ao trecho vizinho o pedaço de palavra que o reconhecedor
+    /// cortou.
+    ///
+    /// O trecho que chega do reconhecimento é indivisível daqui em diante, e
+    /// em escrita densa ele às vezes fecha no meio da palavra — pelo teto de
+    /// 7 s ou por uma pausa medida dentro dela. Na palestra do TEDxWasedaU,
+    /// com a Apple: `…一人でブ` / `ツブツ…` e `…するというよう` / `なそういう…`,
+    /// em legendas seguidas. O pedaço menor muda de lado, com tempo
+    /// proporcional aos caracteres. Texto que usa espaço passa intacto: o
+    /// reconhecedor já corta nele.
+    ///
+    /// **Vale entre locutores também.** A primeira versão só costurava
+    /// trechos da mesma voz, e era justamente a fronteira de voz — que erra
+    /// ±100 ms e é adiantada de propósito — que mais partia palavra: com o
+    /// Qwen 1.7B no vídeo de 9 minutos, `です / か` virou "K." e `すい / ません`
+    /// virou "Depois de amanhã Não". Palavra não troca de dono no meio; o
+    /// pedaço vai para o locutor do resto dela.
+    public static func mendSplitWords(_ pieces: [TimedText]) -> [TimedText] {
+        var result: [TimedText] = []
+        for b in pieces {
+            guard let a = result.last,
+                  let tail = a.text.last, let head = b.text.first,
+                  tail.isLetter, head.isLetter, Tokens.isDense(tail), Tokens.isDense(head)
+            else { result.append(b); continue }
+            let joined = a.text + b.text
+            var offset = 0
+            var cuts: [Int] = []
+            for phrase in Tokens.phrases(joined) {
+                offset += phrase.count
+                cuts.append(offset)
+            }
+            let seam = a.text.count
+            let before = cuts.last { $0 < seam } ?? 0
+            let after = cuts.first { $0 > seam } ?? joined.count
+            guard !cuts.contains(seam) else { result.append(b); continue }
+            let moveBack = seam - before
+            let moveForward = after - seam
+            let move = moveForward <= moveBack ? moveForward : -moveBack
+            guard abs(move) <= maximumMendedCharacters else { result.append(b); continue }
+            let newSeam = seam + move
+            // O trecho inteiro era o pedaço da palavra (`す。`): vira um só,
+            // do locutor que tinha o resto dela.
+            if newSeam <= 0 || newSeam >= joined.count {
+                result[result.count - 1] = TimedText(text: joined, start: a.start, end: max(a.end, b.end),
+                                                     speaker: newSeam <= 0 ? b.speaker : a.speaker)
+                continue
+            }
+            // O instante da costura, pelo lado que perde caracteres.
+            let time: TimeInterval
+            if move < 0 {
+                let perChar = (a.end - a.start) / Double(max(a.text.count, 1))
+                time = max(a.start, a.end - perChar * Double(-move))
+            } else {
+                let perChar = (b.end - b.start) / Double(max(b.text.count, 1))
+                time = min(b.end, b.start + perChar * Double(move))
+            }
+            result[result.count - 1] = TimedText(text: String(joined.prefix(newSeam)), start: a.start,
+                                                 end: max(a.start, time), speaker: a.speaker)
+            result.append(TimedText(text: String(joined.dropFirst(newSeam)), start: min(time, b.end),
+                                    end: b.end, speaker: b.speaker))
+        }
+        return result
+    }
+
+    /// Mais que isto já não é pedaço de palavra, é palavra inteira.
+    static let maximumMendedCharacters = 4
 
     /// O caminho inteiro: do vídeo às legendas traduzidas, sem gravar nada.
     ///
@@ -821,22 +918,38 @@ public final class SubtitleFileBuilder {
         // Quem sabe o tamanho certo é o tradutor, não este código.
         let step = max(1, translator.preferredBatchSize)
 
-        for start in stride(from: 0, to: cues.count, by: step) {
-            let end = min(start + step, cues.count)
+        // A unidade de tradução é a frase, não a legenda — ver
+        // `translatesBySentence`. Sem tradução não há o que juntar, e faixa
+        // de tempo fixo (`.srt` importado, legenda lida da imagem) guarda os
+        // blocos como vieram.
+        let units = translatesBySentence && !preserveCueTiming && source != target
+            ? sentenceUnits(cues)
+            : cues.indices.map { [$0] }
+        // Legendas absorvidas pela anterior quando a tradução é curta demais
+        // para repartir.
+        var absorbed = Set<Int>()
+        func visible(_ count: Int) -> [Cue] {
+            result.prefix(count).enumerated().filter { !absorbed.contains($0.offset) }.map(\.element)
+        }
 
-            // Com `contextOverlap` acima de zero, as legendas anteriores
+        for start in stride(from: 0, to: units.count, by: step) {
+            let end = min(start + step, units.count)
+            let firstCue = units[start].first ?? 0
+            let lastCue = units[end - 1].last ?? firstCue
+
+            // Com `contextOverlap` acima de zero, as frases anteriores
             // viajam junto só como contexto e as traduções delas são
             // descartadas ao voltar. Hoje é zero — ver o comentário do campo.
             let contextStart = max(0, start - contextOverlap)
-            let slice = Array(cues[contextStart..<end])
-            let texts = slice.map(\.source)
+            let slice = Array(units[contextStart..<end])
+            let texts = slice.map { unit in Tokens.join(unit.map { cues[$0].source }) }
 
             // Antes de mandar: diz qual faixa está no ar. É o único momento
             // em que a interface pode dizer algo honesto sobre uma espera que
             // não tem passos intermediários.
             progress(Progress(
                 fraction: Double(done) / Double(max(cues.count, 1)),
-                label: "\(start + 1)–\(end) de \(cues.count)",
+                label: "\(firstCue + 1)–\(lastCue + 1) de \(cues.count)",
                 waiting: true
             ))
 
@@ -874,13 +987,29 @@ public final class SubtitleFileBuilder {
 
             let discard = start - contextStart
             for (offset, translated) in translations.enumerated() where offset >= discard {
-                let index = contextStart + offset
-                guard index < result.count else { continue }
-                result[index].translated = translated
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let unit = slice[offset]
+                let clean = translated.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard unit.count > 1 else {
+                    if let index = unit.first, index < result.count { result[index].translated = clean }
+                    continue
+                }
+                // A tradução da frase volta repartida pelas legendas dela, na
+                // proporção do original de cada uma, preferindo vírgula e fim
+                // de palavra. Curta demais para repartir, as legendas da
+                // frase viram uma só: legenda vazia mostraria o original.
+                let parts = splitEvenly(clean, into: unit.count,
+                                        weights: unit.map { Double(max(1, cues[$0].source.count)) },
+                                        wholeWords: true)
+                if parts.count == unit.count {
+                    for (index, part) in zip(unit, parts) { result[index].translated = part }
+                } else {
+                    result[unit[0]].translated = clean
+                    result[unit[0]].end = cues[unit[unit.count - 1]].end
+                    absorbed.formUnion(unit.dropFirst())
+                }
             }
 
-            done = end
+            done = lastCue + 1
             progress(Progress(
                 fraction: Double(done) / Double(max(cues.count, 1)),
                 label: "\(done) de \(cues.count)"
@@ -888,16 +1017,43 @@ public final class SubtitleFileBuilder {
             // Só o que já foi traduzido: entregar as legendas ainda em branco
             // encheria a lista de linhas vazias que depois mudariam sozinhas.
             if let onBatch {
-                onBatch(finalize(Array(result.prefix(done)), preservingTiming: preserveCueTiming))
+                onBatch(finalize(visible(done), preservingTiming: preserveCueTiming))
             }
 
             if Task.isCancelled {
                 note(lotesFalhos)
-                return finalize(Array(result.prefix(done)), preservingTiming: preserveCueTiming)
+                return finalize(visible(done), preservingTiming: preserveCueTiming)
             }
         }
         note(lotesFalhos)
-        return finalize(result, preservingTiming: preserveCueTiming)
+        return finalize(visible(result.count), preservingTiming: preserveCueTiming)
+    }
+
+    /// Legendas seguidas da mesma frase: a anterior não fecha com ponto, a
+    /// pausa entre elas é curta e quem fala é o mesmo.
+    ///
+    /// Troca de locutor fecha a unidade: juntar a pergunta de um com a
+    /// resposta do outro daria ao tradutor uma frase que ninguém disse.
+    func sentenceUnits(_ cues: [Cue]) -> [[Int]] {
+        var units: [[Int]] = []
+        for index in cues.indices {
+            if let unit = units.last, let last = unit.last {
+                let previous = cues[last]
+                let current = cues[index]
+                let tail = previous.source.trimmingCharacters(in: .whitespaces)
+                    .last { !"\"'」』)）".contains($0) }
+                let ended = tail.map { SentenceSplitter.sentenceEnders.contains($0) } ?? true
+                let length = Tokens.join((unit + [index]).map { cues[$0].source }).count
+                if !ended, current.start - previous.end <= Self.sentenceGap,
+                   previous.speaker == current.speaker,
+                   unit.count < Self.sentenceCues, length <= maximumCharacters {
+                    units[units.count - 1].append(index)
+                    continue
+                }
+            }
+            units.append([index])
+        }
+        return units
     }
 
     private func finalize(_ cues: [Cue], preservingTiming: Bool) -> [Cue] {
@@ -1091,7 +1247,14 @@ public final class SubtitleFileBuilder {
 
     /// Reparte o texto em `count` pedaços de tamanho parecido, cortando em
     /// espaço e preferindo pontuação quando ela cai perto do ponto ideal.
-    private func splitEvenly(_ text: String, into count: Int) -> [String] {
+    ///
+    /// - Parameter weights: tamanho relativo de cada parte; sem ele, iguais.
+    ///   É o original de cada legenda quando a tradução de uma frase volta
+    ///   repartida pelas legendas dela.
+    ///   `wholeWords` proíbe cair para o corte por caractere: repartindo a
+    ///   tradução de uma frase, "Acho" virava "Ac" / "ho".
+    private func splitEvenly(_ text: String, into count: Int, weights: [Double]? = nil,
+                             wholeWords: Bool = false) -> [String] {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard count > 1, clean.count >= count * 2 else { return [clean] }
 
@@ -1099,48 +1262,66 @@ public final class SubtitleFileBuilder {
         var units = clean.split(separator: " ").map(String.init)
         var separator = " "
 
-        // Japonês, chinês e tailandês não separam palavras por espaço: uma
-        // frase inteira vira uma "palavra" só e não haveria onde repartir.
-        // Quando a maior unidade não cabe no alvo, o corte passa a ser por
-        // caractere.
+        // Japonês e chinês não separam palavras por espaço: uma frase inteira
+        // vira uma "palavra" só e não haveria onde repartir. As unidades
+        // passam a ser pedaços de palavra (`Tokens.phrases`) — por caractere,
+        // o corte caía no meio da palavra: `…一人でブ` / `ツブツ…`.
         if units.isEmpty || (units.map(\.count).max() ?? 0) > Int(target) {
-            units = clean.map(String.init)
-            separator = ""
+            let dense = clean.contains { $0.isLetter && Tokens.isDense($0) }
+            if dense {
+                units = Tokens.phrases(clean)
+                separator = ""
+            } else if !wholeWords {
+                units = clean.map(String.init)
+                separator = ""
+            }
+            if units.count < count, !wholeWords {
+                units = clean.map(String.init)
+                separator = ""
+            }
         }
         guard units.count >= count else { return [clean] }
 
-        var parts: [String] = []
-        var current: [String] = []
-
-        func length(_ pieces: [String]) -> Int {
+        func length(_ pieces: ArraySlice<String>) -> Int {
             pieces.joined(separator: separator).count
         }
-
-        for unit in units {
-            let remaining = count - parts.count
-            // A última parte fica com tudo que sobrar.
-            guard remaining > 1 else { current.append(unit); continue }
-
-            if !current.isEmpty {
-                let without = length(current)
-                let with = length(current + [unit])
-                let endsClause = current.last?.last.map { ",;:.!?—、。".contains($0) } ?? false
-
-                // Fecha antes de adicionar quando isso deixa a parte mais
-                // perto do alvo. Só medir depois de adicionar fazia a primeira
-                // parte engolir o texto todo e não sobrava nada para dividir.
-                let closerWithout = abs(Double(without) - target) <= abs(Double(with) - target)
-                if closerWithout, endsClause || Double(without) >= target * 0.55 {
-                    parts.append(current.joined(separator: separator))
-                    current = [unit]
-                    continue
-                }
-            }
-            current.append(unit)
+        func endsClause(_ unit: String) -> Bool {
+            unit.last(where: { !$0.isWhitespace }).map { ",;:.!?—、。？！".contains($0) } ?? false
         }
 
-        if !current.isEmpty { parts.append(current.joined(separator: separator)) }
-        return parts.filter { !$0.isEmpty }
+        // Cada corte escolhe, entre as fronteiras de unidade, a que deixa a
+        // parte mais perto do alvo — com desconto para vírgula e ponto. O
+        // corte guloso de antes fechava na primeira fronteira que passasse do
+        // alvo, e uma vírgula dois caracteres antes perdia: `…勤めていて、長らく`
+        // / `北米の…`, onde a legenda do TEDxWasedaU corta `…勤めていて` /
+        // `長らく北米の…`. O desconto é de um terço do alvo; parte que não
+        // caiba nas duas linhas não entra na disputa.
+        let limit = charactersPerLine * maximumLines
+        var parts: [String] = []
+        var first = 0
+        for made in 0..<(count - 1) {
+            let remainingParts = count - made
+            let share = weights.map { $0[made] / max($0[made...].reduce(0, +), 1) }
+                ?? 1 / Double(remainingParts)
+            let aim = Double(length(units[first...])) * share
+            var best: Int?
+            var bestScore = Double.infinity
+            for last in first..<(units.count - (remainingParts - 1)) {
+                let size = length(units[first...last])
+                if size > limit, best != nil { break }
+                let score = abs(Double(size) - aim) - (endsClause(units[last]) ? aim / 3 : 0)
+                if score < bestScore {
+                    best = last
+                    bestScore = score
+                }
+                if Double(size) > aim * 1.6 { break }
+            }
+            guard let cut = best else { break }
+            parts.append(units[first...cut].joined(separator: separator))
+            first = cut + 1
+        }
+        if first < units.count { parts.append(units[first...].joined(separator: separator)) }
+        return parts.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     /// Legendas não podem se sobrepor, ficar fora de ordem, nem terminar antes

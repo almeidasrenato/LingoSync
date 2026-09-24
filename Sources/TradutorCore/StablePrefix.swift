@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 /// Em que unidades o texto reconhecido é comparado e confirmado.
 ///
@@ -90,6 +91,80 @@ public enum Tokens {
         }
         if pending > 0 { result += String(repeating: " ", count: pending) }
         return result
+    }
+
+    /// Pedaços de escrita densa que se podem separar sem partir palavra.
+    ///
+    /// A repartição de legenda e a quebra de linha cortavam japonês por
+    /// caractere, onde quer que caísse o meio: na palestra do TEDxWasedaU a
+    /// Apple saiu com `…一人でブ` / `ツブツ…` e `まあま` / `だまだ…` em legendas
+    /// seguidas. As palavras vêm do `NLTokenizer` do sistema, que em japonês
+    /// devolve morfema (`思っ|て|い|ます`) e não tem classe gramatical. Então
+    /// partícula e auxiliar conhecidos grudam na palavra de antes (`話を`,
+    /// `思っています`) — linha começando por `を` ou `ます` é a quebra que o
+    /// leitor japonês estranha — e o prefixo de cortesia gruda na seguinte
+    /// (`お話し`). Pontuação e espaço ficam com o pedaço anterior. Juntos, os
+    /// pedaços são o texto exato.
+    public static func phrases(_ text: String) -> [String] {
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+        var starts = tokenizer.tokens(for: text.startIndex..<text.endIndex).map(\.lowerBound)
+        guard !starts.isEmpty else { return text.isEmpty ? [] : [text] }
+        starts[0] = text.startIndex
+        var result: [String] = []
+        var prefix = ""
+        for (offset, start) in starts.enumerated() {
+            let end = offset + 1 < starts.count ? starts[offset + 1] : text.endIndex
+            let word = String(text[start..<end])
+            let bare = word.trimmingCharacters(in: .whitespaces)
+            if attachesForward.contains(bare) {
+                prefix += word
+                continue
+            }
+            // Katakana e letra latina seguidas são uma palavra só: o
+            // tokenizador partiu `テッドックス` em `テッド|ッ|クス`, e a linha
+            // quebrava ali.
+            let sameRun = result.last?.last(where: { !$0.isWhitespace }).map { last in
+                bare.first.map { (isKatakana(last) && isKatakana($0)) || (last.isASCII && last.isLetter && $0.isASCII && $0.isLetter) } ?? false
+            } ?? false
+            let glues = sameRun || attachesBackward.contains(bare.filter(\.isLetter))
+                || (bare.count == 1 && bare.first.map(isHiragana) == true)
+            if prefix.isEmpty, glues, let last = result.last?.last(where: { !$0.isWhitespace }), last.isLetter {
+                result[result.count - 1] += word
+            } else {
+                result.append(prefix + word)
+            }
+            prefix = ""
+        }
+        if !prefix.isEmpty { result.append(prefix) }
+        return result
+    }
+
+    /// Partículas e auxiliares japoneses: nunca abrem pedaço.
+    static let attachesBackward: Set<String> = [
+        "は", "が", "を", "に", "で", "と", "も", "の", "へ", "や", "か", "ね", "よ", "な", "わ", "さ",
+        "て", "た", "だ", "ば", "ん", "う", "い", "る", "ず",
+        "から", "まで", "より", "けど", "けれど", "ので", "のに", "って", "だけ", "しか",
+        "ほど", "など", "ながら", "たり", "だり", "ちゃ", "じゃ", "とか",
+        "ない", "なかっ", "ます", "ませ", "まし", "です", "でし", "でしょ", "だろ", "だっ",
+        "たい", "たく", "たかっ", "れる", "られる", "れ", "られ", "せる", "させる", "せ", "させ",
+        "いる", "いう", "おり", "ござい",
+        // Auxiliar depois de て: `…にして` / `やがる` saiu numa legenda do
+        // anime e a tradução ganhou um "Vai fazer" solto.
+        "やがる", "やがっ", "ちゃう", "ちゃっ", "じゃう", "じゃっ", "しまう", "しまっ", "しまい",
+    ]
+
+    /// Prefixo de cortesia: vai com a palavra seguinte.
+    static let attachesForward: Set<String> = ["お", "ご"]
+
+    private static func isKatakana(_ character: Character) -> Bool {
+        guard let scalar = character.unicodeScalars.first else { return false }
+        return (0x30A1...0x30FF).contains(scalar.value) || (0xFF66...0xFF9F).contains(scalar.value)
+    }
+
+    private static func isHiragana(_ character: Character) -> Bool {
+        guard let scalar = character.unicodeScalars.first else { return false }
+        return (0x3041...0x309F).contains(scalar.value)
     }
 
     public static func join(_ tokens: [String]) -> String {

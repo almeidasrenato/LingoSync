@@ -53,6 +53,10 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
     private let size: Size
     public var language: Language
     public var isPrepared: Bool { Self.isInstalled(size) }
+    /// Ver `Transcriber.speakerBoundaries`. O SRT pronto do Qwen não sabia
+    /// delas; agrupando aqui, troca de voz fecha trecho como na Apple.
+    public var speakerBoundaries: [TimeInterval] = []
+    public var pauseBoundaries: [TimeInterval] = []
     private let log = Logger(subsystem: "app.tradutor", category: "Qwen")
 
     /// Onde `Scripts/qwen-setup.sh` instala.
@@ -101,13 +105,14 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         .russian, .japanese, .chinese, .korean, .arabic, .hindi, .turkish,
     ]
 
-    /// O 0.6B não pontua em inglês.
+    /// Tamanho que não serve para um idioma. Vazio hoje.
     ///
-    /// Em 161 s de conversa: **zero** sinais, contra 63 do Parakeet, 73 da
-    /// Apple e 73 do próprio 1.7B. Sem ponto o agrupador perde a fronteira de
-    /// frase. Em japonês o mesmo modelo pontua normal — é por idioma, e só o
-    /// inglês foi medido.
-    static let unpunctuated: [Size: [Language]] = [.small: [.english]]
+    /// O inglês ficou fora do 0.6B por "não pontuar": zero sinais em 161 s,
+    /// contra 73 do 1.7B. Era o SRT do pacote, não o modelo — o texto do
+    /// mesmo arquivo tem 65 sinais, e o pacote joga toda a pontuação fora no
+    /// primeiro caractere que não casa com o alinhador (ver
+    /// `transcribeTimed`). Medido de novo em 23/09/2026, pelo caminho do app.
+    static let unpunctuated: [Size: [Language]] = [:]
 
     /// O que este tamanho oferece de fato.
     public static func languages(for size: Size) -> [Language] {
@@ -185,10 +190,13 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         }
         progress(0.1)
 
-        // `-f srt` em vez de json de propósito: o próprio modelo quebra o
-        // texto em falas com pontuação, que é o formato que a legenda quer, e
-        // o `SRTParser` do app já sabe ler isso — inclusive o piso de duração
-        // que conserta os blocos de duração zero que ele às vezes emite.
+        // `-f json`, e o agrupamento em falas é nosso. O SRT do pacote
+        // reaplica a pontuação do texto aos segmentos do alinhador e, no
+        // primeiro caractere que não bate — um espaço dentro de `TED Talks`
+        // basta —, devolve **tudo sem pontuação**: na palestra do
+        // TEDxWasedaU (16 min) o 0.6B tinha 201 sinais no texto e 0 no SRT,
+        // e a legenda saía cortada pela largura, no meio da palavra. E o
+        // agrupamento dele não conhecia as fronteiras de voz.
         let process = Process()
         let optimizedMemory = size == .large
             && ProcessInfo.processInfo.environment["TRADUTOR_QWEN_SEM_OTIMIZACAO"] == nil
@@ -198,7 +206,7 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
             "--model", size.rawValue,
             "--language", idioma,
             "--timestamps",
-            "-f", "srt",
+            "-f", "json",
             "-o", folder.path,
             "--no-progress",
             "--quiet",
@@ -242,13 +250,125 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         }
         progress(0.9)
 
-        let srt = folder.appendingPathComponent("fala.srt")
-        let cues = try SRTParser.parse(contentsOf: srt)
+        let json = folder.appendingPathComponent("fala.json")
+        let output = try JSONDecoder().decode(Output.self, from: Data(contentsOf: json))
         progress(1)
-        return cues.map {
-            TimedText(text: $0.translated, start: $0.start, end: $0.end)
+        let runs = Self.punctuated(output.segments ?? [], text: output.text)
+        return Self.phrases(runs, boundaries: (speakerBoundaries + pauseBoundaries).sorted())
+    }
+
+    struct Output: Decodable {
+        let text: String
+        let segments: [Segment]?
+    }
+
+    public struct Segment: Decodable, Sendable {
+        let text: String
+        let start: Double
+        let end: Double
+
+        public init(text: String, start: Double, end: Double) {
+            self.text = text
+            self.start = start
+            self.end = end
         }
     }
+
+    /// Os segmentos do alinhador (uma palavra, ou um caractere em japonês),
+    /// com a pontuação do texto de volta.
+    ///
+    /// Tolerante: o que não casa segue sem pontuação e o texto é
+    /// reencontrado adiante, em vez de o arquivo inteiro perder a
+    /// pontuação — que é o que o pacote faz.
+    public static func punctuated(_ segments: [Segment], text: String) -> [TimedText] {
+        let chars = Array(text)
+        var cursor = 0
+        func isMark(_ c: Character) -> Bool { c.isPunctuation || c.isSymbol }
+        func matches(_ word: [Character], at start: Int) -> Int? {
+            var i = start
+            for c in word {
+                while i < chars.count, chars[i].isWhitespace { i += 1 }
+                guard i < chars.count, String(chars[i]).lowercased() == String(c).lowercased() else { return nil }
+                i += 1
+            }
+            return i
+        }
+        var runs: [TimedText] = []
+        for segment in segments {
+            let word = Array(segment.text.filter { !$0.isWhitespace })
+            guard !word.isEmpty else { continue }
+            var start = cursor
+            var leading = ""
+            while start < chars.count, chars[start].isWhitespace || isMark(chars[start]) {
+                if !chars[start].isWhitespace { leading.append(chars[start]) }
+                start += 1
+            }
+            var end = matches(word, at: start)
+            if end == nil {
+                leading = ""
+                // Reencontra adiante; perto, para não casar com outra
+                // ocorrência da mesma palavra lá na frente.
+                end = (cursor..<min(chars.count, cursor + 40)).lazy.compactMap { matches(word, at: $0) }.first
+            }
+            var body = String(word)
+            if let found = end {
+                cursor = found
+                var trailing = ""
+                while cursor < chars.count, isMark(chars[cursor]), !"「『（(\"“".contains(chars[cursor]) {
+                    trailing.append(chars[cursor])
+                    cursor += 1
+                }
+                body = leading + body + trailing
+            }
+            runs.append(TimedText(text: body, start: segment.start, end: max(segment.end, segment.start)))
+        }
+        return runs
+    }
+
+    /// Junta os segmentos em trechos: fecha na pontuação de frase, na pausa,
+    /// na troca de voz e no teto de tempo — as mesmas regras da Apple
+    /// (`AppleSpeechTranscriber.phrases`), agora com o tempo de cada palavra
+    /// que o alinhador já dava e o SRT pronto jogava fora.
+    public static func phrases(_ runs: [TimedText], boundaries: [TimeInterval] = []) -> [TimedText] {
+        var pieces: [TimedText] = []
+        var current: [TimedText] = []
+        var side = 0
+        func close() {
+            guard let first = current.first, let last = current.last else { return }
+            let text = Tokens.join(current.map(\.text)).trimmingCharacters(in: .whitespaces)
+            if SentenceSplitter.hasContent(text) {
+                pieces.append(TimedText(text: text, start: first.start, end: last.end))
+            } else if let previous = pieces.popLast() {
+                // Pontuação solta é o fim do trecho anterior.
+                pieces.append(TimedText(text: previous.text + text, start: previous.start, end: previous.end))
+            }
+            current = []
+        }
+        for run in runs {
+            if let last = current.last, run.start - last.end >= pauseGap { close() }
+            let meio = (run.start + run.end) / 2
+            let lado = boundaries.filter { $0 <= meio }.count
+            if !current.isEmpty, lado != side { close() }
+            side = lado
+            if let first = current.first, run.end - first.start >= hardCeiling { close() }
+            current.append(run)
+            let span = run.end - (current.first?.start ?? run.end)
+            if let mark = run.text.last, SentenceSplitter.sentenceEnders.contains(mark) {
+                close()
+            } else if span >= softCeiling, let mark = run.text.last,
+                      SentenceSplitter.clauseEnders.contains(mark) {
+                close()
+            }
+        }
+        close()
+        return pieces
+    }
+
+    /// Silêncio entre palavras que fecha o trecho. O mesmo meio segundo da
+    /// Apple.
+    static let pauseGap = 0.5
+    static let softCeiling = 5.0
+    static let hardCeiling = 7.0
 
     /// WAV 16 kHz mono, que é o formato em que o áudio já está.
     static func writeWAV(_ samples: [Float], to url: URL) throws {

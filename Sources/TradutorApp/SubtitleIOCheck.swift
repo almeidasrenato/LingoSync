@@ -54,6 +54,16 @@ enum SubtitleIOCheck {
             expect(model.exportError != nil && unchanged == saved,
                    "faixa ausente não sobrescreve o arquivo com outro idioma")
 
+            // O caso relatado em 22/09/2026: a janela nasce com o seletor de
+            // fala em inglês, e o `.srt` japonês importado ia ao tradutor
+            // como inglês.
+            let outraJanela = SubtitleStudioModel(preferences: nil)
+            outraJanela.sourceLanguage = .english
+            outraJanela.loadSubtitles(from: original, as: .original)
+            expect(outraJanela.subtitleLanguage(for: .original) == .japanese
+                   && outraJanela.suggestedSRTName(for: .original) == "legenda.ja.srt",
+                   "original importado leva o idioma do texto, não o do seletor de fala")
+
             model.translationEngine = .transcriptionOnly
             model.retranslate()
             let deadline = Date().addingTimeInterval(5)

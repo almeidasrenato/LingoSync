@@ -41,6 +41,9 @@ struct Verify {
               tradutor-verify tempos        formatacao e agrupamento de legendas
               tradutor-verify formatos      arquivo sem extensao e formato recusado
               tradutor-verify legendas      leitura de arquivo .srt
+              tradutor-verify imagem [<video> [idioma]] [--gabarito <txt>] [--oraculo] [--faixa 0.76,1.0]
+                                            legenda desenhada no video: sem video, a montagem;
+                                            com video, as legendas lidas, o gabarito e o instante
               tradutor-verify faixas        video com duas faixas: escolha pelo idioma
               tradutor-verify fonte <video> [idioma] [motor]
                                             imprime as falas reconhecidas, uma por linha
@@ -86,6 +89,50 @@ struct Verify {
                                engine: arguments.count >= 5 ? (RecognitionEngine(rawValue: arguments[4]) ?? .apple) : .apple,
                                referencePath: option("--audio-referencia"), cachePath: option("--referencia"), jsonPath: option("--json"))
         case "dialogo": await dialogueGate()
+        case "gerar":
+            // gerar <video> <origem> <destino> <motor> <tradutor> <saida.json> [--locutores] [--modelo m]
+            // Rascunho (antes de traduzir) e legendas finais, com tempos e locutor.
+            let origem = Language(rawValue: arguments[3]) ?? .japanese
+            let destino = Language(rawValue: arguments[4]) ?? .portuguese
+            let builder = SubtitleFileBuilder()
+            if let m = option("--modelo").flatMap(SpeakerDiarizer.Model.init(rawValue:)) { builder.speakerModel = m }
+            let comecou = Date()
+            let cues: [Cue]
+            do {
+                cues = try await builder.generate(
+                    from: URL(fileURLWithPath: arguments[2]), source: origem, target: destino,
+                    engine: RecognitionEngine(rawValue: arguments[5]) ?? .apple,
+                    translation: TranslationEngine(rawValue: arguments[6]) ?? .apple,
+                    diarize: arguments.contains("--locutores"), progress: { _, _, _, _ in })
+            } catch {
+                print("FALHA: \(error.localizedDescription)"); exit(1)
+            }
+            func linha(_ c: Cue) -> [String: Any] {
+                ["start": c.start, "end": c.end, "source": c.source, "translated": c.translated,
+                 "speaker": c.speaker ?? ""]
+            }
+            let saida: [String: Any] = [
+                "segundos": Date().timeIntervalSince(comecou),
+                "reconhecimento": builder.recognitionName ?? "", "traducao": builder.translationName ?? "",
+                "rascunho": builder.draft.map(linha), "legendas": cues.map(linha),
+            ]
+            try! JSONSerialization.data(withJSONObject: saida, options: [.prettyPrinted, .sortedKeys])
+                .write(to: URL(fileURLWithPath: arguments[7]))
+            print("\(builder.draft.count) no rascunho, \(cues.count) legendas")
+            // `--ab <saida2.json>`: o MESMO rascunho retraduzido legenda por
+            // legenda, o jeito antigo. Tira a variação do reconhecedor da conta.
+            if let outra = option("--ab") {
+                builder.translatesBySentence = false
+                let antigas = try! await builder.retranslate(
+                    using: TranslationEngine(rawValue: arguments[6]) ?? .apple,
+                    from: origem, to: destino, progress: { _, _, _, _ in })
+                var copia = saida
+                copia["legendas"] = antigas.map(linha)
+                try! JSONSerialization.data(withJSONObject: copia, options: [.prettyPrinted, .sortedKeys])
+                    .write(to: URL(fileURLWithPath: outra))
+                print("por legenda: \(antigas.count) legendas")
+            }
+        case "referencia": await referenceGate(arguments: arguments, option: option)
         case "audio":
             guard arguments.count >= 3 else { print("falta o caminho do wav"); exit(1) }
             let source = arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .english) : .english
@@ -96,6 +143,8 @@ struct Verify {
                     ? (RecognitionEngine(rawValue: arguments[5]) ?? .whisper) : .whisper
             )
         case "quebra": lineBreakGate()
+        case "japones": japaneseSubtitleGate()
+        case "frase": await sentenceTranslationGate()
         case "modelos": await warmModelGate()
         case "frases": sentenceGate()
         case "lote": await batchGate()
@@ -123,6 +172,24 @@ struct Verify {
         case "tempos": await timecodeGate()
         case "formatos": await formatGate()
         case "legendas": legendaGate()
+        case "imagem":
+            guard arguments.count >= 3 else { burnedSubtitleGate(); return }
+            // `--faixa a,b` é a área de largura inteira; `--area x,y,l,a` é a
+            // desenhada, como a janela a lê.
+            func numeros(_ texto: String) -> [Double] { texto.split(separator: ",").compactMap { Double($0) } }
+            var faixa: CGRect?
+            if let p = option("--faixa").map(numeros), p.count == 2, p[0] < p[1] {
+                faixa = CGRect(x: 0, y: p[0], width: 1, height: p[1] - p[0])
+            }
+            var desenhada: CGRect?
+            if let p = option("--area").map(numeros), p.count == 4, p[2] > 0, p[3] > 0 {
+                desenhada = CGRect(x: p[0], y: p[1], width: p[2], height: p[3])
+            }
+            await burnedSubtitleVideoGate(
+                path: arguments[2],
+                language: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .english) : .english,
+                gabarito: option("--gabarito"), oracle: arguments.contains("--oraculo"),
+                area: desenhada ?? faixa)
         case "faixas": await trackGate()
         case "fonte":
             guard arguments.count >= 3 else { print("falta o caminho do video"); exit(1) }
@@ -543,8 +610,16 @@ struct Verify {
         for begin in stride(from: 0, to: lines.count, by: step) {
             let end = min(begin + step, lines.count)
             let slice = Array(lines[begin..<end])
-            output += (try? await translator.translate(slice, from: source, to: target))
-                ?? Array(repeating: "", count: slice.count)
+            // O erro vai para a tela: engolido, o lote que falhava aparecia
+            // só como linhas em branco, sem dizer se foi tempo, formato ou
+            // contagem.
+            do {
+                output += try await translator.translate(slice, from: source, to: target)
+            } catch {
+                FileHandle.standardError.write(Data(
+                    "lote \(begin + 1)–\(end): \(error.localizedDescription)\n".utf8))
+                output += Array(repeating: "", count: slice.count)
+            }
         }
         let ms = Int(Date().timeIntervalSince(started) * 1000)
 
@@ -642,9 +717,414 @@ struct Verify {
                + "(\"\(comEspacos.first?.translated ?? "")\")")
         expect(comEspacos.last?.translated == "Segunda.", "o segundo bloco chega inteiro")
 
+        // O idioma de uma legenda importada sai do texto dela, não do seletor
+        // de fala — que nasce em inglês e mandava o japonês ao tradutor como
+        // inglês.
+        expect(Language.detect(in: ["あっちもお願いしたいんですけど。", "大丈夫です。", "かわかつです。"]) == .japanese,
+               "detecta legenda japonesa")
+        expect(Language.detect(in: ["Olá a todos, este é um supermercado", "Antes de fazer compras"]) == .portuguese,
+               "detecta legenda em portugues")
+        expect(Language.detect(in: ["OK"]) == nil, "legenda de uma palavra nao decide sozinha")
+
         print("")
         print(failures == 0 ? "leitura de .srt ok" : "\(failures) falhas")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    // MARK: Legenda na imagem
+
+    /// A montagem da legenda lida da imagem, sem vídeo e sem Vision: as linhas
+    /// e as amostras são fabricadas com o que os vídeos de exemplo mostraram.
+    static func burnedSubtitleGate() {
+        failures = 0
+        typealias Line = BurnedSubtitle.Line
+        typealias Sample = BurnedSubtitle.Sample
+        typealias Change = BurnedSubtitle.Change
+
+        print("filtros de linha\n")
+        // Video 2: duas linhas da fala e a marca d'agua na mesma faixa.
+        let marca = Line(text: "©Eiichiro Oda/Shueisha, Toei Animation",
+                         box: CGRect(x: 0.78, y: 0.83, width: 0.20, height: 0.11))
+        let cima = Line(text: "I'm the one who'll become", box: CGRect(x: 0.32, y: 0.32, width: 0.36, height: 0.26))
+        let baixo = Line(text: "the King of the Pirates!", box: CGRect(x: 0.34, y: 0.62, width: 0.31, height: 0.26))
+        let fala = BurnedSubtitle.filter([baixo, marca, cima], for: .english)
+        expect(fala.text == "I'm the one who'll become the King of the Pirates!",
+               "duas linhas viram uma legenda, de cima para baixo (\"\(fala.text)\")")
+        expect(!fala.text.contains("Oda"), "a marca d'agua fora do centro sai")
+
+        // Video de 9 minutos: furigana, japones, romaji e ingles na mesma
+        // legenda, e a placa de cardapio no canto.
+        let furigana = Line(text: "いよ", box: CGRect(x: 0.36, y: 0.05, width: 0.03, height: 0.086))
+        let japones = Line(text: "今、いそがしいの。", box: CGRect(x: 0.36, y: 0.16, width: 0.27, height: 0.309))
+        let romaji = Line(text: "ima isogashii no", box: CGRect(x: 0.38, y: 0.50, width: 0.23, height: 0.262))
+        let ingles = Line(text: "I'm busy right now.", box: CGRect(x: 0.39, y: 0.78, width: 0.22, height: 0.196))
+        let placa = Line(text: "柒￥80", box: CGRect(x: 0.19, y: 0.40, width: 0.10, height: 0.30))
+        let todas = [ingles, placa, romaji, furigana, japones]
+        let emJapones = BurnedSubtitle.filter(todas, for: .japanese)
+        expect(emJapones.text == "今、いそがしいの。",
+               "japones escolhido: so a linha japonesa (\"\(emJapones.text)\")")
+        expect(!emJapones.text.contains("いよ"), "furigana sai pela altura")
+        expect(!emJapones.text.contains("80"), "a placa fora do centro sai")
+        let emIngles = BurnedSubtitle.filter(todas, for: .english)
+        expect(emIngles.text == "ima isogashii no I'm busy right now.",
+               "ingles escolhido: as linhas latinas, que a escrita nao separa (\"\(emIngles.text)\")")
+        let duas = BurnedSubtitle.filter([
+            Line(text: "え、そんなことないよ。", box: CGRect(x: 0.32, y: 0.2, width: 0.34, height: 0.3)),
+            Line(text: "本当に？", box: CGRect(x: 0.44, y: 0.6, width: 0.12, height: 0.3)),
+        ], for: .japanese)
+        expect(duas.text == "え、そんなことないよ。本当に？",
+               "japones junta as linhas sem espaco (\"\(duas.text)\")")
+        // "え？　同じです。": uma linha com um vao largo vem em duas caixas, e a
+        // da direita um pixel acima. Cada metade sozinha fica fora do centro.
+        let partida = BurnedSubtitle.filter([
+            Line(text: "同じです。", box: CGRect(x: 0.46, y: 0.19, width: 0.16, height: 0.30)),
+            Line(text: "え？", box: CGRect(x: 0.38, y: 0.20, width: 0.05, height: 0.29)),
+        ], for: .japanese)
+        expect(partida.text == "え？同じです。",
+               "linha partida pelo vao: junta da esquerda para a direita (\"\(partida.text)\")")
+        let placaNoMeio = Line(text: "1日 60", box: CGRect(x: 0.28, y: 0.60, width: 0.05, height: 0.12))
+        expect(BurnedSubtitle.filter([placaNoMeio], for: .japanese).text.isEmpty,
+               "a placa em 0,30 do centro sai (com 0,2 de folga ela virava legenda)")
+        // A marca d'agua encosta na segunda linha da fala: nao pode entrar na
+        // mesma linha visual, senao a fala sai do centro junto com ela.
+        let encostada = Line(text: "©Eiichiro Oda/Shueisha, Toei Animation",
+                             box: CGRect(x: 0.78, y: 0.80, width: 0.20, height: 0.11))
+        let comMarca = BurnedSubtitle.filter([cima, baixo, encostada], for: .english)
+        expect(comMarca.text == "I'm the one who'll become the King of the Pirates!",
+               "a marca d'agua encostada na fala nao a leva junto (\"\(comMarca.text)\")")
+        let trocado = BurnedSubtitle.filter([ingles], for: .japanese)
+        expect(trocado.text.isEmpty && trocado.otherScript,
+               "texto em outra escrita e marcado, para o erro dizer o motivo")
+        expect(!BurnedSubtitle.filter([placa], for: .japanese).otherScript,
+               "o que o filtro de centro tira nao conta como outra escrita")
+        // Area desenhada: o centro que vale e o do quadro, nao o da area.
+        // Caixas em coordenadas da area recortada.
+        let torta = CGRect(x: 0.2, y: 0.76, width: 0.56, height: 0.24)  // meio do quadro em 0,536
+        let noMeio = Line(text: "the King of the Pirates!", box: CGRect(x: 0.25, y: 0.3, width: 0.572, height: 0.3))
+        let naBorda = Line(text: "Crunchyroll", box: CGRect(x: 0.80, y: 0.6, width: 0.18, height: 0.3))
+        let desenhada = BurnedSubtitle.filter([noMeio, naBorda], for: .english, area: torta)
+        expect(desenhada.text == "the King of the Pirates!",
+               "area desenhada assimetrica: fica a fala no meio do quadro, sai a marca (\"\(desenhada.text)\")")
+        let noCanto = CGRect(x: 0.0, y: 0.0, width: 0.3, height: 0.2)
+        let aEsquerda = Line(text: "Left aligned line", box: CGRect(x: 0.02, y: 0.3, width: 0.5, height: 0.3))
+        expect(BurnedSubtitle.filter([aEsquerda], for: .english).text.isEmpty,
+               "na faixa padrao, linha a esquerda sai pelo centro")
+        expect(BurnedSubtitle.filter([aEsquerda], for: .english, area: noCanto).text == "Left aligned line",
+               "area desenhada sem o meio do quadro: legenda de canto fica")
+        expect(BurnedSubtitle.filter([furigana, japones], for: .japanese, area: noCanto).text == "今、いそがしいの。",
+               "na area de canto, furigana continua saindo pela altura")
+
+        print("\nrecorte da area\n")
+        // Plano Y 8x4 com o valor de cada pixel = 10*linha + coluna.
+        var buffer: CVPixelBuffer?
+        CVPixelBufferCreate(nil, 8, 4, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, nil, &buffer)
+        if let buffer {
+            CVPixelBufferLockBaseAddress(buffer, [])
+            let base = CVPixelBufferGetBaseAddressOfPlane(buffer, 0)!.assumingMemoryBound(to: UInt8.self)
+            let stride = CVPixelBufferGetBytesPerRowOfPlane(buffer, 0)
+            for y in 0..<4 { for x in 0..<8 { base[y * stride + x] = UInt8(10 * y + x) } }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            let recorte = BurnedSubtitle.copyBand(buffer, area: CGRect(x: 0.25, y: 0.5, width: 0.5, height: 0.5))
+            expect(recorte?.width == 4 && recorte?.height == 2,
+                   "recorte de 8x4 pela metade do meio vira 4x2 (\(recorte?.width ?? 0)x\(recorte?.height ?? 0))")
+            expect(recorte?.pixels == [22, 23, 24, 25, 32, 33, 34, 35],
+                   "o recorte comeca na coluna e na linha certas (\(recorte?.pixels ?? []))")
+            let padrao = BurnedSubtitle.copyBand(buffer, area: BurnedSubtitle.defaultArea)
+            expect(padrao?.width == 8, "a area padrao tem a largura inteira")
+        } else {
+            expect(false, "nao consegui criar o quadro de teste")
+        }
+
+        print("\nmesma legenda ou outra\n")
+        expect(BurnedSubtitle.same("My name is...", "My name iS..."), "caixa e pontuacao nao fazem outra legenda")
+        expect(BurnedSubtitle.same("Everyone...", "Everyone.."), "reticencia a menos nao faz outra legenda")
+        expect(!BurnedSubtitle.same("He's so evil!", "He's as vicious as they say."),
+               "falas diferentes sao outra legenda")
+        expect(!BurnedSubtitle.same("", "Hello?!"), "vazio nao e igual a texto")
+        expect(BurnedSubtitle.same("", ""), "vazio e igual a vazio")
+        expect(!BurnedSubtitle.same("me!", "mel"),
+               "texto curto com uma letra trocada passa da tolerancia: e o caso do tremor")
+
+        print("\nmontagem\n")
+        func a(_ time: Double, _ text: String) -> Sample { Sample(time: time, text: text) }
+        let hello = "Hello?!"
+        let inteira = BurnedSubtitle.assemble([a(0, hello), a(0.25, hello), a(0.5, hello)], changes: [:], end: 1)
+        expect(inteira.count == 1 && inteira.first?.start == 0 && inteira.first?.end == 1,
+               "texto do comeco ao fim: uma legenda, ate o fim do ultimo quadro")
+
+        let refinada = BurnedSubtitle.assemble(
+            [a(0, ""), a(0.25, hello), a(0.5, hello), a(0.75, "")],
+            changes: [1: Change(previousEnds: 0.21, nextStarts: 0.21),
+                      3: Change(previousEnds: 0.625, nextStarts: 0.625)],
+            end: 1)
+        expect(refinada.count == 1 && refinada.first?.start == 0.21 && refinada.first?.end == 0.625,
+               "entrada e saida vem do refino, nao da amostra")
+
+        let certo = "Help! Straw Hat's gonna kill me!"
+        let tremor = BurnedSubtitle.assemble(
+            [a(0, certo), a(0.25, certo), a(0.5, "Help! Straw Hat's gonna kill mel"), a(0.75, certo), a(1, certo)],
+            changes: [2: Change(previousEnds: 0.5, nextStarts: 0.5),
+                      3: Change(previousEnds: 0.75, nextStarts: 0.75)],
+            end: 1.25)
+        expect(tremor.count == 1 && tremor.first?.source == certo && tremor.first?.end == 1.25,
+               "A A' A e uma legenda so, com o texto de A")
+
+        let leituras = ["My name is...", "My name iS...", "My name is...",
+                        "My name is...", "My name iS...", "My name is..."]
+        let voto = BurnedSubtitle.assemble(
+            leituras.enumerated().map { a(Double($0.offset) * 0.25, $0.element) }, changes: [:], end: 2)
+        expect(voto.count == 1 && voto.first?.source == "My name is...", "o texto e o mais lido entre as amostras")
+
+        let buraco = BurnedSubtitle.assemble(
+            [a(0, hello), a(0.25, hello), a(0.5, ""), a(0.75, hello)],
+            changes: [2: Change(previousEnds: 0.45, nextStarts: 0.45),
+                      3: Change(previousEnds: 0.7, nextStarts: 0.7)],
+            end: 1)
+        expect(buraco.count == 2 && buraco.first?.end == 0.45 && buraco.last?.start == 0.7,
+               "o mesmo texto depois de um vazio e outra legenda")
+
+        let troca = BurnedSubtitle.assemble(
+            [a(0, "He's so evil!"), a(0.25, "He's as vicious as they say.")],
+            changes: [1: Change(previousEnds: 0.167, nextStarts: 0.167)], end: 0.5)
+        expect(troca.count == 2 && troca.first?.end == 0.167 && troca.last?.start == 0.167,
+               "troca sem vazio: uma fecha no quadro em que a outra abre")
+
+        let vao = BurnedSubtitle.assemble(
+            [a(0, "My name is..."), a(0.25, "...Monkey D. Luffy!")],
+            changes: [1: Change(previousEnds: 0.042, nextStarts: 0.208)], end: 0.5)
+        expect(vao.count == 2 && vao.first?.end == 0.042 && vao.last?.start == 0.208,
+               "legenda, vazio e legenda no mesmo intervalo: dois instantes")
+
+        let dissolve = BurnedSubtitle.assemble(
+            [a(0, "Luffy, no!"), a(0.25, "Clank.")],
+            changes: [1: Change(previousEnds: 0.21, nextStarts: 0.17)], end: 0.5)
+        expect(dissolve.count == 2 && dissolve.first?.end == 0.17 && dissolve.last?.start == 0.17,
+               "dissolucao: a nova manda a partir de quando fica legivel")
+
+        expect(BurnedSubtitle.assemble([a(0, ""), a(0.25, ""), a(0.5, "")], changes: [:], end: 1).isEmpty,
+               "faixa vazia o tempo todo nao vira legenda em branco")
+
+        let curta = BurnedSubtitle.assemble([a(0, ""), a(0.25, "Clank."), a(0.5, "")], changes: [:], end: 1)
+        expect(curta.count == 1 && curta.first?.start == 0.25 && curta.first?.end == 0.5,
+               "legenda vista numa amostra so fica")
+        expect(inteira.map(\.index) == [1] && buraco.map(\.index) == [1, 2], "indices contados de 1")
+
+        print("\no quadro exato\n")
+        // Faixa de 14 x 7: a letra e um retangulo claro (235) dentro de um
+        // contorno escuro (16), como a legenda branca contornada de preto.
+        func faixa(fundo: UInt8, letra: Bool, nucleo: UInt8 = 235, contorno: UInt8 = 16) -> BurnedSubtitle.Band {
+            BurnedSubtitle.Band(width: 14, height: 7, pixels: (0..<98).map { posicao in
+                let (x, y) = (posicao % 14, posicao / 14)
+                guard letra, (2...11).contains(x), (1...5).contains(y) else { return fundo }
+                return (3...10).contains(x) && (2...4).contains(y) ? nucleo : contorno
+            })
+        }
+        let caixa = CGRect(x: 2.0 / 14, y: 1.0 / 7, width: 10.0 / 14, height: 5.0 / 7)
+        let ceu = faixa(fundo: 190, letra: true)
+        let letras = BurnedSubtitle.glyphs(of: ceu, in: [caixa])
+        expect(BurnedSubtitle.shows(ceu, letras) == true, "a amostra mostra as proprias letras")
+        // O caso medido: a legenda some e a cena corta 3 quadros depois.
+        let corte = [faixa(fundo: 190, letra: false), faixa(fundo: 190, letra: false), faixa(fundo: 60, letra: false)]
+        expect(corte.firstIndex { BurnedSubtitle.shows($0, letras) == false } == 0,
+               "a legenda some no quadro em que some, nao no corte de cena seguinte")
+        expect(BurnedSubtitle.shows(faixa(fundo: 60, letra: true), letras) == true,
+               "corte de cena atras da legenda parada nao a tira da tela")
+        expect(BurnedSubtitle.shows(faixa(fundo: 235, letra: false), letras) == false,
+               "fundo claro nao imita a letra: o contorno escuro sumiu")
+        expect(BurnedSubtitle.shows(faixa(fundo: 16, letra: false), letras) == false,
+               "fundo escuro nao imita a letra: o nucleo claro sumiu")
+        let fade = [(200, 60), (140, 100), (90, 115)].map { nucleo, contorno in
+            faixa(fundo: 120, letra: true, nucleo: UInt8(nucleo), contorno: UInt8(contorno))
+        }
+        expect(fade.firstIndex { BurnedSubtitle.shows($0, letras) == false } == 1,
+               "fade: some no quadro em que a letra passa da metade")
+        let apagada = faixa(fundo: 120, letra: true, nucleo: 150, contorno: 100)
+        expect(BurnedSubtitle.shows(apagada, BurnedSubtitle.glyphs(of: apagada, in: [caixa])) == nil,
+               "sem contraste nao ha letra a seguir: o instante fica o da amostra")
+
+        // Duas falas no mesmo lugar, numa caixa escura: a nova cobre 3/4 da
+        // velha. Pela letra inteira a velha "continuava na tela".
+        func caixaEscura(_ colunas: ClosedRange<Int>) -> BurnedSubtitle.Band {
+            BurnedSubtitle.Band(width: 30, height: 9, pixels: (0..<270).map { posicao in
+                let (x, y) = (posicao % 30, posicao / 30)
+                return colunas.contains(x) && (3...5).contains(y) ? 235 : 40
+            })
+        }
+        let velha = caixaEscura(3...26)
+        let nova = caixaEscura(3...20)
+        let faixaToda = CGRect(x: 0, y: 0, width: 1, height: 1)
+        let todasDaVelha = BurnedSubtitle.glyphs(of: velha, in: [faixaToda])
+        expect(BurnedSubtitle.shows(nova, todasDaVelha) == true,
+               "a fala nova cobre a velha: pela letra inteira, a velha parece na tela")
+        let soDaVelha = BurnedSubtitle.distinct(todasDaVelha, in: velha, against: nova)
+        expect([velha, velha, nova, nova].firstIndex { BurnedSubtitle.shows($0, soDaVelha) == false } == 2,
+               "pelo que a nova nao repete, a velha sai no quadro da troca")
+
+        print("\nidiomas\n")
+        expect(BurnedSubtitle.supportedLanguages.contains(.japanese)
+               && BurnedSubtitle.supportedLanguages.contains(.english),
+               "o leitor do sistema le japones e ingles (\(BurnedSubtitle.supportedLanguages.count) idiomas)")
+
+        print("")
+        print(failures == 0 ? "legenda na imagem ok" : "\(failures) falhas")
+        exit(failures == 0 ? 0 : 1)
+    }
+
+    /// A leitura de um vídeo de verdade: as legendas com tempo, o tempo de
+    /// parede e, pedindo, o gabarito e o oráculo.
+    ///
+    /// Gabarito: uma fala por linha, na ordem, feita à mão contra o quadro.
+    /// `# ate <s>` na primeira linha limita a conferência às legendas que
+    /// começam antes disso — para gabarito de só um trecho do vídeo.
+    static func burnedSubtitleVideoGate(
+        path: String, language: Language, gabarito: String?, oracle: Bool, area: CGRect?
+    ) async {
+        failures = 0
+        let url = URL(fileURLWithPath: path)
+        let started = Date()
+        let reading: BurnedSubtitle.Reading
+        do {
+            reading = try await BurnedSubtitle.read(from: url, language: language, area: area)
+        } catch {
+            print("falhou: \(error.localizedDescription)")
+            exit(1)
+        }
+        let wall = Date().timeIntervalSince(started)
+        for cue in reading.cues {
+            print("\(String(format: "%3d", cue.index))  \(SRTWriter.timecode(cue.start)) --> "
+                  + "\(SRTWriter.timecode(cue.end))  \(cue.source)")
+        }
+        print(String(format: "\n%d legendas, %d amostras, %d trocas; %.1f s para %.1f s de video (%.1fx o tempo real)",
+                     reading.cues.count, reading.samples.count, reading.changes.count,
+                     wall, reading.videoEnd, reading.videoEnd / max(wall, 0.001)))
+
+        if let gabarito {
+            let linhas = ((try? String(contentsOfFile: gabarito, encoding: .utf8)) ?? "")
+                .components(separatedBy: .newlines)
+            let limite = linhas.first.flatMap { primeira -> Double? in
+                guard primeira.hasPrefix("# ate ") else { return nil }
+                return Double(primeira.dropFirst(6).trimmingCharacters(in: .whitespaces))
+            } ?? .infinity
+            let esperadas = linhas.map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+            let lidas = reading.cues.filter { $0.start < limite }.map(\.source)
+            var faltam: [String] = []
+            var sobram: [String] = []
+            for mudanca in lidas.difference(from: esperadas) {
+                switch mudanca {
+                case let .remove(_, fala, _): faltam.append(fala)
+                case let .insert(_, fala, _): sobram.append(fala)
+                }
+            }
+            print("\ngabarito: \(esperadas.count - faltam.count) de \(esperadas.count) literais")
+            for fala in faltam { print("  esperada: \(fala)") }
+            for fala in sobram { print("  lida:     \(fala)") }
+            expect(!esperadas.isEmpty, "o gabarito tem falas")
+            expect(faltam.isEmpty && sobram.isEmpty, "as falas lidas sao as do gabarito, literais e na ordem")
+        }
+
+        if oracle { await burnedSubtitleOracle(url: url, reading: reading, language: language,
+                                                   area: area ?? BurnedSubtitle.defaultArea) }
+        print("")
+        exit(failures == 0 ? 0 : 1)
+    }
+
+    /// O instante de cada troca contra o OCR de todos os quadros entre as duas
+    /// amostras: o primeiro quadro que já não lê o texto velho, e o primeiro a
+    /// partir do qual só se lê o novo.
+    ///
+    /// Não serve para fade: o leitor deixa de ler antes do meio, e o refino
+    /// cai no meio de propósito. Essas trocas se conferem olhando os quadros.
+    static func burnedSubtitleOracle(
+        url: URL, reading: BurnedSubtitle.Reading, language: Language, area: CGRect
+    ) async {
+        struct Janela { let troca: Int; let de: Double; let ate: Double }
+        let amostras = reading.samples
+        let janelas = reading.changes.keys.sorted().map {
+            Janela(troca: $0, de: amostras[$0 - 1].time, ate: amostras[$0].time)
+        }
+        let asset = AVURLAsset(url: url)
+        guard let track = try? await asset.loadTracks(withMediaType: .video).first,
+              let reader = try? AVAssetReader(asset: asset) else {
+            print("oraculo: nao abriu o video")
+            return
+        }
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+        ])
+        output.alwaysCopiesSampleData = false
+        reader.add(output)
+        reader.startReading()
+        defer { reader.cancelReading() }
+        let request = BurnedSubtitle.recognizer(for: language)
+        let fps = reading.framesPerSecond > 0 ? reading.framesPerSecond : 30
+
+        var erros: [Int] = []
+        var piores: [String] = []
+        var atual = 0
+        var quadros: [(Double, BurnedSubtitle.Band)] = []
+
+        func avaliar(_ janela: Janela, _ quadros: [(Double, BurnedSubtitle.Band)]) async {
+            let textos: [String] = await withTaskGroup(of: (Int, String).self) { grupo in
+                for (posicao, quadro) in quadros.enumerated() {
+                    guard let imagem = quadro.1.image else { continue }
+                    grupo.addTask {
+                        let linhas = (try? await BurnedSubtitle.recognize(imagem, with: request)) ?? []
+                        return (posicao, BurnedSubtitle.filter(linhas, for: language, area: area).text)
+                    }
+                }
+                var saida = [String](repeating: "", count: quadros.count)
+                for await (posicao, texto) in grupo { saida[posicao] = texto }
+                return saida
+            }
+            let velho = amostras[janela.troca - 1].text
+            let novo = amostras[janela.troca].text
+            guard let troca = reading.changes[janela.troca] else { return }
+            func conta(_ lido: Double, _ verdade: Double, _ rotulo: String) {
+                let erro = Int(((lido - verdade) * fps).rounded())
+                erros.append(erro)
+                if abs(erro) >= 2 {
+                    piores.append(String(format: "  %+d quadros  %@ em %.3f s: %@ -> %@",
+                                         erro, rotulo, verdade, String(velho.prefix(30)), String(novo.prefix(30))))
+                }
+            }
+            if !velho.isEmpty {
+                let fim = textos.indices.first { !BurnedSubtitle.same(textos[$0], velho) }
+                conta(troca.previousEnds, fim.map { quadros[$0].0 } ?? janela.ate, "fim")
+            }
+            if !novo.isEmpty {
+                var inicio = quadros.count
+                while inicio > 0, BurnedSubtitle.same(textos[inicio - 1], novo) { inicio -= 1 }
+                conta(troca.nextStarts, inicio < quadros.count ? quadros[inicio].0 : janela.ate, "inicio")
+            }
+        }
+
+        while let buffer = output.copyNextSampleBuffer(), atual < janelas.count {
+            guard let pixels = CMSampleBufferGetImageBuffer(buffer) else { continue }
+            let tempo = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
+            while atual < janelas.count, tempo > janelas[atual].ate + 1e-6 {
+                await avaliar(janelas[atual], quadros)
+                quadros = []
+                atual += 1
+            }
+            guard atual < janelas.count, tempo > janelas[atual].de + 1e-6,
+                  let faixa = BurnedSubtitle.copyBand(pixels, area: area) else { continue }
+            quadros.append((tempo, faixa))
+        }
+        if atual < janelas.count { await avaliar(janelas[atual], quadros) }
+
+        let exatos = erros.filter { $0 == 0 }.count
+        let umQuadro = erros.filter { abs($0) == 1 }.count
+        let doisQuadros = erros.filter { abs($0) == 2 }.count
+        let mais = erros.filter { abs($0) >= 3 }.count
+        print("\noraculo: \(erros.count) pontas de troca; no quadro exato \(exatos), a 1 quadro \(umQuadro), "
+              + "a 2 \(doisQuadros), a 3 ou mais \(mais)")
+        if !erros.isEmpty {
+            print(String(format: "  exatas %.0f%%, ate 1 quadro %.0f%%",
+                         Double(exatos) * 100 / Double(erros.count),
+                         Double(exatos + umQuadro) * 100 / Double(erros.count)))
+        }
+        for linha in piores { print(linha) }
     }
 
     // MARK: Formatos de arquivo
@@ -3506,10 +3986,10 @@ struct Verify {
                    "o reconhecimento da Apple nao mascara palavra nenhuma")
         }
 
-        // O 0.6B nao pontua em ingles: zero sinais em 161 s medidos, contra
-        // 63 do Parakeet. Sem ponto o agrupador perde a fronteira de frase.
-        expect(RecognitionEngine.qwen.supportedLanguages?.contains(.english) == false,
-               "o Qwen 0.6B nao oferece ingles")
+        // O "0.6B nao pontua em ingles" era o SRT do pacote jogando a
+        // pontuacao fora; lendo o JSON, 66 sinais em 161 s (1.7B: 72).
+        expect(RecognitionEngine.qwen.supportedLanguages?.contains(.english) == true,
+               "o Qwen 0.6B oferece ingles de novo")
         expect(RecognitionEngine.qwenLarge.supportedLanguages?.contains(.english) == true,
                "o Qwen 1.7B oferece ingles, que ele pontua")
         expect(RecognitionEngine.qwen.supportedLanguages?.contains(.japanese) == true,
@@ -4012,5 +4492,626 @@ extension Verify {
             } catch { expect(true, "faixa invertida é recusada antes da medição") }
         } catch { expect(false, error.localizedDescription) }
         exit(failures == 0 ? 0 : 1)
+    }
+}
+
+// MARK: - Contra uma legenda de referencia
+
+/// A legenda gerada contra uma legenda feita por gente, do mesmo vídeo.
+///
+/// Nasceu da palestra TEDxWasedaU (16 min, japonês, legenda oficial do TED):
+/// medir se o que sai do app chega perto do que um legendador escreve —
+/// texto, onde a frase quebra e quando a legenda entra.
+///
+/// O texto é comparado **sem pontuação nem espaço**: a legenda do TED em
+/// japonês separa oração com espaço e não usa `。`, e o app escreve `。` e
+/// `、`. Essa diferença é convenção, não erro, e entra na conta das
+/// fronteiras, não na do texto.
+extension Verify {
+
+    /// Um caractere comparável e o que vem depois dele.
+    struct RefChar {
+        var char: Character
+        /// Instante estimado, interpolado dentro da legenda.
+        var time: Double
+        /// Depois dele há espaço ou pontuação: fim de oração.
+        var clauseEnd = false
+        /// Último caractere da legenda.
+        var cueEnd = false
+        /// Primeiro caractere da legenda.
+        var cueStart = false
+    }
+
+    static let boundaryMarks: Set<Character> = [
+        " ", "　", "。", "、", "，", "．", "？", "！", "?", "!", ".", ",", "…", "・", "—", "〜", "～",
+    ]
+
+    /// Os caracteres comparáveis de um texto, marcando as fronteiras.
+    static func referenceChars(_ cues: [(start: Double, end: Double, text: String)]) -> [RefChar] {
+        var all: [RefChar] = []
+        for cue in cues {
+            let text = cue.text.precomposedStringWithCompatibilityMapping.lowercased()
+            var chars: [RefChar] = []
+            for character in text {
+                if character.isLetter || character.isNumber {
+                    chars.append(RefChar(char: character, time: 0))
+                } else if boundaryMarks.contains(character) || character.isWhitespace, !chars.isEmpty {
+                    chars[chars.count - 1].clauseEnd = true
+                }
+            }
+            guard !chars.isEmpty else { continue }
+            for index in chars.indices {
+                chars[index].time = cue.start + (cue.end - cue.start) * (Double(index) + 0.5) / Double(chars.count)
+            }
+            chars[0].cueStart = true
+            chars[chars.count - 1].cueEnd = true
+            // Fim de legenda também é fim de oração.
+            chars[chars.count - 1].clauseEnd = true
+            all += chars
+        }
+        return all
+    }
+
+    enum EditOp: UInt8 { case match, substitute, delete, insert }
+
+    /// Alinhamento por distância de edição, com o caminho.
+    ///
+    /// - Returns: para cada caractere da referência, o índice do caractere
+    ///   da hipótese com que foi casado (igual ou trocado), e as contagens.
+    static func align(_ ref: [Character], _ hyp: [Character])
+        -> (map: [Int?], hits: Int, subs: Int, dels: Int, ins: Int, insertions: [Int])
+    {
+        let n = ref.count, m = hyp.count
+        var previous = [Int](0...m)
+        var current = [Int](repeating: 0, count: m + 1)
+        var trace = [UInt8](repeating: 0, count: (n + 1) * (m + 1))
+        for j in 1...max(m, 1) where j <= m { trace[j] = EditOp.insert.rawValue }
+        for i in 1...max(n, 1) where i <= n {
+            current[0] = i
+            trace[i * (m + 1)] = EditOp.delete.rawValue
+            for j in stride(from: 1, through: m, by: 1) {
+                let same = ref[i - 1] == hyp[j - 1]
+                let diagonal = previous[j - 1] + (same ? 0 : 1)
+                let up = previous[j] + 1
+                let left = current[j - 1] + 1
+                if diagonal <= up && diagonal <= left {
+                    current[j] = diagonal
+                    trace[i * (m + 1) + j] = (same ? EditOp.match : EditOp.substitute).rawValue
+                } else if up <= left {
+                    current[j] = up
+                    trace[i * (m + 1) + j] = EditOp.delete.rawValue
+                } else {
+                    current[j] = left
+                    trace[i * (m + 1) + j] = EditOp.insert.rawValue
+                }
+            }
+            swap(&previous, &current)
+        }
+        var map = [Int?](repeating: nil, count: n)
+        var hits = 0, subs = 0, dels = 0, ins = 0
+        var insertions: [Int] = []
+        var i = n, j = m
+        while i > 0 || j > 0 {
+            switch EditOp(rawValue: trace[i * (m + 1) + j])! {
+            case .match: map[i - 1] = j - 1; hits += 1; i -= 1; j -= 1
+            case .substitute: map[i - 1] = j - 1; subs += 1; i -= 1; j -= 1
+            case .delete: dels += 1; i -= 1
+            case .insert: ins += 1; insertions.append(j - 1); j -= 1
+            }
+        }
+        return (map, hits, subs, dels, ins, insertions.reversed())
+    }
+
+    /// Precisão e cobertura de fronteiras: a da hipótese casa com a da
+    /// referência quando cai a até `slack` caracteres do lugar alinhado.
+    static func boundaryScore(ref: [RefChar], hyp: [RefChar], map: [Int?],
+                              refIs: (RefChar) -> Bool, hypIs: (RefChar) -> Bool,
+                              slack: Int = 2) -> (precision: Double, recall: Double, refCount: Int, hypCount: Int) {
+        let hypBoundaries = hyp.indices.filter { hypIs(hyp[$0]) }
+        let hypSet = Set(hypBoundaries)
+        var mapped: [Int] = []
+        for index in ref.indices where refIs(ref[index]) {
+            // O caractere pode ter sido apagado: vale o último casado antes.
+            var k = index
+            while k >= 0, map[k] == nil { k -= 1 }
+            if k >= 0, let j = map[k] { mapped.append(j) }
+        }
+        let recallHits = mapped.filter { j in (j - slack...j + slack).contains { hypSet.contains($0) } }.count
+        let mappedSet = Set(mapped)
+        let precisionHits = hypBoundaries.filter { j in (j - slack...j + slack).contains { mappedSet.contains($0) } }.count
+        return (Double(precisionHits) / Double(max(hypBoundaries.count, 1)),
+                Double(recallHits) / Double(max(mapped.count, 1)),
+                mapped.count, hypBoundaries.count)
+    }
+
+    static func unionLength(_ intervals: [(Double, Double)]) -> Double {
+        var total = 0.0
+        var current: (Double, Double)?
+        for interval in intervals.sorted(by: { $0.0 < $1.0 }) {
+            if let open = current, interval.0 <= open.1 {
+                current = (open.0, max(open.1, interval.1))
+            } else {
+                if let open = current { total += open.1 - open.0 }
+                current = interval
+            }
+        }
+        if let open = current { total += open.1 - open.0 }
+        return total
+    }
+
+    static func median(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        return sorted[sorted.count / 2]
+    }
+
+    struct ReferenceReport: Codable {
+        var engine: String
+        var seconds: Double
+        var referenceChars: Int
+        var hypothesisChars: Int
+        var cer: Double
+        var substitutions: Int
+        var deletions: Int
+        var insertions: Int
+        var clausePrecision: Double
+        var clauseRecall: Double
+        var cuePrecision: Double
+        var cueRecall: Double
+        var timeRecall: Double
+        var timePrecision: Double
+        var medianOffset: Double
+        var within500ms: Double
+        var cueStartMedian: Double
+        var cues: Int
+        var referenceCues: Int
+        var medianCueChars: Double
+        var maxCueChars: Int
+        var medianCueSeconds: Double
+    }
+
+    /// Compara uma legenda com a de referência e imprime a conta.
+    static func compareWithReference(hypothesis: [Cue], reference: [Cue], label: String, seconds: Double,
+                                     showDiff: Bool, rawLines: String? = nil) -> ReferenceReport {
+        // A linha de crédito do legendador não é fala.
+        let refCues = reference.filter { !$0.translated.contains("字幕:") && !$0.translated.contains("校正:") }
+            .map { (start: $0.start, end: $0.end, text: $0.translated) }
+        let hypCues = hypothesis.map {
+            (start: $0.start, end: $0.end,
+             text: ($0.translated.isEmpty ? $0.source : $0.translated).replacingOccurrences(of: "\n", with: ""))
+        }
+        let ref = referenceChars(refCues)
+        let hyp = referenceChars(hypCues)
+        let result = align(ref.map(\.char), hyp.map(\.char))
+        let errors = result.subs + result.dels + result.ins
+        let cer = Double(errors) / Double(max(ref.count, 1))
+
+        // Pela leitura: `喋る` e `しゃべる`, `良い` e `いい` são a mesma
+        // palavra escrita de outro jeito, e o CER acima conta isso como erro.
+        let readingRef = reading(refCues.map(\.text).joined(separator: " "))
+        let readingHyp = reading(hypCues.map(\.text).joined(separator: " "))
+        let readingAlign = align(readingRef, readingHyp)
+        let readingCER = Double(readingAlign.subs + readingAlign.dels + readingAlign.ins) / Double(max(readingRef.count, 1))
+        let clause = boundaryScore(ref: ref, hyp: hyp, map: result.map, refIs: \.clauseEnd, hypIs: \.clauseEnd)
+        let cue = boundaryScore(ref: ref, hyp: hyp, map: result.map, refIs: \.cueEnd, hypIs: \.cueEnd)
+
+        // Tempo: onde a hipótese põe cada caractere casado.
+        var offsets: [Double] = []
+        var startOffsets: [Double] = []
+        for (index, match) in result.map.enumerated() {
+            guard let j = match, ref[index].char == hyp[j].char else { continue }
+            offsets.append(hyp[j].time - ref[index].time)
+        }
+        // Começo de legenda: a legenda da hipótese que contém o 1º caractere
+        // casado da legenda de referência.
+        var hypCueOf = [Int](repeating: 0, count: hyp.count)
+        var hypCueStarts: [Double] = []
+        var cueIndex = -1
+        for (index, char) in hyp.enumerated() {
+            if char.cueStart { cueIndex += 1 }
+            hypCueOf[index] = cueIndex
+        }
+        for cue in hypCues where referenceChars([cue]).count > 0 { hypCueStarts.append(cue.start) }
+        var refCueIndex = -1
+        let refCuesWithText = refCues.filter { referenceChars([$0]).count > 0 }
+        for (index, char) in ref.enumerated() where char.cueStart {
+            refCueIndex += 1
+            guard let j = result.map[index], hyp[j].cueStart, hypCueOf[j] < hypCueStarts.count else { continue }
+            startOffsets.append(hypCueStarts[hypCueOf[j]] - refCuesWithText[refCueIndex].start)
+        }
+
+        let refUnion = unionLength(refCues.map { ($0.start, $0.end) })
+        let hypUnion = unionLength(hypCues.map { ($0.start, $0.end) })
+        let both = unionLength(refCues.map { ($0.start, $0.end) }) + unionLength(hypCues.map { ($0.start, $0.end) })
+            - unionLength(refCues.map { ($0.start, $0.end) } + hypCues.map { ($0.start, $0.end) })
+
+        let lengths = hypCues.map { referenceChars([$0]).count }
+        let report = ReferenceReport(
+            engine: label, seconds: seconds,
+            referenceChars: ref.count, hypothesisChars: hyp.count, cer: cer,
+            substitutions: result.subs, deletions: result.dels, insertions: result.ins,
+            clausePrecision: clause.precision, clauseRecall: clause.recall,
+            cuePrecision: cue.precision, cueRecall: cue.recall,
+            timeRecall: both / max(refUnion, 0.001), timePrecision: both / max(hypUnion, 0.001),
+            medianOffset: median(offsets),
+            within500ms: Double(offsets.filter { abs($0) <= 0.5 }.count) / Double(max(offsets.count, 1)),
+            cueStartMedian: median(startOffsets),
+            cues: hypCues.count, referenceCues: refCues.count,
+            medianCueChars: median(lengths.map(Double.init)), maxCueChars: lengths.max() ?? 0,
+            medianCueSeconds: median(hypCues.map { $0.end - $0.start })
+        )
+
+        print("\n== \(label) ==")
+        print(String(format: "texto        CER %.1f%%  (%d trocas, %d faltando, %d a mais; ref %d, hip %d caracteres)",
+                     cer * 100, result.subs, result.dels, result.ins, ref.count, hyp.count))
+        print(String(format: "leitura      CER %.1f%% (romaji: a diferenca de escrita kanji/kana nao conta)", readingCER * 100))
+        print(String(format: "oracao       precisao %.0f%%  cobertura %.0f%%  (ref %d, hip %d fronteiras)",
+                     clause.precision * 100, clause.recall * 100, clause.refCount, clause.hypCount))
+        print(String(format: "legenda      precisao %.0f%%  cobertura %.0f%%  (ref %d, hip %d legendas)",
+                     cue.precision * 100, cue.recall * 100, refCues.count, hypCues.count))
+        print(String(format: "tempo        voz coberta %.0f%%, legenda sobre voz %.0f%%, desvio mediano %+.2fs, %.0f%% a 0,5s, inicio %+.2fs (%d)",
+                     report.timeRecall * 100, report.timePrecision * 100, report.medianOffset,
+                     report.within500ms * 100, report.cueStartMedian, startOffsets.count))
+        print(String(format: "tamanho      mediana %.0f caracteres (max %d), %.1fs",
+                     report.medianCueChars, report.maxCueChars, report.medianCueSeconds))
+
+        let (cortesLegenda, _, costuras) = splitWordCount(hypothesis)
+        let (refLegenda, _, refCosturas) = splitWordCount(reference)
+        let cortesLinha = rawLines.map(lineSplitCount) ?? 0
+        print(String(format: "palavra      partida entre legendas %d de %d, entre linhas %d (referencia: %d de %d)",
+                     cortesLegenda, costuras, cortesLinha, refLegenda, refCosturas))
+
+        if showDiff {
+            // Os trechos a mais e a menos mais frequentes: é onde a
+            // hesitação ("えー", "あの") e a troca de escrita aparecem.
+            var extra: [String: Int] = [:]
+            var run = ""
+            var last = -2
+            for j in result.insertions {
+                if j == last + 1 { run.append(hyp[j].char) } else {
+                    if !run.isEmpty { extra[run, default: 0] += 1 }
+                    run = String(hyp[j].char)
+                }
+                last = j
+            }
+            if !run.isEmpty { extra[run, default: 0] += 1 }
+            let top = extra.sorted { $0.value * $0.key.count > $1.value * $1.key.count }.prefix(15)
+            print("a mais (hipotese): " + top.map { "\($0.key)×\($0.value)" }.joined(separator: " "))
+            var missing: [String: Int] = [:]
+            run = ""
+            var previousMissing = -2
+            for index in ref.indices where result.map[index] == nil {
+                if index == previousMissing + 1 { run.append(ref[index].char) } else {
+                    if !run.isEmpty { missing[run, default: 0] += 1 }
+                    run = String(ref[index].char)
+                }
+                previousMissing = index
+            }
+            if !run.isEmpty { missing[run, default: 0] += 1 }
+            let topMissing = missing.sorted { $0.value * $0.key.count > $1.value * $1.key.count }.prefix(15)
+            print("faltando (ref):    " + topMissing.map { "\($0.key)×\($0.value)" }.joined(separator: " "))
+        }
+        return report
+    }
+
+    /// O que a palestra do TEDxWasedaU ensinou sobre legenda japonesa, sem
+    /// modelo nem áudio: cada caso é um defeito que saiu no `.srt` dela.
+    static func japaneseSubtitleGate() {
+        failures = 0
+        print("pedacos de palavra\n")
+        let frase = "私はこのようにカメラの前で一人でブツブツ陰気に喋るという"
+        expect(Tokens.phrases(frase).joined() == frase, "os pedacos somam o texto exato")
+        expect(!Tokens.phrases(frase).contains { $0.hasPrefix("を") || $0.hasPrefix("に") || $0.hasPrefix("て") },
+               "particula nao abre pedaco (\(Tokens.phrases(frase).joined(separator: "|")))")
+        expect(Tokens.phrases("このテッドックスに関して").contains("テッドックスに"),
+               "katakana seguido e uma palavra so (\(Tokens.phrases("このテッドックスに関して").joined(separator: "|")))")
+        expect(Tokens.phrases("今回はTED Talksそのもの").contains { $0.hasPrefix("TED Talks") },
+               "nome latino com espaco fica inteiro")
+        expect(Tokens.phrases("ことをお話ししてみたい").contains { $0.hasPrefix("お話し") },
+               "o prefixo de cortesia vai com a palavra seguinte")
+        expect(Tokens.phrases("権力をカバにしてやがる。").contains { $0.hasSuffix("してやがる。") },
+               "auxiliar depois de te nao abre pedaco (\(Tokens.phrases("権力をカバにしてやがる。").joined(separator: "|")))")
+
+        print("\nquebra de linha em 20\n")
+        for texto in [
+            "楽しそうに、そしてすごくいい話をするとそういうイメージがあるかもしれません。",
+            "まあもともと私はちょっとこのテッドックスに関して気になることはあったので、",
+            "つまり言ってみれば今回の挑修はTED Talksそのものです。",
+            "私はこのようにカメラの前で一人でブツブツインキンに喋るというそういう設定に",
+        ] {
+            let linhas = LineBreaker.wrap(texto, maximum: 20)
+            let partidas = zip(linhas, linhas.dropFirst()).filter { par in
+                var soma = 0
+                let cortes = Set(Tokens.phrases(par.0 + par.1).map { soma += $0.count; return soma })
+                return !cortes.contains(par.0.count)
+            }
+            expect(partidas.isEmpty && linhas.allSatisfy { $0.count <= 20 },
+                   "nenhuma linha parte palavra: \(linhas.joined(separator: " / "))")
+        }
+        let latino = "a single English line that has to wrap somewhere near here"
+        let latinas = LineBreaker.wrap(latino, maximum: 20)
+        expect(latinas.joined(separator: " ") == latino && latinas.allSatisfy { $0.count <= 20 },
+               "texto latino continua quebrando no espaco (\(latinas.joined(separator: " / ")))")
+
+        print("\ntrecho cortado no meio da palavra\n")
+        func t(_ texto: String, _ inicio: Double, _ fim: Double) -> TimedText {
+            TimedText(text: texto, start: inicio, end: fim)
+        }
+        let emenda = SubtitleFileBuilder.mendSplitWords([t("そういうふうに思っていま", 0, 6.9), t("す。", 7, 7.3)])
+        expect(emenda.map(\.text) == ["そういうふうに思っています。"] && emenda.first?.end == 7.3,
+               "o trecho que era so o fim da palavra se junta ao anterior (\(emenda.map(\.text)))")
+        let ida = SubtitleFileBuilder.mendSplitWords([t("カメラの前で一人でブ", 0, 5), t("ツブツ陰気に喋る", 5, 8)])
+        expect(ida.map(\.text) == ["カメラの前で一人で", "ブツブツ陰気に喋る"] && ida[0].end < 5,
+               "o pedaco menor muda de lado, com o tempo junto (\(ida.map(\.text)))")
+        let ingles = [t("I was thinking", 0, 1), t("about it", 1, 2)]
+        expect(SubtitleFileBuilder.mendSplitWords(ingles).map(\.text) == ingles.map(\.text), "texto latino passa intacto")
+        let vozes = [TimedText(text: "一人でブ", start: 0, end: 1, speaker: "A"),
+                     TimedText(text: "ツブツ", start: 1, end: 2, speaker: "B")]
+        let costura = SubtitleFileBuilder.mendSplitWords(vozes)
+        expect(costura.map(\.text) == ["一人で", "ブツブツ"] && costura.map(\.speaker) == ["A", "B"],
+               "fronteira de voz no meio da palavra: o pedaco vai com o resto dela (\(costura.map(\.text)))")
+        let resto = SubtitleFileBuilder.mendSplitWords([
+            TimedText(text: "何すればいいです", start: 0, end: 2, speaker: "A"),
+            TimedText(text: "か。", start: 2, end: 2.3, speaker: "B")])
+        expect(resto.map(\.text) == ["何すればいいですか。"] && resto.first?.speaker == "A",
+               "o trecho que era so o fim da palavra fica com quem disse a palavra")
+
+        print("\na frase vai inteira ao tradutor\n")
+        let builder = SubtitleFileBuilder()
+        let pecas = [t("私の父親はもともと商社に勤めていて、", 0, 3), t("長らく北米のいくつかの都市で", 3, 5.5),
+                     t("勤務をしていました。", 5.5, 6.8)]
+        let agrupadas = builder.makeCues(from: pecas)
+        // Um teto de 40 caracteres antes da tradução foi medido e desfeito:
+        // em japonês o verbo vem no fim, e a metade sem ele era traduzida
+        // sozinha ("…é Ambos provavelmente"). Às cegas, 16 x 12 sem o teto.
+        expect(agrupadas.count == 1, "a frase nao e partida antes de traduzir (\(agrupadas.map(\.source)))")
+        builder.charactersPerLine = 20
+        let repartida = builder.enforceLineLimit([Cue(index: 1, start: 0, end: 6,
+            source: "私の父親はもともと商社に勤めていて、長らく北米のいくつかの都市で勤務をしていました。")])
+        expect(repartida.first.map { ($0.translated.isEmpty ? $0.source : $0.translated).hasSuffix("勤めていて、") } == true,
+               "a reparticao prefere a virgula perto do meio (\(repartida.map { $0.translated.isEmpty ? $0.source : $0.translated }))")
+
+        print("\nhesitacao\n")
+        for (entrada, saida) in [
+            ("まあノリノリのお客さんに支えられて、", "ノリノリのお客さんに支えられて、"),
+            ("その気になることをまあ今回のイベントで", "その気になることを今回のイベントで"),
+            ("すけれども、あのまあ喋れと言われて", "すけれども、喋れと言われて"),
+            ("あのー、えーと、それはですね。", "それはですね。"),
+            ("あの人はまあまあ上手です。", "あの人はまあまあ上手です。"),
+            ("人が良すぎて、まあまだまだひよっこだな", "人が良すぎて、まだまだひよっこだな"),
+            ("ただあの私が勝手に喋って", "ただあの私が勝手に喋って"),
+            ("ええ、そうです。", "ええ、そうです。"),
+        ] {
+            let got = Hesitations.stripJapanese(entrada)
+            expect(got == saida, "\(entrada) -> \(got)")
+        }
+        for (entrada, saida) in [
+            ("Um, so we started.", "So we started."),
+            ("I was, uh, thinking about it.", "I was thinking about it."),
+            ("Uh-huh, that's right.", "Uh-huh, that's right."),
+            ("The drum sounds good.", "The drum sounds good."),
+        ] {
+            let got = Hesitations.stripEnglish(entrada)
+            expect(got == saida, "\(entrada) -> \(got)")
+        }
+
+        print("\nQwen: pontuacao de volta e agrupamento\n")
+        typealias S = QwenTranscriber.Segment
+        let segmentos = [S(text: "皆", start: 1.0, end: 1.2), S(text: "さん", start: 1.2, end: 1.4),
+                         S(text: "こんにちは", start: 1.4, end: 2.0), S(text: "TEDTalks", start: 2.6, end: 3.2),
+                         S(text: "という", start: 3.2, end: 3.5), S(text: "と", start: 3.5, end: 3.6),
+                         S(text: "楽しそう", start: 4.4, end: 5.0)]
+        let pontuados = QwenTranscriber.punctuated(segmentos, text: "皆さんこんにちは。TED Talksというと、楽しそう")
+        expect(pontuados.map(\.text).joined() == "皆さんこんにちは。TEDTalksというと、楽しそう",
+               "o espaco dentro de TED Talks nao derruba a pontuacao do resto (\(pontuados.map(\.text).joined()))")
+        let trechos = QwenTranscriber.phrases(pontuados)
+        expect(trechos.map(\.text) == ["皆さんこんにちは。", "TEDTalksというと、", "楽しそう"],
+               "fecha no ponto e na pausa de meio segundo (\(trechos.map(\.text)))")
+        let comVoz = QwenTranscriber.phrases(pontuados.prefix(3).map { $0 }, boundaries: [1.3])
+        expect(comVoz.count == 2, "fronteira de voz fecha o trecho")
+
+        print(failures == 0 ? "\nlegenda japonesa ok" : "\n\(failures) falhas")
+        exit(failures == 0 ? 0 : 1)
+    }
+
+    /// Tradutor de teste: devolve o que estiver no dicionário e guarda o que
+    /// recebeu, para o gate conferir as unidades que foram mandadas.
+    final class ProbeTranslator: Translator, @unchecked Sendable {
+        let engineName = "sonda"
+        let answers: [String: String]
+        var received: [String] = []
+        init(_ answers: [String: String]) { self.answers = answers }
+        func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {}
+        func reset() {}
+        func translate(_ text: String, from: Language, to: Language) async throws -> String {
+            received.append(text)
+            return answers[text] ?? "[\(text)]"
+        }
+    }
+
+    /// A frase partida na pausa vai inteira ao tradutor, e a tradução volta
+    /// repartida pelas legendas dela, com os tempos de antes.
+    static func sentenceTranslationGate() async {
+        failures = 0
+        func cue(_ i: Int, _ a: Double, _ b: Double, _ texto: String, _ quem: String? = nil) -> Cue {
+            Cue(index: i, start: a, end: b, source: texto, speaker: quem)
+        }
+        let frase = [
+            cue(1, 18.1, 20.6, "Once these kids wake up, I'll"),
+            cue(2, 20.7, 22.5, "have them give you a report."),
+            cue(3, 22.6, 25.0, "You'd better not be doing a sloppy job."),
+        ]
+        let sonda = ProbeTranslator([
+            "Once these kids wake up, I'll have them give you a report.":
+                "Assim que essas crianças acordarem, vou pedir que te entreguem um relatório.",
+            "You'd better not be doing a sloppy job.": "É melhor não estar fazendo um trabalho malfeito.",
+        ])
+        let builder = SubtitleFileBuilder()
+        let saida = await builder.translate(frase, using: sonda, from: .english, to: .portuguese)
+        expect(sonda.received == ["Once these kids wake up, I'll have them give you a report.",
+                                  "You'd better not be doing a sloppy job."],
+               "a frase partida vai inteira, a que fecha com ponto vai sozinha (\(sonda.received))")
+        expect(saida.count == 3, "a traducao volta para as tres legendas (\(saida.count))")
+        expect(saida.count == 3 && saida[0].translated.hasSuffix(",") && !saida[1].translated.isEmpty,
+               "a reparticao corta na virgula (\(saida.map(\.translated)))")
+        expect(saida.count == 3 && abs(saida[0].start - 18.1) < 0.01 && abs(saida[1].start - 20.7) < 0.01,
+               "os tempos da pausa ficam")
+        expect(saida.count == 3 && saida[0].source == "Once these kids wake up, I'll",
+               "cada legenda guarda o proprio original")
+
+        // Japonês: a primeira metade ia sozinha, sem o verbo.
+        let ja = [cue(1, 246.5, 249.0, "例えば英語"), cue(2, 250.0, 253.4, "ペラペラになったらいいよねっていうような考えは")]
+        let sondaJa = ProbeTranslator([
+            "例えば英語ペラペラになったらいいよねっていうような考えは":
+                "Por exemplo, a ideia de que seria bom falar inglês fluentemente",
+        ])
+        let saidaJa = await SubtitleFileBuilder().translate(ja, using: sondaJa, from: .japanese, to: .portuguese)
+        expect(sondaJa.received.count == 1, "japones: a frase partida na pausa vai inteira")
+        expect(saidaJa.count == 2 && saidaJa.allSatisfy { !$0.translated.isEmpty && $0.translated.first != "[" },
+               "japones: as duas legendas recebem pedaco da traducao (\(saidaJa.map(\.translated)))")
+
+        // O que não se junta.
+        let vozes = [cue(1, 0, 2, "Did you hand in the", "A"), cue(2, 2.1, 3, "Yes", "B")]
+        let sondaVozes = ProbeTranslator([:])
+        _ = await SubtitleFileBuilder().translate(vozes, using: sondaVozes, from: .english, to: .portuguese)
+        expect(sondaVozes.received.count == 2, "troca de locutor nao junta")
+        let longe = [cue(1, 0, 2, "and then I went"), cue(2, 4, 5, "to the market")]
+        let sondaLonge = ProbeTranslator([:])
+        _ = await SubtitleFileBuilder().translate(longe, using: sondaLonge, from: .english, to: .portuguese)
+        expect(sondaLonge.received.count == 2, "pausa acima de 1,5 s nao junta")
+        let fixa = ProbeTranslator([:])
+        _ = await SubtitleFileBuilder().translate(frase, using: fixa, from: .english, to: .portuguese,
+                                                  preserveCueTiming: true)
+        expect(fixa.received.count == 3, "faixa de tempo fixo traduz legenda por legenda")
+        let igual = ProbeTranslator([:])
+        _ = await SubtitleFileBuilder().translate(ja, using: igual, from: .japanese, to: .japanese)
+        expect(igual.received.count == 2, "sem traducao nao ha o que juntar")
+
+        // Tradução curta demais para repartir: as legendas viram uma só, em
+        // vez de uma delas ficar vazia e mostrar o original.
+        let curta = [cue(1, 0, 1.5, "Well, I"), cue(2, 1.6, 3.0, "guess")]
+        let sondaCurta = ProbeTranslator(["Well, I guess": "Acho"])
+        let saidaCurta = await SubtitleFileBuilder().translate(curta, using: sondaCurta, from: .english, to: .portuguese)
+        expect(saidaCurta.count == 1 && saidaCurta[0].translated == "Acho" && abs(saidaCurta[0].end - 3.0) < 0.01,
+               "traducao curta: uma legenda cobrindo as duas (\(saidaCurta.map(\.translated)))")
+
+        print(failures == 0 ? "\ntraducao por frase ok" : "\n\(failures) falhas")
+        exit(failures == 0 ? 0 : 1)
+    }
+
+    /// O texto como se lê, em romaji, pelo tokenizador do sistema.
+    static func reading(_ text: String) -> [Character] {
+        let string = text as CFString
+        guard let tokenizer = CFStringTokenizerCreate(
+            nil, string, CFRange(location: 0, length: CFStringGetLength(string)),
+            kCFStringTokenizerUnitWord, Locale(identifier: "ja") as CFLocale) else { return [] }
+        var out = ""
+        while CFStringTokenizerAdvanceToNextToken(tokenizer) != [] {
+            let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+            if let latin = CFStringTokenizerCopyCurrentTokenAttribute(
+                tokenizer, kCFStringTokenizerAttributeLatinTranscription) as? String {
+                out += latin
+            } else if let piece = CFStringCreateWithSubstring(nil, string, range) {
+                out += piece as String
+            }
+        }
+        return Array(out.precomposedStringWithCompatibilityMapping.lowercased()
+            .filter { $0.isLetter || $0.isNumber })
+    }
+
+    /// Quantas costuras caem no meio de uma palavra de escrita densa: entre
+    /// legendas seguidas (a menos de 1 s) e entre as linhas de 20 que a
+    /// legenda japonesa ganha no arquivo.
+    static func splitWordCount(_ cues: [Cue]) -> (cues: Int, lines: Int, seams: Int) {
+        func midWord(_ left: String, _ right: String) -> Bool {
+            guard let tail = left.last, let head = right.first, tail.isLetter, head.isLetter,
+                  Tokens.isDense(tail), Tokens.isDense(head) else { return false }
+            var offset = 0
+            var cuts = Set<Int>()
+            for phrase in Tokens.phrases(left + right) { offset += phrase.count; cuts.insert(offset) }
+            return !cuts.contains(left.count)
+        }
+        let texts = cues.map { ($0.translated.isEmpty ? $0.source : $0.translated).replacingOccurrences(of: "\n", with: "") }
+        var cueSplits = 0, lineSplits = 0, seams = 0
+        for index in texts.indices {
+            let lines = LineBreaker.wrap(texts[index], maximum: 20)
+            for pair in zip(lines, lines.dropFirst()) where midWord(pair.0, pair.1) { lineSplits += 1 }
+            guard index > 0, cues[index].start - cues[index - 1].end < 1 else { continue }
+            seams += 1
+            if midWord(texts[index - 1], texts[index]) { cueSplits += 1 }
+        }
+        return (cueSplits, lineSplits, seams)
+    }
+
+    /// Linhas seguidas do mesmo bloco que partem palavra, lidas do `.srt`
+    /// como ele está escrito.
+    static func lineSplitCount(_ srt: String) -> Int {
+        var count = 0
+        for block in srt.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n\n") {
+            let lines = block.components(separatedBy: "\n").filter { !$0.isEmpty }
+            guard lines.count > 3 else { continue }
+            let body = Array(lines.dropFirst(2))
+            for pair in zip(body, body.dropFirst()) {
+                let cue = { (text: String) in Cue(index: 1, start: 0, end: 1, source: text) }
+                // Duas "legendas" coladas: a mesma conta da costura.
+                var a = cue(pair.0), b = cue(pair.1)
+                a.end = 1; b.start = 1
+                if splitWordCount([a, b]).cues > 0 { count += 1 }
+            }
+        }
+        return count
+    }
+
+    /// `referencia <video> <legenda.srt> [idioma] [motor]` gera pelo caminho
+    /// do app, sem tradução, e compara. `referencia --srt <gerada.srt>
+    /// <legenda.srt>` só compara.
+    static func referenceGate(arguments: [String], option: (String) -> String?) async {
+        let showDiff = arguments.contains("--diff")
+        if arguments.count >= 5, arguments[2] == "--srt" {
+            guard let hyp = try? SRTParser.parse(contentsOf: URL(fileURLWithPath: arguments[3])),
+                  let ref = try? SRTParser.parse(contentsOf: URL(fileURLWithPath: arguments[4])) else {
+                print("FALHA: nao consegui ler as legendas"); exit(1)
+            }
+            _ = compareWithReference(hypothesis: hyp, reference: ref,
+                                     label: URL(fileURLWithPath: arguments[3]).lastPathComponent,
+                                     seconds: 0, showDiff: showDiff,
+                                     rawLines: try? String(contentsOfFile: arguments[3], encoding: .utf8))
+            return
+        }
+        guard arguments.count >= 4 else {
+            print("uso: referencia <video> <legenda.srt> [idioma] [motor] [--saida <srt>] [--json <arquivo>] [--diff]")
+            exit(1)
+        }
+        let video = URL(fileURLWithPath: arguments[2])
+        guard let ref = try? SRTParser.parse(contentsOf: URL(fileURLWithPath: arguments[3])) else {
+            print("FALHA: nao consegui ler \(arguments[3])"); exit(1)
+        }
+        let language = arguments.count >= 5 ? (Language(rawValue: arguments[4]) ?? .japanese) : .japanese
+        let engine = arguments.count >= 6 ? (RecognitionEngine(rawValue: arguments[5]) ?? .apple) : .apple
+
+        let builder = SubtitleFileBuilder()
+        let started = Date()
+        let cues: [Cue]
+        do {
+            cues = try await builder.generate(
+                from: video, source: language, target: language, engine: engine,
+                translation: .transcriptionOnly, progress: { _, _, _, _ in })
+        } catch {
+            print("FALHA: \(error.localizedDescription)"); exit(1)
+        }
+        let seconds = Date().timeIntervalSince(started)
+        print(String(format: "%@: %d legendas em %.1fs", builder.recognitionName ?? engine.rawValue, cues.count, seconds))
+        let srt = SRTWriter.render(cues, charactersPerLine: SubtitleFileBuilder.lineWidth(for: language))
+        if let path = option("--saida") {
+            try? srt.write(toFile: path, atomically: true, encoding: .utf8)
+        }
+        let report = compareWithReference(hypothesis: cues, reference: ref,
+                                          label: builder.recognitionName ?? engine.rawValue,
+                                          seconds: seconds, showDiff: showDiff, rawLines: srt)
+        if let path = option("--json") {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try? encoder.encode(report).write(to: URL(fileURLWithPath: path))
+        }
     }
 }

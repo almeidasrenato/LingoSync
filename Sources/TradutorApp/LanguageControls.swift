@@ -134,3 +134,36 @@ struct SourceLanguagePicker: View {
         }
     }
 }
+
+/// Idioma do texto desenhado no vídeo, para a leitura da imagem.
+///
+/// A lista é a do leitor de texto do sistema, não a do reconhecimento de fala:
+/// com a Apple escolhida, `SourceLanguagePicker` só oferece o que tem modelo de
+/// fala instalado — e ainda troca a escolha sozinho quando o motor muda.
+struct ImageLanguagePicker: View {
+
+    @Binding var selection: Language
+    var width: CGFloat?
+
+    var body: some View {
+        Picker("Idioma do texto", selection: $selection) {
+            ForEach(options) { language in
+                Text(language.displayName).tag(language)
+            }
+        }
+        .labelsHidden()
+        .frame(width: width)
+        .help("""
+              O idioma em que a legenda está escrita no vídeo — não o que se \
+              fala. O leitor usa isso para ler certo, e a tradução parte dele.
+              """)
+    }
+
+    private var options: [Language] {
+        // O selecionado fica na lista: um Picker com seleção fora das opções
+        // aparece em branco.
+        var list = BurnedSubtitle.supportedLanguages
+        if !list.contains(selection) { list.append(selection) }
+        return list
+    }
+}
