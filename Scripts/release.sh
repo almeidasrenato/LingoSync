@@ -37,6 +37,13 @@ cp -R "$ROOT/build/Tradutor.app" "$STAGE/dev.app" 2>/dev/null || true
 "$ROOT/Scripts/bundle.sh" TradutorApp "Tradutor" "$PLIST" release
 mv "$ROOT/build/Tradutor.app" "$OUT/LingoSync.app"
 if [ -d "$STAGE/dev.app" ]; then mv "$STAGE/dev.app" "$ROOT/build/Tradutor.app"; fi
+
+# Sem os símbolos de depuração o executável cai pela metade, e o .dmg fica
+# abaixo dos 10 MB que o envio pelo navegador aceita. Tirar símbolos mexe no
+# binário, então a assinatura é refeita com os mesmos direitos.
+strip -x "$OUT/LingoSync.app/Contents/MacOS/Tradutor"
+codesign --force --deep --sign - --options runtime \
+    --entitlements "$ROOT/Resources/app.entitlements" "$OUT/LingoSync.app"
 codesign --verify --deep --strict "$OUT/LingoSync.app"
 
 ditto -c -k --keepParent "$OUT/LingoSync.app" "$OUT/LingoSync.zip"
@@ -45,7 +52,7 @@ DMG_DIR="$STAGE/dmg"
 mkdir -p "$DMG_DIR"
 cp -R "$OUT/LingoSync.app" "$DMG_DIR/"
 ln -s /Applications "$DMG_DIR/Applications"
-hdiutil create -volname "LingoSync $VERSION" -srcfolder "$DMG_DIR" -ov -format UDZO \
+hdiutil create -volname "LingoSync $VERSION" -srcfolder "$DMG_DIR" -ov -format ULMO \
     "$OUT/LingoSync.dmg" >/dev/null
 rm -rf "$STAGE" "$ROOT/$PLIST"
 
