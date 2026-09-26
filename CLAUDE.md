@@ -2503,3 +2503,26 @@ outro vídeo volta ao padrão.
 dados fabricados dos dois vídeos; `--selftest-imagem` confere pela janela que
 nenhum passo de áudio roda, que as setas andam nas legendas lidas, que traduzir
 não move tempo nenhum e que o original exportado sai com os blocos lidos.
+
+---
+
+## Identidade visual (26/09/2026)
+
+Paleta sálvia pastel sobre neutros quentes, em `Brand.swift`; menus em pílula,
+botões e seletor segmentado desenhados em `Controls.swift`. Validada antes
+com mockups no GPT (`scratchpad/visual-pastel/`, fora do repositório).
+
+- **Sem violeta, sem degradê, sem sombra.** A primeira versão pastel usava o
+  índigo do ícone antigo, degradê na marca e sombra difusa nos cartões — lida
+  como "cara de IA". A profundidade vem do contraste fundo × cartão e de um fio
+  de 1 px (`cardSurface`).
+- **Botão principal com texto verde-musgo, não branco**: branco sobre pastel
+  dá 2,6:1. Cada par de cor tem o contraste medido ao lado, nos dois temas.
+- **Menus são `Menu` com o `Picker` do sistema dentro** (`PillPicker`): o macOS
+  não tem `PickerStyle` público. A lista que abre continua nativa.
+- **Tipografia**: New York (serifada do sistema) nos títulos, SF Pro no resto,
+  escala 17 · 14 · 13 · 11 · 10. Nada abaixo de 10 pt.
+- **O painel ao vivo é sempre escuro** e tem cores próprias (`panelInk`,
+  zonas amarela, sálvia e coral), todas acima de 8:1.
+- **O ícone é desenhado em vetor** por `Scripts/icon.swift` (grade de 824 em
+  1024, cantos transparentes); o `.icns` sai dele com `sips` + `iconutil`.

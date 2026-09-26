@@ -95,6 +95,9 @@ struct SubtitleStudioView: View {
         .padding(14)
         // Largura mínima com folga para o seletor de reconhecimento e o +.
         .frame(minWidth: 1080, minHeight: 640)
+        .background(Color.canvas)
+        .buttonStyle(PastelButtonStyle())
+        .tint(.brandInk)
         .background(
             // Atalhos: espaço reproduz, setas andam de legenda em legenda —
             // que é como se lê uma conversa —, e ⌘← e ⌘→ andam 5 s no tempo,
@@ -136,7 +139,8 @@ struct SubtitleStudioView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text(model.videoName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.controlStrong)
+                    .foregroundStyle(Color.ink)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .help(model.videoName)
@@ -154,11 +158,8 @@ struct SubtitleStudioView: View {
                 // A fonte do texto à vista, não dentro de "Opções": o cabeçalho
                 // abre recolhido, e escolha escondida ninguém acha — a lição dos
                 // controles de locutor.
-                Picker("Fonte do texto", selection: $model.textSource) {
-                    ForEach(SubtitleStudioModel.TextSource.allCases) { Text($0.displayName).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                PillSegmented(title: "Fonte do texto", selection: $model.textSource,
+                              options: SubtitleStudioModel.TextSource.allCases, label: \.displayName)
                 .fixedSize()
                 .disabled(isWorking)
                 .help("De onde vem o texto: da fala, reconhecendo o áudio, ou da imagem, "
@@ -190,7 +191,7 @@ struct SubtitleStudioView: View {
                     Label(readsImage ? "Ler legenda" : "Gerar legenda",
                           systemImage: readsImage ? "text.viewfinder" : "text.badge.plus")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PastelButtonStyle(prominent: true))
                 .keyboardShortcut(.defaultAction)
                 .disabled(!model.canGenerate)
                 Button { model.showsVideo.toggle() } label: {
@@ -209,7 +210,7 @@ struct SubtitleStudioView: View {
                         // lista é a do leitor de texto, não a do reconhecimento.
                         VStack(alignment: .leading, spacing: 5) {
                             toolbarCaption("Idioma do texto")
-                            ImageLanguagePicker(selection: $model.imageLanguage, width: 108)
+                            ImageLanguagePicker(selection: $model.imageLanguage, width: 124)
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 5) {
@@ -219,20 +220,17 @@ struct SubtitleStudioView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             toolbarCaption("Idioma original")
                             SourceLanguagePicker(selection: $model.sourceLanguage,
-                                                 engine: model.recognitionEngine, width: 108)
+                                                 engine: model.recognitionEngine, width: 124)
                         }
                     }
                     Image(systemName: "arrow.right")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom, 6)
+                        .foregroundStyle(Color.inkSoft)
+                        .padding(.bottom, 8)
                     VStack(alignment: .leading, spacing: 5) {
                         toolbarCaption("Traduzir para")
-                        Picker("Idioma da tradução", selection: $model.targetLanguage) {
-                            ForEach(Language.allCases) { Text($0.displayName).tag($0) }
-                        }
-                        .labelsHidden()
-                        .frame(width: 108)
+                        PillPicker(title: "Idioma da tradução", selection: $model.targetLanguage,
+                                   options: Language.allCases, label: \.displayName, width: 124)
                         .disabled(model.translationEngine == .transcriptionOnly)
                     }
                     VStack(alignment: .leading, spacing: 5) {
@@ -249,8 +247,25 @@ struct SubtitleStudioView: View {
                             Toggle("Uma cor por locutor", isOn: $model.colorBySpeaker)
                                 .disabled(!model.diarizeSpeakers)
                         } label: {
-                            Image(systemName: model.diarizeSpeakers ? "person.2.wave.2.fill" : "person.2.wave.2")
+                            HStack(spacing: 7) {
+                                Image(systemName: model.diarizeSpeakers ? "person.2.wave.2.fill" : "person.2.wave.2")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.brandInk)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 8.5, weight: .bold))
+                                    .foregroundStyle(Color.brandInk)
+                                    .frame(width: 18, height: 18)
+                                    .background(Color.brandSoft, in: Circle())
+                            }
+                            .padding(.leading, 10)
+                            .padding(.trailing, 5)
+                            .frame(height: 28)
+                            .background(Color.field, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .contentShape(Rectangle())
                         }
+                        .menuStyle(.button)
+                        .buttonStyle(.plain)
+                        .menuIndicator(.hidden)
                         .fixedSize()
                         .accessibilityLabel("Identificação de locutores")
                         .help("Identificação, modelo e cores dos locutores")
@@ -260,7 +275,7 @@ struct SubtitleStudioView: View {
                         Label(TranslatorFactory.estimate(forVideoOf: model.duration, using: model.translationEngine),
                               systemImage: "clock")
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.inkSoft)
                     }
                     Button {
                         showsGenerationOptions = false
@@ -285,24 +300,26 @@ struct SubtitleStudioView: View {
             }
         }
         .padding(10)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.quaternary, lineWidth: 0.5))
+        .padding(4)
+        .cardSurface()
     }
 
     private func toolbarCaption(_ title: String) -> some View {
-        Text(title).font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
+        Text(title).font(.caption).foregroundStyle(Color.inkSoft)
     }
 
     private var cueListHeader: some View {
         HStack(spacing: 6) {
             Text("Legendas")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.heading)
+                .foregroundStyle(Color.ink)
             if !model.cues.isEmpty {
                 Text("\(model.cues.count)")
-                    .font(.system(size: 10, design: .monospaced))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(.quaternary.opacity(0.5), in: Capsule())
+                    .font(.meta.weight(.medium).monospacedDigit())
+                    .foregroundStyle(Color.brandInk)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1.5)
+                    .background(Color.brandSoft, in: Capsule())
             }
             // Quem fez o que está na tela. Os motores que rodaram, não os
             // dos seletores: trocar o seletor não muda a legenda que já saiu,
@@ -311,7 +328,7 @@ struct SubtitleStudioView: View {
                 // Lido da imagem e ainda sem tradução, não há seta para nada.
                 Text(origem.translation.isEmpty
                      ? origem.recognition : "\(origem.recognition) → \(origem.translation)")
-                    .font(.system(size: 9))
+                    .font(.meta)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -322,15 +339,15 @@ struct SubtitleStudioView: View {
             Spacer()
             if model.isPartial {
                 Text("parcial")
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.meta.weight(.medium))
                     .foregroundStyle(.orange)
             } else if model.loadedFromFile {
                 Label("de arquivo", systemImage: "doc")
-                    .font(.system(size: 9))
+                    .font(.meta)
                     .foregroundStyle(.tertiary)
             }
         }
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.inkSoft)
     }
 
     // MARK: Lista de legendas
@@ -366,11 +383,7 @@ struct SubtitleStudioView: View {
                 }
             }
         }
-        .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(.quaternary, lineWidth: 1)
-        )
+        .cardSurface()
         .frame(maxHeight: .infinity)
     }
 
@@ -395,7 +408,7 @@ struct SubtitleStudioView: View {
     /// do sistema; no vídeo continua branco.
     private func listSpeakerColor(_ cue: Cue) -> Color? {
         guard let color = speakerColor(cue) else { return nil }
-        return SpeakerPalette.index(for: cue.speaker) == 0 ? Color.accentColor : color
+        return SpeakerPalette.index(for: cue.speaker) == 0 ? Color.brandInk : color
     }
 
     private func cueRow(_ cue: Cue, position: Int) -> some View {
@@ -411,7 +424,7 @@ struct SubtitleStudioView: View {
                 // ainda vem.
                 RoundedRectangle(cornerRadius: 1.5)
                     .fill(isActive
-                          ? AnyShapeStyle(listSpeakerColor(cue) ?? Color.accentColor)
+                          ? AnyShapeStyle(listSpeakerColor(cue) ?? Color.brandInk)
                           : AnyShapeStyle(isPast
                                           ? (listSpeakerColor(cue)?.opacity(0.5)
                                              ?? Color.secondary.opacity(0.28))
@@ -421,24 +434,24 @@ struct SubtitleStudioView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 5) {
                         Text(SRTWriter.timecode(cue.start).dropFirst(3).prefix(5))
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(isActive ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
+                            .font(.meta.monospacedDigit())
+                            .foregroundStyle(isActive ? AnyShapeStyle(Color.brandInk) : AnyShapeStyle(.tertiary))
                         if isActive {
                             Image(systemName: "speaker.wave.2.fill")
-                                .font(.system(size: 7))
-                                .foregroundStyle(Color.accentColor)
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.brandInk)
                         }
                         Spacer(minLength: 0)
                         Text("\(position + 1)")
-                            .font(.system(size: 8.5, design: .monospaced))
+                            .font(.meta.monospacedDigit())
                             .foregroundStyle(.quaternary)
                     }
 
                     Text(model.displayText(at: position))
-                        .font(.system(size: 13, weight: isActive ? .semibold : .regular))
+                        .font(isActive ? .controlStrong : .control)
                         .foregroundStyle(isActive
                                          ? AnyShapeStyle(.primary)
-                                         : AnyShapeStyle(.secondary))
+                                         : AnyShapeStyle(Color.inkSoft))
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -450,7 +463,7 @@ struct SubtitleStudioView: View {
                     if !cue.source.isEmpty, !cue.translated.isEmpty, cue.source != cue.translated {
                         Text(cue.source)
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -458,8 +471,8 @@ struct SubtitleStudioView: View {
             .padding(.vertical, 10)
             .padding(.horizontal, 9)
             .background(
-                isActive ? Color.accentColor.opacity(0.13) : .clear,
-                in: RoundedRectangle(cornerRadius: 6)
+                isActive ? Color.brandSoft : .clear,
+                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
             )
             .contentShape(Rectangle())
         }
@@ -492,10 +505,7 @@ struct SubtitleStudioView: View {
             }
             .padding(.vertical, 7)
             .padding(.horizontal, 9)
-            .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8).strokeBorder(.red.opacity(0.35), lineWidth: 1)
-            )
+            .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
     }
 
@@ -519,7 +529,7 @@ struct SubtitleStudioView: View {
             }
         }
         .font(.system(size: 11))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color.inkSoft)
         .padding(6)
     }
 
@@ -570,11 +580,11 @@ struct SubtitleStudioView: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
                     Text(step.kind.rawValue)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.captionStrong)
                     Spacer()
                     Text("\(Int(step.overall * 100))%")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(Color.inkSoft)
                 }
 
                 ProgressView(value: step.overall)
@@ -590,7 +600,7 @@ struct SubtitleStudioView: View {
                         }
                         Text(step.waiting ? "\(step.detail) · aguardando" : step.detail)
                             .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.inkSoft)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
@@ -607,9 +617,9 @@ struct SubtitleStudioView: View {
                     ForEach(Self.stepOrder, id: \.self) { kind in
                         Capsule()
                             .fill(
-                                kind == step.kind ? Color.accentColor
+                                kind == step.kind ? Color.brandInk
                                     : (step.kind.share.lowerBound > kind.share.lowerBound
-                                       ? Color.accentColor.opacity(0.35)
+                                       ? Color.brandInk.opacity(0.35)
                                        : Color.secondary.opacity(0.18))
                             )
                             .frame(height: 3)
@@ -618,11 +628,11 @@ struct SubtitleStudioView: View {
 
                 HStack {
                     Text(Self.clock(model.elapsed))
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10).monospacedDigit())
                     Spacer()
                     if let remaining = model.estimatedRemaining {
                         Text("faltam ~\(Self.clock(remaining))")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 10).monospacedDigit())
                     }
                 }
                 .foregroundStyle(.tertiary)
@@ -636,10 +646,7 @@ struct SubtitleStudioView: View {
                 .controlSize(.small)
             }
             .padding(10)
-            .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8).strokeBorder(.quaternary, lineWidth: 1)
-            )
+            .cardSurface()
         }
     }
 
@@ -678,7 +685,7 @@ struct SubtitleStudioView: View {
                 }
                 Text("legenda")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.inkSoft)
                     .frame(maxWidth: .infinity)
                 controlButton("forward.end.alt.fill", "Próxima legenda") {
                     model.jumpToNextCue()
@@ -702,48 +709,42 @@ struct SubtitleStudioView: View {
                     .frame(maxWidth: .infinity)
                     .help("Volume")
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.inkSoft)
             .disabled(model.player == nil)
 
             HStack(spacing: 8) {
                 Text(SRTWriter.timecode(model.currentTime).prefix(8))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 10).monospacedDigit())
                 Text("/")
                     .font(.system(size: 10))
                     .foregroundStyle(.quaternary)
                 Text(SRTWriter.timecode(model.duration).prefix(8))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 10).monospacedDigit())
                     .foregroundStyle(.tertiary)
 
                 Spacer()
 
-                Picker("", selection: $model.rate) {
-                    Text("0,75×").tag(Float(0.75))
-                    Text("1×").tag(Float(1.0))
-                    Text("1,25×").tag(Float(1.25))
-                    Text("1,5×").tag(Float(1.5))
-                }
-                .labelsHidden()
-                .frame(width: 72)
+                PillPicker(title: "Velocidade", selection: $model.rate,
+                           options: [Float(0.75), 1.0, 1.25, 1.5],
+                           label: { $0 == 1 ? "1×" : "\($0.formatted(.number.locale(Locale(identifier: "pt_BR"))))×" },
+                           width: 74)
                 .controlSize(.small)
                 .help("Velocidade de reprodução")
 
                 if let active = model.activeIndex {
                     Text("\(active + 1)/\(model.cues.count)")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10).monospacedDigit())
                 } else if !model.cues.isEmpty {
                     Text("—/\(model.cues.count)")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 10).monospacedDigit())
                         .foregroundStyle(.tertiary)
                 }
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color.inkSoft)
         }
         .padding(10)
-        .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8).strokeBorder(.quaternary, lineWidth: 1)
-        )
+        .padding(2)
+        .cardSurface()
     }
 
     /// Barra de posição com as legendas desenhadas como marcas.
@@ -765,7 +766,7 @@ struct SubtitleStudioView: View {
                 let track = CGRect(x: 0, y: midY - 2.5, width: size.width, height: 5)
                 context.fill(
                     Path(roundedRect: track, cornerRadius: 2.5),
-                    with: .color(.secondary.opacity(0.25))
+                    with: .color(Color.hairline)
                 )
 
                 // Onde há fala: mostra de relance a distribuição do diálogo.
@@ -776,7 +777,7 @@ struct SubtitleStudioView: View {
                         context.fill(
                             Path(roundedRect: CGRect(x: x, y: midY - 2.5, width: w, height: 5),
                                  cornerRadius: 2.5),
-                            with: .color(.accentColor.opacity(0.3))
+                            with: .color(Color.brandInk.opacity(0.3))
                         )
                     }
                 }
@@ -785,13 +786,13 @@ struct SubtitleStudioView: View {
                                     width: max(2, progress * size.width), height: 5)
                 context.fill(
                     Path(roundedRect: played, cornerRadius: 2.5),
-                    with: .color(.accentColor)
+                    with: .color(Color.brandInk)
                 )
 
                 let knobX = max(5, min(size.width - 5, progress * size.width))
                 context.fill(
                     Path(ellipseIn: CGRect(x: knobX - 5, y: midY - 5, width: 10, height: 10)),
-                    with: .color(.accentColor)
+                    with: .color(Color.brandInk)
                 )
             }
             .frame(height: 12)
@@ -825,10 +826,10 @@ struct SubtitleStudioView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: prominent ? 16 : 13))
-                .frame(width: prominent ? 40 : 32, height: 26)
+                .font(.system(size: prominent ? 17 : 13, weight: .semibold))
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(CircleButtonStyle(prominent: prominent))
+        .accessibilityLabel(help)
         .help(help)
         .disabled(model.player == nil)
     }
@@ -840,10 +841,7 @@ struct SubtitleStudioView: View {
             videoStack(width: geometry.size.width)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8).strokeBorder(.quaternary, lineWidth: 1)
-        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func videoStack(width: CGFloat) -> some View {
@@ -853,8 +851,10 @@ struct SubtitleStudioView: View {
                     .onTapGesture { model.togglePlay() }
                 if readsImage { ImageAreaOverlay(model: model, player: player) }
             } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.black.opacity(0.85))
+                Rectangle()
+                    // Mais escuro que o fundo nos dois temas: no escuro,
+                    // o cinza do vídeo vazio sumia contra a janela.
+                    .fill(Color(hex: 0x121411))
                     .overlay(
                         Text("Nenhum vídeo carregado")
                             .foregroundStyle(.white.opacity(0.4))
@@ -888,7 +888,7 @@ struct SubtitleStudioView: View {
 
             Button { model.subtitleScale = SubtitleStudioModel.defaultSubtitleScale } label: {
                 Text("\(Int((model.subtitleScale * 100).rounded()))%")
-                    .font(.system(size: 9.5, design: .monospaced))
+                    .font(.meta.monospacedDigit())
                     .frame(width: 36, height: 22)
                     .contentShape(Rectangle())
             }

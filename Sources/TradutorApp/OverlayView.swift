@@ -50,12 +50,13 @@ struct OverlayView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.black)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.panelInk)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(.white.opacity(0.09), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
         )
+        .tint(Color.blueZone)
     }
 
     // MARK: Zona amarela — a unica que rola
@@ -194,7 +195,7 @@ struct OverlayView: View {
                 if block.source != block.translated {
                     Text(block.source)
                         .font(.system(size: sourceSize))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(Color.panelMuted)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -224,15 +225,16 @@ struct OverlayView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Text(pair)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .font(.system(size: 13, weight: .semibold, design: .serif))
+                    .foregroundStyle(Color.panelText)
                     .lineLimit(1)
                     .layoutPriority(1)
                 Spacer(minLength: 4)
                 Text(pipeline.engineNames + (pipeline.lastTranslateMs > 0
                     ? " · \(pipeline.lastTranscribeMs + pipeline.lastTranslateMs) ms" : ""))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.panelMuted)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .help("Reconhecimento e tradução usados nesta captura")
@@ -245,7 +247,7 @@ struct OverlayView: View {
                 Spacer(minLength: 4)
                 HStack(spacing: 4) {
                     Image(systemName: "circle.lefthalf.filled")
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(Color.panelIcon)
                     Slider(value: $windowOpacity, in: OverlayPanel.minimumOpacity...1.0)
                         .controlSize(.mini)
                         .frame(width: 54)
@@ -286,13 +288,17 @@ struct OverlayView: View {
                 .joined(separator: "\n")
             copyToPasteboard(texto)
         } label: {
-            HStack(spacing: 2) {
+            HStack(spacing: 4) {
                 Image(systemName: "doc.on.doc")
-                    .font(.system(size: 8.5, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                 Text(language.rawValue.uppercased())
-                    .font(.system(size: 8.5, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
             }
-            .foregroundStyle(.white.opacity(0.4))
+            .foregroundStyle(Color.blueZone)
+            .padding(.horizontal, 9)
+            .frame(height: 22)
+            .background(Color.blueZone.opacity(0.14), in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .disabled(subtitles.transcript.isEmpty)
@@ -303,13 +309,13 @@ struct OverlayView: View {
         Button {
             copyToPasteboard(text)
         } label: {
-            HStack(spacing: 2) {
+            HStack(spacing: 3) {
                 Image(systemName: "doc.on.doc")
-                    .font(.system(size: 8))
+                    .font(.system(size: 9))
                 Text(language.rawValue.uppercased())
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.system(size: 9, weight: .semibold))
             }
-            .foregroundStyle(.white.opacity(0.4))
+            .foregroundStyle(Color.panelMuted)
         }
         .buttonStyle(.plain)
         .disabled(text.isEmpty)
@@ -333,10 +339,11 @@ struct OverlayView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: name)
-                .font(.system(size: 11, weight: bold ? .bold : .medium))
-                .foregroundStyle(.white.opacity(0.7))
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
+                .font(.system(size: 11, weight: bold ? .bold : .semibold))
+                .foregroundStyle(Color.panelIcon)
+                .frame(width: 26, height: 26)
+                .background(.white.opacity(0.07), in: Circle())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .help(help)
@@ -396,7 +403,19 @@ extension Color {
     /// As cores das tres zonas, escolhidas para ler sobre fundo escuro em cima
     /// de video: amarela apagada para o historico, azul clara para o atual,
     /// vermelha suave para o que ainda esta sendo captado.
-    static let yellowZone = Color(red: 0.86, green: 0.68, blue: 0.29)
-    static let blueZone = Color(red: 0.56, green: 0.74, blue: 0.96)
-    static let redZone = Color(red: 0.92, green: 0.44, blue: 0.38)
+    ///
+    /// Em tom pastel sobre o fundo quase preto: amarelo manteiga, sálvia
+    /// (a cor do app) e coral. Todas passam de 8:1 sobre o fundo — legenda
+    /// é leitura em movimento, e pastel escuro demais não se lê de relance.
+    /// O nome `blueZone` ficou da primeira versão, quando a atual era azul.
+    static let yellowZone = Color(hex: 0xF2DDA4)
+    static let blueZone = Color(hex: 0xB9DDBF)
+    static let redZone = Color(hex: 0xF2A39A)
+
+    /// O fundo do painel e os textos de apoio. O painel é sempre escuro
+    /// porque flutua sobre vídeo, então não segue o tema do sistema.
+    static let panelInk = Color(hex: 0x171916)
+    static let panelText = Color(hex: 0xE6E9E2)
+    static let panelMuted = Color(hex: 0xA0A69C)
+    static let panelIcon = Color(hex: 0xCDD2C8)
 }

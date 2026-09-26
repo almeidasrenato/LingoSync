@@ -21,72 +21,84 @@ struct SettingsView: View {
     var onNewStudio: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "captions.bubble.fill")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 11) {
+                // O balão do ícone do app, em cor chapada. O degradê
+                // azul-violeta saiu junto com o violeta da paleta.
+                Image(systemName: "text.bubble.fill")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(Color.onBrand)
                     .frame(width: 40, height: 40)
-                    .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
-                VStack(alignment: .leading, spacing: 3) {
+                    .background(Color.brand, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Tradutor Instantâneo")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.display)
+                        .foregroundStyle(Color.ink)
                     Text("Áudio ao vivo e legendas de vídeo")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                        .foregroundStyle(Color.inkSoft)
                 }
             }
             .padding(.bottom, 2)
 
-            card("Idiomas e modelos", icon: "character.bubble") { languages }
-            card("Ao vivo", icon: "waveform") { liveControls }
-            card("Vídeos", icon: "film") { videoControls }
+            card("Idiomas e modelos", icon: "character.bubble", tint: .sage) { languages }
+            card("Ao vivo", icon: "waveform", tint: .clay) { liveControls }
+            card("Vídeos", icon: "film", tint: .sand) { videoControls }
 
             HStack {
                 if !pipeline.modelDiskUsage.isEmpty {
                     Label(pipeline.modelDiskUsage, systemImage: "internaldrive")
+                        .monospacedDigit()
                         .help("Espaço ocupado pelos modelos em disco")
                 }
                 Spacer()
                 Button("Encerrar") { NSApp.terminate(nil) }
                     .buttonStyle(.borderless)
+                    .foregroundStyle(Color.inkSoft)
             }
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
+            .font(.caption)
+            .foregroundStyle(Color.inkSoft)
+            .padding(.horizontal, 4)
         }
         .padding(14)
         .frame(width: 372)
+        .background(Color.canvas)
+        .buttonStyle(PastelButtonStyle())
+        .tint(.brandInk)
     }
 
     private func card<Content: View>(
-        _ title: String, icon: String, @ViewBuilder content: () -> Content
+        _ title: String, icon: String, tint: Color.Tint, @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 12, weight: .semibold))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 9) {
+                IconTile(symbol: icon, tint: tint)
+                Text(title)
+                    .font(.heading)
+                    .foregroundStyle(Color.ink)
+                    .accessibilityAddTraits(.isHeader)
+            }
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.7),
-                    in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.quaternary, lineWidth: 0.5))
+        .padding(14)
+        .cardSurface()
     }
 
     private func caption(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(.secondary)
+            .font(.caption)
+            .foregroundStyle(Color.inkSoft)
     }
 
     // MARK: Idiomas — valem para o ao vivo e para os vídeos
 
     private var languages: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 caption("Reconhecimento")
                 Spacer()
-                EnginePicker(selection: $pipeline.recognitionEngine)
+                EnginePicker(selection: $pipeline.recognitionEngine, width: 158)
                     .controlSize(.small)
                     .disabled(pipeline.isRunning)
             }
@@ -94,7 +106,7 @@ struct SettingsView: View {
             HStack {
                 caption("Tradução")
                 Spacer()
-                TranslationEnginePicker(selection: $pipeline.translationEngine)
+                TranslationEnginePicker(selection: $pipeline.translationEngine, width: 158)
                     .controlSize(.small)
                     .disabled(pipeline.isRunning)
             }
@@ -104,24 +116,21 @@ struct SettingsView: View {
                     caption("Ouvir em")
                     SourceLanguagePicker(
                         selection: $pipeline.sourceLanguage,
-                        engine: pipeline.recognitionEngine
+                        engine: pipeline.recognitionEngine,
+                        width: 112
                     )
                     .disabled(pipeline.isRunning)
                 }
 
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 14)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.inkSoft)
+                    .padding(.top, 16)
 
                 VStack(alignment: .leading, spacing: 5) {
                     caption("Traduzir para")
-                    Picker("", selection: $pipeline.targetLanguage) {
-                        ForEach(Language.allCases) { language in
-                            Text(language.displayName).tag(language)
-                        }
-                    }
-                    .labelsHidden()
+                    PillPicker(title: "Traduzir para", selection: $pipeline.targetLanguage,
+                               options: Language.allCases, label: \.displayName, width: 124)
                     // Sem tradução o destino não é usado por ninguém —
                     // apagado diz isso; escondido faria a linha saltar.
                     .disabled(pipeline.isRunning
@@ -132,22 +141,23 @@ struct SettingsView: View {
             // O motor de reconhecimento muda com o idioma, e a diferenca de
             // latencia e grande o suficiente para valer dizer ao usuario.
             Text(engineNote)
-                .font(.system(size: 10.5))
-                .foregroundStyle(.secondary)
+                .font(.caption)
+                .foregroundStyle(Color.inkSoft)
+                .padding(.top, 2)
 
             // O mesmo para a traducao: um motor que nao cobre o par escolhido,
             // ou que nao serve ao vivo, precisa dizer isso aqui — senao o
             // usuario descobre no meio de uma geracao de dez minutos.
             if let translationNote {
                 Text(translationNote)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .foregroundStyle(Color.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             if let erro = AppleSpeechLanguages.shared.lastError {
                 Text(erro)
-                    .font(.system(size: 10.5))
+                    .font(.caption)
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -200,39 +210,38 @@ struct SettingsView: View {
                     Spacer()
                     Button(action: onRefresh) {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.brandInk)
                     }
                     .buttonStyle(.borderless)
+                    .accessibilityLabel("Atualizar a lista")
                     .help("Atualizar a lista de aplicativos e de microfones")
                 }
 
-                Picker("", selection: $pipeline.selectedProcess) {
-                    Text("Escolha a fonte").tag(AudioProcess?.none)
-                    ForEach(pipeline.availableProcesses) { process in
-                        // Quem esta tocando som aparece marcado: e quase sempre
-                        // o que o usuario quer, e evita escolher o app errado.
-                        Text(process.isPlaying ? "● \(process.name)" : process.name)
-                            .tag(AudioProcess?.some(process))
-                    }
-                }
-                .labelsHidden()
-                .disabled(pipeline.isRunning)
+                // Quem esta tocando som aparece marcado: e quase sempre
+                // o que o usuario quer, e evita escolher o app errado.
+                PillPicker(title: "Capturar o áudio de", selection: $pipeline.selectedProcess,
+                           options: [nil] + pipeline.availableProcesses.map(Optional.some),
+                           label: { process in
+                               guard let process else { return "Escolha a fonte" }
+                               return process.isPlaying ? "● \(process.name)" : process.name
+                           },
+                           width: .infinity)
+                    .disabled(pipeline.isRunning)
 
                 // Qual microfone só é pergunta depois que "Microfone" é a
                 // resposta da primeira. Padrão do sistema na frente, e é ele
                 // que continua valendo quando o usuário troca de fone no meio
                 // da reunião — um ID gravado ficaria apontando para o anterior.
                 if pipeline.selectedProcess?.isMicrophone == true {
-                    Picker("", selection: $pipeline.selectedInputDevice) {
-                        Text("Padrão do sistema"
-                             + (AudioInputList.systemDefault.map { " (\($0.name))" } ?? ""))
-                            .tag(AudioInputDevice?.none)
-                        ForEach(pipeline.availableInputs) { device in
-                            Text(device.name).tag(AudioInputDevice?.some(device))
-                        }
-                    }
-                    .labelsHidden()
-                    .disabled(pipeline.isRunning)
+                    PillPicker(title: "Microfone", selection: $pipeline.selectedInputDevice,
+                               options: [nil] + pipeline.availableInputs.map(Optional.some),
+                               label: { device in
+                                   device?.name ?? "Padrão do sistema"
+                                       + (AudioInputList.systemDefault.map { " (\($0.name))" } ?? "")
+                               },
+                               width: .infinity)
+                        .disabled(pipeline.isRunning)
                 }
 
                 if let selected = pipeline.selectedProcess,
@@ -243,8 +252,8 @@ struct SettingsView: View {
                     Text(selected.pids.count > 1
                          ? "\(selected.name) · \(selected.pids.count) processos"
                          : "\(selected.name) · 1 processo")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
+                        .font(.meta)
+                        .foregroundStyle(Color.inkSoft)
                 }
             }
 
@@ -253,7 +262,7 @@ struct SettingsView: View {
                       systemImage: pipeline.isRunning ? "stop.fill" : "waveform")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(PastelButtonStyle(prominent: true))
             .controlSize(.large)
             .keyboardShortcut(.defaultAction)
             .disabled(pipeline.selectedProcess == nil && !pipeline.isRunning)
@@ -262,20 +271,21 @@ struct SettingsView: View {
             HStack(spacing: 5) {
                 Circle()
                     .fill(pipeline.isWarm ? Color.green : Color.orange)
-                    .frame(width: 5, height: 5)
+                    .frame(width: 6, height: 6)
                 Text(pipeline.isWarm ? "modelos carregados" : "carregando modelos…")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .font(.meta)
+                    .foregroundStyle(Color.inkSoft)
                     .help(pipeline.engineNames)
                 Spacer()
                 Text("atalho")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
+                    .font(.meta)
+                    .foregroundStyle(Color.inkSoft)
                 Text(GlobalHotKey.displayName)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 1)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.ink)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Color.field, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
 
             // O painel nao tem barra de titulo, entao se for arrastado para
@@ -283,7 +293,8 @@ struct SettingsView: View {
             // ser por aqui.
             Button("Restaurar tamanho do painel", action: onResetPanel)
                 .buttonStyle(.borderless)
-                .font(.system(size: 11))
+                .font(.caption)
+                .foregroundStyle(Color.brandInk)
                 .help("Arraste as bordas do painel para escolher o tamanho; ele é lembrado.")
         }
     }
@@ -291,7 +302,7 @@ struct SettingsView: View {
     // MARK: Vídeos
 
     private var videoControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 9) {
             // O principal primeiro: gera, grava o .srt e ainda deixa assistir.
             Button {
                 onOpenStudio()
@@ -333,7 +344,7 @@ struct SettingsView: View {
             // fala. Vale só aqui: o ao vivo não tem o áudio inteiro.
             if pipeline.recognitionEngine.supportsDiarization {
                 Toggle("Identificar quem fala", isOn: $pipeline.diarizeSpeakers)
-                    .font(.system(size: 11))
+                    .font(.control)
                     .help("Separa as legendas por locutor e marca a troca com travessão. "
                           + "Acrescenta um passo à geração.")
 
@@ -345,19 +356,19 @@ struct SettingsView: View {
                 Group {
                     HStack(spacing: 6) {
                         caption("Por")
-                        Picker("", selection: $pipeline.speakerModel) {
-                            ForEach(SpeakerDiarizer.Model.allCases) { modelo in
-                                Text(modelo.displayName).tag(modelo)
-                            }
-                        }
-                        .labelsHidden()
+                        PillPicker(title: "Modelo de vozes", selection: $pipeline.speakerModel,
+                                   options: SpeakerDiarizer.Model.allCases, label: \.displayName,
+                                   width: .infinity)
                         .controlSize(.small)
                         .help("Sortformer é um modelo só, ponta a ponta: mais rápido, marca mais legendas e devolve sempre o mesmo resultado. Agrupamento de vozes segmenta, extrai a voz e agrupa — acha menos vozes em conversa de duas pessoas.")
                     }
                     .padding(.leading, 18)
 
                     Toggle("Uma cor por locutor", isOn: $pipeline.colorBySpeaker)
-                        .font(.system(size: 11))
+                        .font(.control)
+                        // O rótulo da caixa não apaga sozinho quando está
+                        // desligada: sem isto ela parecia disponível.
+                        .foregroundStyle(pipeline.diarizeSpeakers ? Color.ink : Color.inkSoft.opacity(0.6))
                         .padding(.leading, 18)
                         .help("Na janela de legendas e no .srt exportado, cada voz ganha "
                               + "uma cor (branco, amarelo, ciano, verde)")
@@ -366,8 +377,8 @@ struct SettingsView: View {
             }
 
             Text("Assista e revise na janela de legendas, ou gere apenas o arquivo SRT.")
-                .font(.system(size: 10.5))
-                .foregroundStyle(.secondary)
+                .font(.caption)
+                .foregroundStyle(Color.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

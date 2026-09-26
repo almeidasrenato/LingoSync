@@ -5,15 +5,12 @@ import TradutorCore
 struct EnginePicker: View {
 
     @Binding var selection: RecognitionEngine
+    var width: CGFloat?
 
     var body: some View {
-        Picker("Reconhecimento", selection: $selection) {
-            ForEach(RecognitionEngine.allCases.filter(\.isAvailable)) { engine in
-                Text(engine.displayName).tag(engine)
-            }
-        }
-        .labelsHidden()
-        .fixedSize()
+        PillPicker(title: "Reconhecimento", selection: $selection,
+                   options: RecognitionEngine.allCases.filter(\.isAvailable),
+                   label: \.displayName, width: width)
         .help("""
               Quem reconhece a fala. Parakeet é o mais rápido, mas só cobre os \
               idiomas europeus; Whisper cobre todos. Apple usa o \
@@ -27,18 +24,15 @@ struct EnginePicker: View {
 struct TranslationEnginePicker: View {
 
     @Binding var selection: TranslationEngine
+    var width: CGFloat?
 
     var body: some View {
-        Picker("Tradução", selection: $selection) {
-            // Só o que existe: o Hunyuan mora num ambiente que o usuário
-            // instala à parte, e oferecer o que não está lá daria erro no
-            // meio de uma geração.
-            ForEach(TranslationEngine.allCases.filter(\.isAvailable)) { engine in
-                Text(engine.displayName).tag(engine)
-            }
-        }
-        .labelsHidden()
-        .fixedSize()
+        // Só o que existe: o Hunyuan mora num ambiente que o usuário
+        // instala à parte, e oferecer o que não está lá daria erro no
+        // meio de uma geração.
+        PillPicker(title: "Tradução", selection: $selection,
+                   options: TranslationEngine.allCases.filter(\.isAvailable),
+                   label: \.displayName, width: width)
         .help("""
               Quem traduz as legendas de vídeo. Apple é local e instantânea. \
               DeepL abre o site numa janela e traduz por lá — o melhor em \
@@ -69,13 +63,8 @@ struct SourceLanguagePicker: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Picker("Idioma original", selection: $selection) {
-                ForEach(options) { language in
-                    Text(language.displayName).tag(language)
-                }
-            }
-            .labelsHidden()
-            .frame(width: width)
+            PillPicker(title: "Idioma original", selection: $selection,
+                       options: options, label: \.displayName, width: width)
 
             if engine == .apple { installControl }
         }
@@ -123,8 +112,13 @@ struct SourceLanguagePicker: View {
                 }
             } label: {
                 Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.brandInk)
+                    .frame(width: 24, height: 24)
+                    .background(Color.brandSoft, in: Circle())
             }
-            .menuStyle(.borderlessButton)
+            .menuStyle(.button)
+            .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .fixedSize()
             .disabled(catalog.installable.isEmpty)
@@ -146,13 +140,8 @@ struct ImageLanguagePicker: View {
     var width: CGFloat?
 
     var body: some View {
-        Picker("Idioma do texto", selection: $selection) {
-            ForEach(options) { language in
-                Text(language.displayName).tag(language)
-            }
-        }
-        .labelsHidden()
-        .frame(width: width)
+        PillPicker(title: "Idioma do texto", selection: $selection,
+                   options: options, label: \.displayName, width: width)
         .help("""
               O idioma em que a legenda está escrita no vídeo — não o que se \
               fala. O leitor usa isso para ler certo, e a tradução parte dele.
