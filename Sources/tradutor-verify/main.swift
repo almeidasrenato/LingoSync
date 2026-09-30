@@ -4175,6 +4175,14 @@ struct Verify {
                "o teto de tentativas fica entre 2 e 4")
         expect(WhisperTranscriber.coverageFloor > 0.5 && WhisperTranscriber.coverageFloor < 1,
                "o piso de alcance fica entre 50% e 100%")
+        // A repetição congelava a janela em "8092 de 8092 s": a fração
+        // recomeçava de zero e a janela ignora fração que volta.
+        let meio = WhisperTranscriber.pass(of: 0.5), fim = WhisperTranscriber.pass(of: 1)
+        let segunda = WhisperTranscriber.pass(of: 1.25), terceira = WhisperTranscriber.pass(of: 3)
+        expect(meio.number == 1 && meio.fraction == 0.5 && fim.number == 1 && fim.fraction == 1,
+               "a primeira passada relata de 0 a 1")
+        expect(segunda.number == 2 && segunda.fraction == 0.25 && terceira.number == 3 && terceira.fraction == 1,
+               "a repetição se distingue da primeira passada")
 
         // A retentativa do Neural Engine: uma falha e recuperada, duas sobem,
         // e cancelamento nao e retentado.

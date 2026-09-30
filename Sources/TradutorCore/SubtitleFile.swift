@@ -782,9 +782,14 @@ public final class SubtitleFileBuilder {
         }
 
         progress(.transcribing, 0, String(format: L("0 de %.0f s de áudio", "0 of %.0f s of audio"), seconds), false)
-        let timed = try await transcriber.transcribeForSubtitles(samples) { fraction in
-            progress(.transcribing, fraction,
-                     String(format: L("%.0f de %.0f s de áudio", "%.0f of %.0f s of audio"), fraction * seconds, seconds), false)
+        let timed = try await transcriber.transcribeForSubtitles(samples) { valor in
+            let (passada, fraction) = WhisperTranscriber.pass(of: valor)
+            let lido = String(format: L("%.0f de %.0f s de áudio", "%.0f of %.0f s of audio"), fraction * seconds, seconds)
+            // Na repetição a barra fica cheia — a fração não pode voltar — e
+            // quem anda é o texto.
+            progress(.transcribing, passada == 1 ? fraction : 1,
+                     passada == 1 ? lido : L("nova passada \(passada) de \(WhisperTranscriber.maximumAttempts) · \(lido)",
+                                             "extra pass \(passada) of \(WhisperTranscriber.maximumAttempts) · \(lido)"), false)
         }
         try Task.checkCancellation()
 

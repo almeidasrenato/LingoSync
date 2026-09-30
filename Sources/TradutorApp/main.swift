@@ -1183,7 +1183,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                         viuEspera = true
                         if legendasNaEspera < 0 { legendasNaEspera = model.cues.count }
                     }
+                    // A repetição do Whisper tem de aparecer no texto: a barra
+                    // fica cheia nela, e sem o texto a janela parecia travada.
+                    let repetindo = passo.kind == .transcribing
+                        && (passo.detail.hasPrefix("nova passada") || passo.detail.hasPrefix("extra pass"))
                     let atual = passo.kind.rawValue + (passo.waiting ? " (aguardando)" : "")
+                        + (repetindo ? " " + passo.detail.prefix(while: { $0 != "·" }) : "")
                     if atual != ultimo {
                         write(String(format: "  [%5.1fs] %@ %@",
                                      Date().timeIntervalSince(inicio), atual, passo.detail))

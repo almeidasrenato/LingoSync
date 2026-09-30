@@ -59,6 +59,15 @@ extension Transcriber {
         try await transcribeTimed(samples) { _ in }
     }
 
+    /// Separa o progresso relatado em passada (1, 2, 3) e fração dela. Só o
+    /// Whisper repete passada; os outros relatam de 0 a 1 e caem na primeira.
+    public static func pass(of progress: Double) -> (number: Int, fraction: Double) {
+        let inteira = max(0, Int(progress.rounded(.down)))
+        // O fim exato de uma passada é 1,0 dela, não o 0 da seguinte.
+        if inteira > 0, progress == Double(inteira) { return (inteira, 1) }
+        return (inteira + 1, min(1, max(0, progress - Double(inteira))))
+    }
+
     /// Mesmo pós-processamento no app e nas verificações de legendas. O texto
     /// suspeito precisa chegar aqui intacto para poder ser conferido no áudio.
     public func transcribeForSubtitles(
@@ -472,6 +481,8 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
     /// **notar que a passada saiu ruim e tentar de novo**.
     ///
     /// Em áudio normal a primeira passada já passa do piso e nada se repete.
+    ///
+    /// `progress` passa de 1 quando há repetição; ver `pass(of:)`.
     public func transcribeTimed(
         _ samples: [Float],
         progress: @escaping @Sendable (Double) -> Void
@@ -482,12 +493,16 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         var melhorCobertura = -1.0
         for tentativa in 1...Self.maximumAttempts {
             try Task.checkCancellation()
-            // Cada passada usa a barra inteira. Com fatias de um terço, a
-            // passada única — o caso comum — andava só até 33% (e "180 de
-            // 540 s de áudio") e saltava para o fim, e a geração parecia três
-            // vezes mais lenta do que era. Numa repetição a barra recomeça,
-            // o que é verdade: o áudio está sendo lido de novo.
-            let saida = try await transcribeOnce(samples, progress: progress)
+            // O valor diz a passada: 0…1 na primeira, 1…2 na segunda, 2…3 na
+            // terceira. Com fatias de um terço a passada única — o caso comum —
+            // parava em 33% ("180 de 540 s de áudio") e a geração parecia três
+            // vezes mais lenta. Recomeçar de 0 também não serve: a janela
+            // ignora fração que volta, e a repetição ficava congelada em
+            // "8092 de 8092 s" (vídeo de 2 h 15, 30/09/2026).
+            let passada = Double(tentativa - 1)
+            let saida = try await transcribeOnce(samples) { fracao in
+                progress(passada + fracao)
+            }
             // Uma frase suspeita não pode fazer uma passada pobre parecer
             // completa. Preserve-a na saída para a conferência posterior.
             let cobertura = Self.reached(regioes, by: saida.filter {
