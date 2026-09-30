@@ -577,8 +577,8 @@ vídeo de 9 min japonês    96%   uma passada · 26 s
 ```
 
 **A régua de energia repetia à toa (30/09/2026).** Música, vento e ruído
-contam como "fala não alcançada": um vídeo de 2 h 15 ficava em 44–47% e relia
-tudo três vezes, **46 min**. Quando a energia recusa a 1ª passada, a régua
+contam como "fala não alcançada", e a passada boa parecia pobre. Quando a
+energia recusa a 1ª passada, a régua
 passa a ser a voz do Sortformer (`voiceRegions`); quando aceita, o Sortformer
 nem roda. Medido com as três passadas gravadas de cada arquivo:
 
@@ -587,7 +587,7 @@ nem roda. Medido com as três passadas gravadas de cada arquivo:
 música 334 s              3 passadas · 36 s     1 · 27 s        idêntico
 78 s difícil              3 · 20 s              1 ·  8 s        idêntico
 97 s japonês              3 · 15 s              1 ·  6 s        idêntico
-30 min do vídeo de 2 h    3 · 351 s             1 · 102 s       idêntico
+30 min de vídeo longo     3 · 351 s             1 · 102 s       idêntico
 inglês ×2, 9 min, TED     1                     1 (+0,3 a 2 s)  idêntico
 ```
 
@@ -596,6 +596,11 @@ mudavam nada. O **Silero** (VAD do FluidAudio) foi medido como régua e
 recusado: mais rápido (0,1–1,3 s), mas junta a voz em trechos enormes (3 na
 música inteira) e continuou repetindo à toa no vídeo de 78 s. Com o
 Sortformer fora do disco, o `try?` falha e vale a energia de antes.
+
+**Não é garantia de uma passada em vídeo longo.** Um recorte de 30 min não
+representa o resto: no vídeo inteiro o Whisper deixou um terço dos trechos
+com voz sem texto (64% na 2ª passada), e as três passadas rodaram — é fala
+perdida de verdade, e repetir é o certo. Meça o arquivo inteiro.
 
 **Sem sorteio não quer dizer determinístico**: três execuções do vídeo de
 9 min sem nenhuma re-decodificação com temperatura deram 1540, 1535 e 1517

@@ -498,8 +498,8 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
             // terceira. Com fatias de um terço a passada única — o caso comum —
             // parava em 33% ("180 de 540 s de áudio") e a geração parecia três
             // vezes mais lenta. Recomeçar de 0 também não serve: a janela
-            // ignora fração que volta, e a repetição ficava congelada em
-            // "8092 de 8092 s" (vídeo de 2 h 15, 30/09/2026).
+            // ignora fração que volta, e a repetição ficava congelada no fim
+            // da primeira passada (vídeo longo, 30/09/2026).
             let passada = Double(tentativa - 1)
             let saida = try await transcribeOnce(samples) { fracao in
                 progress(passada + fracao)
@@ -509,11 +509,10 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
             let semSuspeitas = saida.filter { !Hallucinations.isIsolatedFiller($0.text) }
             var cobertura = Self.reached(regioes, by: semSuspeitas)
             // A régua de energia conta música, vento e ruído como fala, e a
-            // passada boa parecia pobre: o vídeo de 2 h 15 relia tudo três
-            // vezes, 46 min. Antes de repetir, a régua passa a ser a voz que o
-            // Sortformer ouve. Nos 8 arquivos medidos em 30/09/2026 o texto
-            // final saiu idêntico, e onde havia repetição o tempo caiu de 2 a
-            // 3,4 vezes (30 min do mesmo vídeo: 351 s → 102 s). Quando a
+            // passada boa parecia pobre. Antes de repetir, a régua passa a ser
+            // a voz que o Sortformer ouve. Nos 8 arquivos medidos em 30/09/2026
+            // o texto final saiu idêntico, e onde havia repetição o tempo caiu
+            // de 2 a 3,4 vezes (30 min de vídeo: 351 s → 102 s). Quando a
             // energia já aceita, o Sortformer nem roda.
             if cobertura < Self.coverageFloor, !mediuVoz {
                 mediuVoz = true

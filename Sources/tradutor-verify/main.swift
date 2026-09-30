@@ -4185,7 +4185,7 @@ struct Verify {
         expect(vozes == [0...5, 5.8...8], "vozes sobrepostas se juntam, pausa acima de 0,5 s separa")
         expect(WhisperTranscriber.reached(vozes, by: [.init(text: "oi", start: 1, end: 2)]) == 0.5,
                "texto só no primeiro trecho de voz alcança metade")
-        // A repetição congelava a janela em "8092 de 8092 s": a fração
+        // A repetição congelava a janela no fim da 1ª passada: a fração
         // recomeçava de zero e a janela ignora fração que volta.
         let meio = WhisperTranscriber.pass(of: 0.5), fim = WhisperTranscriber.pass(of: 1)
         let segunda = WhisperTranscriber.pass(of: 1.25), terceira = WhisperTranscriber.pass(of: 3)
