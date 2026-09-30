@@ -1161,6 +1161,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 if case let .working(passo) = model.stage, passo.kind == .transcribing {
                     progressoReconhecendo = max(progressoReconhecendo, passo.withinStep)
                 }
+                // Aqui também, e não só no relator de 500 ms: o Google traduz
+                // um vídeo curto em menos que isso, e a espera passava entre
+                // duas amostras — reprovava de vez em quando (30/09/2026).
+                if case let .working(passo) = model.stage, passo.waiting {
+                    viuEspera = true
+                    if legendasNaEspera < 0 { legendasNaEspera = model.cues.count }
+                }
                 if case .done = model.stage { break }
                 if case let .failed(message) = model.stage {
                     write("FALHA na geracao: \(message)")
@@ -1620,9 +1627,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(model.stage == .cancelled, "cancelar deixa o estado em cancelado")
             expect(!model.isWorking, "cancelar encerra o trabalho")
             expect(model.canGenerate, "da para gerar de novo depois de cancelar")
+            // O rascunho da geração cancelada ficava de pé, e a importação
+            // abaixo o juntava com a tradução de outra execução: tradução
+            // repetida na vizinha e fatia de 0,08 s (30/09/2026).
+            expect(model.originalCues.isEmpty && !model.canRetranslate,
+                   "geracao cancelada nao deixa rascunho para a importacao juntar")
 
             // Devolve as legendas para o resto do teste.
+            let blocosDoBackup = ((try? SRTParser.parse(contentsOf: destinoParaTeste)) ?? []).count
             model.loadSubtitles(from: destinoParaTeste)
+            expect(model.cues.count == blocosDoBackup,
+                   "importar depois de cancelar mostra so o que foi importado (\(model.cues.count) de \(blocosDoBackup))")
             try? FileManager.default.removeItem(at: destinoParaTeste)
 
             // --- volume e mudo ---

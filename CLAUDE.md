@@ -136,8 +136,19 @@ gravado do usuário antes do `exit`); a janela de legendas é
 que para na legenda 2 logo depois da geração para um `screencapture -l` —
 o `cacheDisplay` não desenha o quadro do vídeo. O vídeo de demonstração é
 nosso (cena gerada + diálogo do `say`), porque os de `Videos Exemplo/` são de
-terceiros. Com o Google, os dois checks de "espera pelo tradutor" reprovam
-num vídeo de 28 s: a resposta chega antes da amostragem.
+terceiros.
+
+Dois defeitos achados tirando esse print (30/09/2026):
+
+- **Geração cancelada deixava o rascunho de pé.** Regerar, cancelar e
+  importar uma tradução juntava a tradução com o original de **outra**
+  execução — tempos diferentes, tradução repetida na legenda vizinha e fatia
+  de 0,08 s sem tradução; a exportação saía com menos blocos que a tela.
+  `cancelGeneration` solta o `builder` quando não é retradução.
+- **"A interface anuncia a espera pelo tradutor" reprovava de vez em quando**
+  com o Google: quem procurava o "aguardando" amostrava a cada 500 ms, e o
+  Google traduz um vídeo curto em menos que isso. A detecção foi para o laço
+  de 40 ms; três rodadas seguidas passaram.
 
 Bandeiras: `--motor <parakeet|whisper|qwen|qwenLarge>`, `--tradutor
 <apple|deepl|google|hunyuan>`, `--locutores`, `--cores`, `--modelo

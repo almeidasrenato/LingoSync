@@ -821,6 +821,16 @@ final class SubtitleStudioModel {
         clock?.invalidate()
         clock = nil
         jobStartedAt = nil
+        // Geração cancelada não deixa rascunho: a tela já foi limpa, e o
+        // reconhecimento que chegou a sair é de uma execução que ninguém viu.
+        // Com ele de pé, importar uma tradução depois juntava as duas faixas
+        // de execuções diferentes — tradução repetida na legenda vizinha e
+        // fatia de 0,08 s (30/09/2026). Retradução cancelada guarda o
+        // rascunho: é dele que a legenda na tela saiu.
+        if !retranslating {
+            builder?.finish()
+            builder = nil
+        }
         retranslating = false
         stage = .cancelled
     }
