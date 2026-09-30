@@ -482,11 +482,12 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         var melhorCobertura = -1.0
         for tentativa in 1...Self.maximumAttempts {
             try Task.checkCancellation()
-            let saida = try await transcribeOnce(samples) { fracao in
-                // A barra não pode voltar: cada tentativa ocupa a sua fatia.
-                let fatia = 1 / Double(Self.maximumAttempts)
-                progress(min(1, (Double(tentativa - 1) + fracao) * fatia))
-            }
+            // Cada passada usa a barra inteira. Com fatias de um terço, a
+            // passada única — o caso comum — andava só até 33% (e "180 de
+            // 540 s de áudio") e saltava para o fim, e a geração parecia três
+            // vezes mais lenta do que era. Numa repetição a barra recomeça,
+            // o que é verdade: o áudio está sendo lido de novo.
+            let saida = try await transcribeOnce(samples, progress: progress)
             // Uma frase suspeita não pode fazer uma passada pobre parecer
             // completa. Preserve-a na saída para a conferência posterior.
             let cobertura = Self.reached(regioes, by: saida.filter {
