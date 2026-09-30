@@ -9,6 +9,12 @@ enum LayoutPreview {
         let folder = URL(fileURLWithPath: "/tmp/tradutor-layout", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let pipeline = Pipeline()
+        // O motor de tradução do Pipeline é preferência gravada: a do
+        // usuário volta no fim, antes do `exit`.
+        let motorDoUsuario = pipeline.translationEngine
+        pipeline.translationEngine = .apple
+        pipeline.sourceLanguage = .japanese
+        pipeline.targetLanguage = .english
         let model = SubtitleStudioModel()
         model.sourceLanguage = .portuguese
         model.targetLanguage = .english
@@ -70,9 +76,15 @@ enum LayoutPreview {
                          "studio-expanded-\(dark ? "dark" : "light")",
                          width: 1080, height: 700, dark: dark)
         }
-        for text in ["A conversa fica guardada no histórico.", "Agora os controles estão mais fáceis de encontrar."] {
-            pipeline.subtitles.commit(SubtitleBlock(source: "Sample source text.", translated: text))
+        // Uma reunião de verdade, para o print servir de divulgação.
+        for (source, text) in [
+            ("来週の打ち合わせ、火曜日で大丈夫ですか？", "Does Tuesday work for next week's meeting?"),
+            ("はい、午後なら空いています。", "Yes, I'm free in the afternoon."),
+            ("資料は前日までに送りますね。", "I'll send the materials the day before."),
+        ] {
+            pipeline.subtitles.commit(SubtitleBlock(source: source, translated: text))
         }
+        pipeline.subtitles.setPartial("それと、会議室の予約も")
         // Preferências do painel num domínio à parte: teste não escreve no
         // do usuário.
         let painel = UserDefaults(suiteName: "tradutor-layout-preview")!
@@ -81,12 +93,27 @@ enum LayoutPreview {
             await render(OverlayView(pipeline: pipeline, onClose: {}).defaultAppStorage(painel),
                          "live-\(Int(width))", width: width, height: 300, dark: true)
         }
-        pipeline.subtitles.setPartial("e isto ainda está sendo captado")
+        // Texto corrido: um ditado em inglês, só transcrevendo, com uma
+        // pausa longa que abre parágrafo.
+        pipeline.translationEngine = .transcriptionOnly
+        pipeline.sourceLanguage = .english
+        pipeline.subtitles.clear()
+        let inicio = Date()
+        for (offset, text) in [
+            (0.0, "Okay, quick recap of today's call."),
+            (3.0, "We agreed to ship the beta on Friday."),
+            (7.0, "Marina will handle the release notes, and I'll update the onboarding screens."),
+            (25.0, "Next week we'll review the feedback from the first users."),
+        ] {
+            pipeline.subtitles.commit(SubtitleBlock(
+                source: text, translated: text, at: inicio.addingTimeInterval(offset)))
+        }
+        pipeline.subtitles.setPartial("and decide what goes into version two")
         painel.set(true, forKey: "painelEmTextoCorrido")
-        painel.set(0.5, forKey: "opacidadeDoFundoDoPainel")
         await render(OverlayView(pipeline: pipeline, onClose: {}).defaultAppStorage(painel),
                      "live-texto-620", width: 620, height: 300, dark: true)
         painel.removePersistentDomain(forName: "tradutor-layout-preview")
+        pipeline.translationEngine = motorDoUsuario
         model.stop()
         try? report.write(to: folder.appendingPathComponent("layout.txt"), atomically: true, encoding: .utf8)
         print(report)

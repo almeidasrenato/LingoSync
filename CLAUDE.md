@@ -129,6 +129,16 @@ transparência e modo texto a cada 0,5 s; quem arrasta é um script de fora com
 `CGEvent` (arrasto e controle de mouse só se provam com evento de verdade).
 Preferências num domínio à parte, posição não guardada.
 
+**As imagens do README** (`docs/`) saem do próprio app: `--selftest-layout`
+desenha painel, modo texto e menu com conteúdo realista (e devolve o tradutor
+gravado do usuário antes do `exit`); a janela de legendas é
+`--selftest-studio <video> ja en --motor apple --tradutor google --segurar 25 2`,
+que para na legenda 2 logo depois da geração para um `screencapture -l` —
+o `cacheDisplay` não desenha o quadro do vídeo. O vídeo de demonstração é
+nosso (cena gerada + diálogo do `say`), porque os de `Videos Exemplo/` são de
+terceiros. Com o Google, os dois checks de "espera pelo tradutor" reprovam
+num vídeo de 28 s: a resposta chega antes da amostragem.
+
 Bandeiras: `--motor <parakeet|whisper|qwen|qwenLarge>`, `--tradutor
 <apple|deepl|google|hunyuan>`, `--locutores`, `--cores`, `--modelo
 <clustering|sortformer>`, `--retraduzir <motor>`.
@@ -2431,7 +2441,7 @@ O item de menu não identifica locutor para `.txt` — seria um passo a mais
 para nada sair no arquivo.
 
 `tradutor-verify texto` é o mesmo caminho sem app, com o texto no stdout. A
-skill `~/.claude/skills/lingosync-transcrever-audio` do Claude Code chama esse comando (pelo `scripts/lingosync-transcrever`, que só repassa)
+skill `integrations/claude-code/lingosync-transcrever-audio` (ligada por symlink em `~/.claude/skills`) chama esse comando pelo `scripts/lingosync-transcrever`, que acha o repositório pelo próprio caminho e usa **Whisper e português** por padrão — o app continua na Apple
 quando alguém manda áudio ou vídeo para ler. 161 s de inglês: 1,2 s na Apple.
 
 ## Atualização pelo GitHub (30/09/2026)

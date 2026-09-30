@@ -1,0 +1,25 @@
+#!/bin/bash
+# LingoSync: a fala de um áudio ou vídeo em texto corrido, no stdout.
+#   lingosync-transcrever <arquivo> [idioma] [motor] [--saida <arquivo.txt>]
+#
+# Acha o repositório pelo caminho real deste script, então funciona com a
+# skill ligada por symlink em ~/.claude/skills. LINGOSYNC_DIR sobrepõe.
+set -euo pipefail
+SELF="$(python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$0")"
+ROOT="${LINGOSYNC_DIR:-$(cd "$(dirname "$SELF")/../../../.." && pwd)}"
+BIN="$ROOT/.build/release/tradutor-verify"
+if [ ! -x "$BIN" ]; then
+  echo "tradutor-verify não compilado em $ROOT. Rode:" >&2
+  echo "  cd \"$ROOT\" && swift build -c release --product tradutor-verify" >&2
+  exit 1
+fi
+# Padrão da skill: português e Whisper (o mais amplo; o app usa a Apple).
+POS=(); FLAGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --saida) FLAGS+=("$1" "$2"); shift 2 ;;
+    *) POS+=("$1"); shift ;;
+  esac
+done
+[ ${#POS[@]} -ge 1 ] || { echo "uso: lingosync-transcrever <arquivo> [idioma] [motor] [--saida <txt>]" >&2; exit 1; }
+exec "$BIN" texto "${POS[0]}" "${POS[1]:-pt}" "${POS[2]:-whisper}" ${FLAGS[@]+"${FLAGS[@]}"}

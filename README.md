@@ -4,17 +4,22 @@
 
 # LingoSync
 
-**Real-time translation and subtitles for macOS. Private, on-device.**
+**Understand any conversation on your Mac — live, subtitled, or as plain text.**
 
-Captures the audio of any app or your microphone, transcribes it and translates
-it while people speak — no API key, no account, no cloud.
+LingoSync listens to any app or your microphone, transcribes what is said and
+translates it while people speak. It subtitles whole videos, and hands you the
+clean text of any recording. All on-device: no API key, no account, no cloud.
 
 ![macOS 15+](https://img.shields.io/badge/macOS-15%2B-000000?logo=apple&logoColor=white)
 ![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1%E2%80%93M5-333333)
 ![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 ![No paid API](https://img.shields.io/badge/no_paid_API-3E7A52)
+![Free](https://img.shields.io/badge/price-free-3E7A52)
 
-[**Download the latest release**](https://github.com/almeidasrenato/LingoSync/releases/latest)
+### [⬇ Download LingoSync for macOS](https://github.com/almeidasrenato/LingoSync/releases/latest)
+
+**Live translation** &nbsp;·&nbsp; **Subtitles for any video** &nbsp;·&nbsp;
+**Just the text** &nbsp;·&nbsp; **Private by design**
 
 </div>
 
@@ -25,70 +30,112 @@ it while people speak — no API key, no account, no cloud.
 
 ---
 
-## What it does
+## Made for
 
-### Listen and translate live &nbsp;·&nbsp; <kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>
+- **Calls and meetings in another language** — a floating panel translates the
+  other side as they talk, over Zoom, Meet, Teams, a browser tab or any app.
+- **Watching videos, anime and lectures** — generate subtitles for a file you
+  already have, in your language, and watch them side by side.
+- **Getting the words out of audio** — voice memos, interviews, podcasts,
+  dictation: one click gives you clean, copyable text.
 
-<img src="docs/ao-vivo-estreito.png" width="330" align="right" alt="The live panel at its narrow width">
+## Listen and translate live &nbsp;·&nbsp; <kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>
+
+<img src="docs/ao-vivo.png" width="620" alt="The live panel translating a Japanese meeting into English">
 
 Pick where the sound comes from — one app, all system audio, or the
-microphone — and a floating panel shows three zones:
+microphone — and a floating panel keeps up with the conversation:
 
-- **coral**, the raw partial from the recognizer, still changing;
+- **coral**, what is being heard right now, still settling;
 - **sage**, the sentence just confirmed and translated;
-- **yellow**, the session history.
+- **yellow**, everything said so far, original above the translation.
+
+It floats over full-screen video, follows you across desktops and never steals
+focus. Drag it by the header, fade its background until the video shows
+through — the text stays sharp — and copy the whole session in either language
+with one click.
 
 **Audio is never cut mid-word.** The running segment is re-recognized in full
 every 0.6 s, and only the prefix that two passes agree on reaches the screen.
 Cutting split words, and neither half was recognizable ("reported" became
 "Reaper's" at the end of one chunk and "ported" at the start of the next).
 
-Pausing keeps the capture alive, the copy buttons take the whole session, and
-the export includes timestamps and the language pair. **Text** switches the
-panel from subtitles to one running, selectable transcript — for dictating or
-grabbing what someone said and pasting it elsewhere. The panel is draggable by
-its header, and the transparency control fades only the background, never the
-text.
+## Just the words
 
-<br clear="right">
+<img src="docs/promo/just-the-words.png" width="820" alt="The live panel in text mode next to an exported meeting.txt">
 
-### Subtitle any video
+Sometimes you do not want subtitles — you want the text. Flip the panel to
+**Text** and it becomes one running, selectable transcript: talk, then paste
+it into your notes, an email or a chat.
+
+<img src="docs/ao-vivo-texto.png" width="620" alt="Text mode: the session as running text, with the part still being heard in coral">
+
+For recordings, **Extract text (.txt)** in the menu turns any video or audio
+file into plain running text — no timecodes, filler words like "um" and "uh"
+removed, paragraphs where the speaker paused. Pick a translator and you get
+the translated text instead.
+
+## Subtitle any video
 
 <img src="docs/promo/video-subtitles.png" width="820" alt="Subtitle window with the cue list next to the video">
 
-Open a video, generate the `.srt`, and watch it with the subtitles alongside.
-Original and translation in the same list, cue-by-cue navigation, speaker
-identification with one color per speaker, separate import and export of each
-track, and re-translation without recognizing the audio again — seconds instead
-of minutes. It can also **read subtitles already burned into the video** (OCR)
-and translate them.
+Open a video and press **Generate**. LingoSync transcribes, translates and
+lines up every subtitle — 2 lines × 42 characters, 20 for Japanese and
+Chinese — and plays the video with the list alongside.
 
-Only need the words? **Extract text (.txt)** turns any video or audio file into
-plain running text, no timecodes — and the subtitle window exports `.txt` too.
+<img src="docs/legendas.png" width="820" alt="The real subtitle window: a Japanese conversation subtitled in English">
 
-<img src="docs/legendas.png" width="820" alt="The real subtitle window">
+- original and translation in the same list, with ← → to jump cue by cue;
+- **who is speaking**, with one color per speaker;
+- **re-translate** with another engine in seconds, without recognizing the
+  audio again;
+- import and export each track separately, as `.srt` or plain `.txt`;
+- **reads subtitles already burned into the video** (OCR) and translates them.
 
-### Everything from the menu bar
+## Everything from the menu bar
 
-<img src="docs/painel.png" width="360" align="right" alt="Menu bar panel">
+<img src="docs/painel.png" width="340" align="right" alt="Menu bar panel">
 
 The app lives in the menu bar, with no Dock icon. From there you choose the
-language pair, the recognition engine, the translator, the audio source, and
-open subtitle windows. When a newer release is out, an **Update** button
-appears there; it downloads the `.dmg` for you (the app never replaces itself,
-which would drop its screen-recording permission).
+language pair, the recognition engine, the translator and the audio source,
+and open subtitle windows.
 
 Every engine states its cost **before** you pick it: the panel warns that DeepL
 takes 2–3 s per chunk live, that a resident Hunyuan uses 4.5 GB, and that Qwen
 only works on video files. Your choice is never silently swapped.
 
+When a new version is out, an **Update** button appears at the top. It
+downloads the `.dmg` and opens it — the app never replaces itself, which would
+drop its screen-recording permission. The GitHub link lives in the footer.
+
 <br clear="right">
+
+## Let your AI assistant listen
+
+Claude and other coding agents cannot hear audio. LingoSync ships a
+[Claude Code](https://claude.com/claude-code) skill that transcribes any audio
+or video file locally, so you can say *"summarize this recording"* and it just
+works.
+
+```bash
+swift build -c release --product tradutor-verify
+ln -s "$PWD/integrations/claude-code/lingosync-transcrever-audio" ~/.claude/skills/
+```
+
+Under the hood it is one command, handy in any script:
+
+```bash
+integrations/claude-code/lingosync-transcrever-audio/scripts/lingosync-transcrever meeting.m4a en
+```
+
+It prints the running text to stdout (Whisper by default, any language), and
+nothing leaves your Mac.
 
 ---
 
 ## How it works
 
-<img src="docs/promo/how-it-works.png" width="820" alt="Capture, recognize on-device, translate and subtitle">
+<img src="docs/promo/how-it-works.png" width="820" alt="Capture, recognize on-device, translate into a live panel, .srt or .txt">
 
 ```
 live
@@ -105,7 +152,7 @@ video
        ──▶ who speaks, when requested ──▶ timed recognition
        ──▶ group into sentences ──▶ translate in batches
        ──▶ split into 2 lines × 42 characters (20 for CJK targets)
-       ──▶ .srt
+       ──▶ .srt, or running text ──▶ .txt
 ```
 
 ## Install
@@ -229,6 +276,10 @@ Qwen and Hunyuan run on-device, and after the first download loading uses no
 network. The DeepL, Google and Gemini translators **send text out** (never
 audio), which is why they are not the default and why the panel states the
 cost of each before you pick it.
+
+The only request the app makes on its own is a public check of the latest
+GitHub release when you open the menu (at most every 6 hours) — no account,
+no identifier, nothing about your Mac.
 
 ## Project structure
 

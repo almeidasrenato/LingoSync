@@ -1177,6 +1177,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             write(String(format: "geracao em %.1fs", model.elapsed))
             write("legendas: \(model.cues.count)")
+
+            // `--segurar <s> [legenda]`: para a janela numa legenda logo
+            // depois da geração, para um print de fora (`screencapture -l`),
+            // que pega o quadro do vídeo — o `cacheDisplay` do fim do teste
+            // não desenha a camada do player, e lá a janela já passou por
+            // importações e regerações.
+            if let flag = CommandLine.arguments.firstIndex(of: "--segurar"),
+               CommandLine.arguments.count > flag + 1,
+               let segundos = Double(CommandLine.arguments[flag + 1]) {
+                let pedida = CommandLine.arguments.count > flag + 2
+                    ? Int(CommandLine.arguments[flag + 2]) : nil
+                model.jump(to: min(pedida ?? model.cues.count / 2, max(model.cues.count - 1, 0)))
+                if model.isPlaying { model.togglePlay() }
+                window.makeKeyAndOrderFront(nil)
+                write("segurando a janela \(window.windowNumber) por \(Int(segundos)) s")
+                try? await Task.sleep(for: .seconds(segundos))
+            }
             expect(!model.cues.isEmpty, "a geracao produz legendas")
             expect(viuEspera, "a interface anuncia a espera pela resposta do tradutor")
             expect(legendasNaEspera > 0,
