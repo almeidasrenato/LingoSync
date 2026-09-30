@@ -263,6 +263,29 @@ public enum SentenceSplitter {
         ",", ";", ":", "—", "、", "，", "；", "：",
     ]
 
+    /// Põe ponto no trecho que o reconhecedor deixou aberto quando ele mesmo
+    /// começou o seguinte com maiúscula, depois de pausa de legenda.
+    ///
+    /// Em canto a Apple não pontua quase nada (2 sinais em 334 s de música em
+    /// português), mas capitaliza o começo de cada verso: dos 24 trechos sem
+    /// pontuação seguidos de maiúscula, 22 vinham depois de pausa de 1,38 s ou
+    /// mais. O Whisper faz o mesmo em letra de música. Sem o ponto, a tradução
+    /// por frase juntava versos até 4 legendas e o texto corrido saía um bloco
+    /// só. Em fala comum dispara 0 a 1 vez por vídeo (inglês: Apple, Whisper,
+    /// Parakeet), sempre em fim de frase de verdade. Escrita sem caixa
+    /// (japonês, chinês) nunca dispara.
+    public static func closeAtPauses(_ pieces: [TimedText]) -> [TimedText] {
+        pieces.enumerated().map { index, piece in
+            let text = piece.text.trimmingCharacters(in: .whitespaces)
+            guard index + 1 < pieces.count, let last = text.last, last.isLetter || last.isNumber,
+                  let first = pieces[index + 1].text.trimmingCharacters(in: .whitespaces).first,
+                  first.isUppercase,
+                  pieces[index + 1].start - piece.end >= SpeechEnergy.subtitlePause
+            else { return piece }
+            return TimedText(text: text + ".", start: piece.start, end: piece.end, speaker: piece.speaker)
+        }
+    }
+
     /// Frases curtas demais viram fragmento sem sentido; abaixo disso a frase
     /// e grudada na seguinte.
     private static let minimumCharacters = 12

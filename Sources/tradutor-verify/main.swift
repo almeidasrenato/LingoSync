@@ -2169,6 +2169,31 @@ struct Verify {
         }
         print("")
 
+        print("ponto na pausa seguida de maiuscula")
+        do {
+            // Canto: a Apple capitaliza o verso seguinte e nao pontua.
+            let pecas = [
+                TimedText(text: "vamos andar pela estrada", start: 0, end: 2),
+                TimedText(text: "Sem parar", start: 3.5, end: 5),        // pausa + maiuscula
+                TimedText(text: "e depois", start: 6.5, end: 7),         // pausa, minuscula
+                TimedText(text: "Voltar", start: 7.1, end: 8),           // maiuscula sem pausa
+                TimedText(text: "Tudo bem?", start: 9, end: 10),
+                TimedText(text: "Sim", start: 11, end: 12),
+                TimedText(text: "今日は", start: 13, end: 14),
+                TimedText(text: "晴れ", start: 16, end: 17),
+            ]
+            let fechado = SentenceSplitter.closeAtPauses(pecas).map(\.text)
+            expect(fechado[0] == "vamos andar pela estrada.", "pausa + maiuscula fecha a frase")
+            expect(fechado[1] == "Sem parar", "minuscula depois da pausa nao fecha")
+            expect(fechado[2] == "e depois", "maiuscula sem pausa nao fecha")
+            expect(fechado[4] == "Tudo bem?", "trecho ja pontuado fica como veio")
+            expect(fechado[5] == "Sim", "o ultimo trecho so fecha se houver seguinte")
+            expect(fechado[6] == "今日は", "escrita sem caixa nunca ganha ponto")
+            expect(Hallucinations.isIsolatedFiller("E aí"), "\"E aí\" isolado do Whisper e suspeito")
+            expect(!Hallucinations.isIsolatedFiller("E aí, tudo bem?"), "cumprimento com conteudo nao e suspeito")
+        }
+        print("")
+
         print("sobreposicao entre blocos")
         do {
             // O caso real do teste ao vivo: o corte por teto repete a cauda

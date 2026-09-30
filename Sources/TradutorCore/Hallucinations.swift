@@ -33,6 +33,10 @@ public enum Hallucinations {
         "seeyouinthenextvideo",
         // português e espanhol, para quando a origem for essa
         "obrigadoporassistir",
+        // "E aí" sozinho abria a transcrição do Whisper sobre 30 s de
+        // introdução instrumental (música em português, 30/09/2026); a
+        // conferência pela Apple preserva o cumprimento que foi falado.
+        "eaí",
         "graciasporver",
     ]
 

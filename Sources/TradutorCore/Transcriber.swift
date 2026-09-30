@@ -71,8 +71,9 @@ extension Transcriber {
         let pieces = try await transcribeTimed(samples, progress: progress)
         let kept = try await Hallucinations.filter(pieces, samples: samples, language: language)
         // Legenda omite hesitação; ver `Hesitations`.
-        guard ProcessInfo.processInfo.environment["TRADUTOR_COM_HESITACAO"] == nil else { return kept }
-        return Hesitations.strip(kept, language: language)
+        let clean = ProcessInfo.processInfo.environment["TRADUTOR_COM_HESITACAO"] == nil
+            ? Hesitations.strip(kept, language: language) : kept
+        return SentenceSplitter.closeAtPauses(clean)
     }
 }
 
