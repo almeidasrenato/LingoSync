@@ -57,6 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Sempre crescente, so para numerar o titulo. Reaproveitar o numero de
     /// uma janela fechada daria duas "Legendas 2" ao mesmo tempo.
     private var studioCounter = 0
+    /// Uma janela só: soltar outro arquivo nela troca o que está sendo lido.
+    private var transcription: (window: NSWindow, model: FileTranscriptionModel)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if CommandLine.arguments.contains("--selftest-gemini") {
@@ -151,6 +153,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             runStudioWindowsSelfTest()
         }
 
+        // Abre "Transcrever na tela" já lendo um arquivo, para conferir a
+        // janela sem arrastar nada:
+        //   open -n build/Tradutor.app --args --transcrever <audio> [idioma] [destino] [tradutor] [--motor m]
+        if let index = CommandLine.arguments.firstIndex(of: "--transcrever") {
+            let arguments = CommandLine.arguments
+            openTranscription()
+            if arguments.count > index + 1, let model = transcription?.model {
+                if arguments.count > index + 2, let idioma = Language(rawValue: arguments[index + 2]) {
+                    model.sourceLanguage = idioma
+                }
+                if arguments.count > index + 3, let destino = Language(rawValue: arguments[index + 3]) {
+                    model.targetLanguage = destino
+                }
+                if arguments.count > index + 4, let motor = TranslationEngine(rawValue: arguments[index + 4]) {
+                    model.translationEngine = motor
+                }
+                if let flag = arguments.firstIndex(of: "--motor"), arguments.count > flag + 1,
+                   let motor = RecognitionEngine(rawValue: arguments[flag + 1]) {
+                    model.recognitionEngine = motor
+                }
+                model.transcribe(URL(fileURLWithPath: arguments[index + 1]))
+            }
+        }
+
         // Exercita a janela de legendas sem ninguem clicar:
         //   open build/Tradutor.app --args --selftest-studio <video> ja pt
         if let index = CommandLine.arguments.firstIndex(of: "--selftest-studio"),
@@ -222,7 +248,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             onMakeSubtitles: { [weak self] in self?.makeSubtitles() },
             onMakeText: { [weak self] in self?.makeSubtitles(writesText: true) },
             onOpenStudio: { [weak self] in self?.openStudio() },
-            onNewStudio: { [weak self] in self?.openStudio(nova: true) }
+            onNewStudio: { [weak self] in self?.openStudio(nova: true) },
+            onTranscribeFile: { [weak self] in self?.openTranscription() }
         )
     }
 
@@ -275,6 +302,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         studios[window] = model
+    }
+
+    /// Janela "Transcrever na tela". Existindo, só volta para a frente.
+    func openTranscription() {
+        popover.performClose(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        if let transcription {
+            transcription.window.makeKeyAndOrderFront(nil)
+            return
+        }
+        let model = FileTranscriptionModel(pipeline: pipeline)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 780, height: 620),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = L("Transcrever", "Transcribe")
+        window.isReleasedWhenClosed = false
+        window.contentViewController = NSHostingController(rootView: FileTranscriptionView(model: model))
+        window.center()
+        window.delegate = self
+        window.makeKeyAndOrderFront(nil)
+        transcription = (window, model)
     }
 
     private func makeSubtitles(writesText: Bool = false) {
@@ -1792,6 +1843,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        if let transcription, notification.object as? NSWindow === transcription.window {
+            // Fechar cancela: o tradutor de rede e o Hunyuan não param sozinhos.
+            transcription.model.cancel()
+            self.transcription = nil
+            return
+        }
         guard let window = notification.object as? NSWindow,
               let model = studios.removeValue(forKey: window) else { return }
         // Solta o player e o observador de tempo junto com a janela.

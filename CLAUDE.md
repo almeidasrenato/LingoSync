@@ -1940,6 +1940,25 @@ puramente grave e sintético. Nada foi acrescentado.
 **`AVAudioUnitEffect` de voice processing não serve**: é para captura ao vivo e
 não funciona no modo de renderização offline, que é o que a legenda usa.
 
+### Isolamento de voz do sistema: medido e reprovado (30/09/2026)
+
+`AUSoundIsolation` (`aufx vois appl`, macOS 13+) roda offline em
+`AVAudioEngine` com renderização manual, a ~100× tempo real, **só com
+entrada mono** (estéreo 44,1 kHz dá `-10868`). Numa música em português de
+334 s com banda, WER contra a letra:
+
+```
+                 original   isolado 100%   isolado 50%   só voz (tipo 1)
+Apple              0,353        0,424         0,337          0,755
+Whisper            0,451        0,440         0,446          0,761
+Parakeet           0,424        0,478           —              —
+Qwen 0.6B          0,598        0,750           —              —
+Qwen 1.7B          0,462        0,592           —              —
+```
+
+Mesma lição da subtração espectral: o artefato custa mais que o fundo
+que sai. 50% empata dentro do ruído. O protótipo ficou fora do repositório.
+
 ### Subtração espectral: medida e reprovada
 
 O fundo do vídeo difícil **é** estacionário (0,06 a 0,12 de diferença entre
@@ -1965,6 +1984,42 @@ dizendo 4088 bytes e o reconhecedor devolvia nada).
 ---
 
 ## Legenda
+
+### Canto: o reconhecedor capitaliza o verso e não pontua (30/09/2026)
+
+Música em português de 334 s (voz e banda), comparada à letra oficial que o
+usuário mandou (não guardada no repositório, é letra de terceiros). A
+Apple deixou **2 sinais** no texto inteiro e o Whisper 6, mas os dois
+começam cada verso com maiúscula. Dos 24 trechos da Apple sem pontuação
+seguidos de maiúscula, 22 vinham depois de pausa de 1,38 s ou mais.
+
+`SentenceSplitter.closeAtPauses`, no fim de `transcribeForSubtitles` (todo
+motor, legenda e `.txt`), põe ponto quando o trecho termina em letra, o
+seguinte começa com maiúscula e a pausa entre eles passa de
+`subtitlePause` (0,8 s). Sem o ponto, a tradução por frase juntava versos
+até 4 legendas e o texto corrido virava um bloco só.
+
+```
+                 sinais antes → depois     WER contra a letra
+Apple                   2 → 25             0,353 → 0,353
+Whisper                 6 → 33             0,451 → 0,440  ("E aí" filtrado)
+Parakeet               27 → 32             0,424
+Qwen 0.6B              31 → 33             0,598
+Qwen 1.7B              41 → 45             0,462
+```
+
+Em fala comum (os dois vídeos em inglês, Apple, Whisper e Parakeet) dispara
+0 a 1 vez por vídeo, sempre em fim de frase real. Escrita sem caixa
+(japonês, chinês) nunca dispara. Maiúscula depois de pausa com o trecho
+anterior em minúscula **não** fecha: são 6 casos na Apple, e ali não há
+sinal do reconhecedor, só suposição.
+
+**Palavra errada em canto é do modelo**, e nenhum pós-processo sem a letra
+a conserta. Para música a Apple foi a melhor dos cinco (WER 0,353, e a
+mais rápida: 3 s). O Parakeet não aceita idioma, só escrita, e por isso
+escorrega para o espanhol no canto. O Whisper abria com `E aí` sobre a
+introdução instrumental; entrou em `Hallucinations`, conferido pela Apple
+como os outros.
 
 ### O ponto final japonês não fechava legenda
 
@@ -2481,6 +2536,27 @@ já aberta, painel de salvar) segue o idioma da próxima vez que abrir.
 - `tradutor-verify interface` confere padrão, gravação e troca na hora.
   `--selftest-layout` renderiza em inglês e o menu de novo em português
   (`menu-light-pt.png`), e apaga a preferência se ela não existia antes.
+
+## Transcrever na tela (30/09/2026)
+
+"Transcrever na tela…" no menu abre uma janela (`FileTranscription.swift`)
+onde se solta ou escolhe um áudio ou vídeo e **lê** a transcrição, sem ir
+buscar arquivo no Finder. É a mesma `SubtitleFileBuilder.generate` dos
+outros caminhos; a fala reconhecida aparece antes da tradução (`onBatch`) e
+a lista acompanha o fim enquanto chega texto, como o painel ao vivo. Falas
+com tempo ou texto corrido (`CaptureExport.prose`), copiar por idioma e
+exportar `.txt`/`.srt`. **Nada vai para o disco sem exportar.**
+
+- Uma janela só: soltar outro arquivo troca o que está sendo lido. Fechar
+  cancela, porque tradutor de rede e Hunyuan não param sozinhos.
+- Motores e idiomas copiados do menu ao abrir e trocados só na janela,
+  como na janela de legendas.
+- Não identifica locutor: seria um passo a mais para uma tela de leitura.
+- O texto só chega **depois** do reconhecimento inteiro: nenhum
+  reconhecedor de arquivo entrega trecho parcial. A Apple leva segundos; o
+  Whisper, dezenas.
+- `open -n build/Tradutor.app --args --transcrever [arquivo] [idioma]` abre
+  a janela já lendo o arquivo, para conferir sem arrastar nada.
 
 ## Atualização pelo GitHub (30/09/2026)
 

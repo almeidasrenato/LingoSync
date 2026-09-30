@@ -21,6 +21,7 @@ struct SettingsView: View {
     var onMakeText: () -> Void
     var onOpenStudio: () -> Void
     var onNewStudio: () -> Void
+    var onTranscribeFile: () -> Void = {}
 
     @Bindable private var interface = Interface.shared
 
@@ -387,6 +388,19 @@ struct SettingsView: View {
             }
             .controlSize(.small)
             .help(L("Abre mais uma janela de legendas, para outro vídeo", "Opens another subtitle window, for another video"))
+
+            // Para ler o que um áudio diz sem ouvir: o texto aparece na tela,
+            // e o arquivo só existe se a pessoa exportar.
+            Button {
+                onTranscribeFile()
+            } label: {
+                Label(L("Transcrever na tela…", "Transcribe on screen…"), systemImage: "waveform")
+                    .frame(maxWidth: .infinity)
+            }
+            .help(L("Abre uma janela onde você solta um áudio ou vídeo e lê a transcrição "
+                    + "(traduzida, se houver tradutor escolhido) sem gravar nada.",
+                    "Opens a window where you drop an audio or video file and read the "
+                    + "transcript (translated if a translator is chosen) without saving anything."))
 
             Button {
                 onMakeSubtitles()

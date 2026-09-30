@@ -18,8 +18,8 @@ clean text of any recording. All on-device: no API key, no account, no cloud.
 
 ### [⬇ Download LingoSync for macOS](https://github.com/almeidasrenato/LingoSync/releases/latest)
 
-**Live translation** &nbsp;·&nbsp; **Subtitles for any video** &nbsp;·&nbsp;
-**Just the text** &nbsp;·&nbsp; **Private by design**
+**Live translation** &nbsp;·&nbsp; **Read any recording** &nbsp;·&nbsp;
+**Subtitles for any video** &nbsp;·&nbsp; **Private by design**
 
 </div>
 
@@ -37,6 +37,9 @@ clean text of any recording. All on-device: no API key, no account, no cloud.
   other side as they talk, over Zoom, Meet, Teams, a browser tab or any app.
 - **Watching videos, anime and lectures** — generate subtitles for a file you
   already have, in your language, and watch them side by side.
+- **Recordings you cannot play right now** — a voice memo on the train, a
+  meeting you missed, an interview in another language: drop the file and
+  read it, translated, in seconds.
 - **Getting the words out of audio** — voice memos, interviews, podcasts,
   dictation: one click gives you clean, copyable text.
 
@@ -61,6 +64,35 @@ every 0.6 s, and only the prefix that two passes agree on reaches the screen.
 Cutting split words, and neither half was recognizable ("reported" became
 "Reaper's" at the end of one chunk and "ported" at the start of the next).
 
+## Read a recording without playing it
+
+<img src="docs/promo/read-any-recording.png" width="820" alt="Reading a translated voice memo on a train, without headphones">
+
+Someone sent you a two-minute voice memo and you are in a meeting, on a train,
+or it is simply in a language you do not speak. Open **Transcribe on screen…**
+from the menu, drop the file on the window, and read it.
+
+<img src="docs/transcrever.png" width="720" alt="The Transcribe window: a Japanese voice memo read as English lines, each with the original underneath">
+
+- **Any audio or video** — `.m4a` voice memos, `.mp3`, `.wav`, recorded calls,
+  `.mp4`, `.mov`. Drag it in or press <kbd>⌘</kbd><kbd>O</kbd>.
+- **Speech first, translation right after** — the recognized words show up
+  as soon as they exist, and each translated batch takes their place, the same
+  way the live panel fills in.
+- **Lines or text** — every line with its timestamp and the original
+  underneath to check against, or one clean paragraph to read top to bottom.
+
+<img src="docs/transcrever-texto.png" width="720" alt="The same voice memo as running English text">
+
+- **Copy in either language** with one click (`JA`, `EN`…), or export `.txt`
+  or `.srt`. **Nothing is written to disk until you export** — reading a
+  recording leaves no files behind.
+- Change the engine or the language right in the window and press ↻ to run it
+  again. Closing the window cancels the work.
+
+Apple's on-device recognizer gets through a five-minute recording in about
+three seconds, and with a local translator nothing leaves your Mac.
+
 ## Just the words
 
 <img src="docs/promo/just-the-words.png" width="820" alt="The live panel in text mode next to an exported meeting.txt">
@@ -71,8 +103,8 @@ it into your notes, an email or a chat.
 
 <img src="docs/ao-vivo-texto.png" width="620" alt="Text mode: the session as running text, with the part still being heard in coral">
 
-For recordings, **Extract text (.txt)** in the menu turns any video or audio
-file into plain running text — no timecodes, filler words like "um" and "uh"
+To save a recording straight to a file, **Just extract the text (.txt)** in
+the menu turns any video or audio file into plain running text — no timecodes, filler words like "um" and "uh"
 removed, paragraphs where the speaker paused. Pick a translator and you get
 the translated text instead.
 
@@ -99,7 +131,7 @@ Chinese — and plays the video with the list alongside.
 
 The app lives in the menu bar, with no Dock icon. From there you choose the
 language pair, the recognition engine, the translator and the audio source,
-and open subtitle windows.
+and open subtitle and transcription windows.
 
 Every engine states its cost **before** you pick it: the panel warns that DeepL
 takes 2–3 s per chunk live, that a resident Hunyuan uses 4.5 GB, and that Qwen
@@ -217,7 +249,7 @@ work live and on video.
 
 ## Why it is built this way
 
-Almost every decision in this project has a measurement behind it. Three
+Almost every decision in this project has a measurement behind it. Four
 examples:
 
 **Japanese has no spaces, and the confirmer counted words.** In 75 s of
@@ -242,6 +274,23 @@ by text.
 and starts sentences with a capital letter in 109 of 110 lines against 49. It
 is not about elegance — it is lines that make no sense where the others get it
 right.
+
+**Singers do not punctuate, and neither do recognizers.** On a 5½-minute
+song in Portuguese, Apple's recognizer left **2 punctuation marks** in the
+whole transcript — yet it started every sung line with a capital letter. When
+a segment ends with no punctuation, the next one starts with a capital, and
+there is a measured pause of 0.8 s or more between them, LingoSync closes the
+sentence. The same rule helps every engine and every cased language, and in
+ordinary speech it fires at most once per video, always at a real sentence end:
+
+```
+                 punctuation marks    word error vs. the published lyrics
+Apple                 2 → 25                 0.353 → 0.353
+Whisper               6 → 33                 0.451 → 0.440
+```
+
+Isolating the voice first with macOS's own `AUSoundIsolation` was measured
+too, and made recognition **worse** on four of five engines.
 
 More than two thousand lines of this kind of record live in
 [CLAUDE.md](CLAUDE.md) (in Portuguese), including what was **tried and
