@@ -30,7 +30,7 @@ import OSLog
 /// termos de uso, como já vale para o site do DeepL. É opção do usuário.
 public final class GoogleWebTranslator: Translator, @unchecked Sendable {
 
-    public let engineName = "Google Tradutor"
+    public var engineName: String { L("Google Tradutor", "Google Translate") }
     private let log = Logger(subsystem: "app.tradutor", category: "Google")
 
     /// Teto em **bytes de URL**, não em falas: japonês escapado custa 9 bytes
@@ -43,7 +43,7 @@ public final class GoogleWebTranslator: Translator, @unchecked Sendable {
     public init() {}
 
     public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
-        progress(1.0, "Google pronto")
+        progress(1.0, L("Google pronto", "Google ready"))
     }
 
     public func reset() {}
@@ -120,11 +120,14 @@ enum WebAPIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .malformed: "Não consegui montar o endereço do tradutor."
-        case .unexpectedShape: "O tradutor respondeu num formato que não reconheço."
+        case .malformed: L("Não consegui montar o endereço do tradutor.",
+                           "Could not build the translator address.")
+        case .unexpectedShape: L("O tradutor respondeu num formato que não reconheço.",
+                                 "The translator answered in an unrecognized format.")
         case let .countMismatch(esperadas, obtidas):
-            "O tradutor devolveu \(obtidas) linhas para \(esperadas)."
-        case let .http(codigo): "O tradutor respondeu \(codigo)."
+            L("O tradutor devolveu \(obtidas) linhas para \(esperadas).",
+              "The translator returned \(obtidas) lines for \(esperadas).")
+        case let .http(codigo): L("O tradutor respondeu \(codigo).", "The translator answered \(codigo).")
         }
     }
 }

@@ -145,50 +145,50 @@ struct SubtitleStudioView: View {
                     .truncationMode(.middle)
                     .help(model.videoName)
                     .frame(minWidth: 90, maxWidth: .infinity, alignment: .leading)
-                Button(action: pickVideo) { Label("Abrir vídeo", systemImage: "folder") }
-                Button(action: loadSRT) { Label("Importar SRT", systemImage: "square.and.arrow.down") }
+                Button(action: pickVideo) { Label(L("Abrir vídeo", "Open video"), systemImage: "folder") }
+                Button(action: loadSRT) { Label(L("Importar SRT", "Import SRT"), systemImage: "square.and.arrow.down") }
                     .disabled(isWorking)
-                Button(action: exportSRT) { Label("Exportar SRT", systemImage: "square.and.arrow.up") }
+                Button(action: exportSRT) { Label(L("Exportar SRT", "Export SRT"), systemImage: "square.and.arrow.up") }
                     .disabled(model.cues.isEmpty)
                 Button { showsGenerationOptions.toggle() } label: {
-                    Label("Opções", systemImage: showsGenerationOptions ? "chevron.up" : "slider.horizontal.3")
+                    Label(L("Opções", "Options"), systemImage: showsGenerationOptions ? "chevron.up" : "slider.horizontal.3")
                 }
-                .accessibilityValue(showsGenerationOptions ? "Expandidas" : "Recolhidas")
-                .help("Idiomas, modelos e tradução. Clique para expandir ou recolher.")
+                .accessibilityValue(showsGenerationOptions ? L("Expandidas", "Expanded") : L("Recolhidas", "Collapsed"))
+                .help(L("Idiomas, modelos e tradução. Clique para expandir ou recolher.", "Languages, models and translation. Click to expand or collapse."))
                 // A fonte do texto à vista, não dentro de "Opções": o cabeçalho
                 // abre recolhido, e escolha escondida ninguém acha — a lição dos
                 // controles de locutor.
-                PillSegmented(title: "Fonte do texto", selection: $model.textSource,
+                PillSegmented(title: L("Fonte do texto", "Text source"), selection: $model.textSource,
                               options: SubtitleStudioModel.TextSource.allCases, label: \.displayName)
                 .fixedSize()
                 .disabled(isWorking)
-                .help("De onde vem o texto: da fala, reconhecendo o áudio, ou da imagem, "
-                      + "lendo a legenda que já está desenhada no vídeo")
+                .help(L("De onde vem o texto: da fala, reconhecendo o áudio, ou da imagem, ", "Where the text comes from: speech, by recognizing the audio, or the image, ")
+                      + L("lendo a legenda que já está desenhada no vídeo", "by reading the subtitle already burned into the video"))
                 if readsImage, model.player != nil {
                     Button { model.drawsImageArea.toggle() } label: {
-                        Label("Área", systemImage: model.imageArea == nil ? "rectangle.dashed" : "rectangle.inset.filled")
+                        Label(L("Área", "Area"), systemImage: model.imageArea == nil ? "rectangle.dashed" : "rectangle.inset.filled")
                     }
                     .disabled(isWorking)
                     // Esc desliga o desenho pelo próprio botão: o vídeo não
                     // tem foco de teclado para receber a tecla.
                     .keyboardShortcut(model.drawsImageArea ? KeyboardShortcut.cancelAction : nil)
                     .help(model.drawsImageArea
-                          ? "Arraste sobre o vídeo em volta da legenda. Esc cancela."
-                          : "Desenhar onde a legenda aparece. Sem área, lê a faixa de baixo do vídeo.")
+                          ? L("Arraste sobre o vídeo em volta da legenda. Esc cancela.", "Drag over the video around the subtitle. Esc cancels.")
+                          : L("Desenhar onde a legenda aparece. Sem área, lê a faixa de baixo do vídeo.", "Draw where the subtitle appears. Without an area, the bottom strip of the video is read."))
                     if model.imageArea != nil {
                         Button { model.imageArea = nil } label: {
                             Image(systemName: "arrow.uturn.backward")
                         }
                         .disabled(isWorking)
-                        .accessibilityLabel("Área padrão")
-                        .help("Voltar à área padrão: a faixa de baixo do vídeo")
+                        .accessibilityLabel(L("Área padrão", "Default area"))
+                        .help(L("Voltar à área padrão: a faixa de baixo do vídeo", "Back to the default area: the bottom strip of the video"))
                     }
                 }
                 Button {
                     showsGenerationOptions = false
                     model.generate()
                 } label: {
-                    Label(readsImage ? "Ler legenda" : "Gerar legenda",
+                    Label(readsImage ? L("Ler legenda", "Read subtitles") : L("Gerar legenda", "Generate"),
                           systemImage: readsImage ? "text.viewfinder" : "text.badge.plus")
                 }
                 .buttonStyle(PastelButtonStyle(prominent: true))
@@ -197,8 +197,8 @@ struct SubtitleStudioView: View {
                 Button { model.showsVideo.toggle() } label: {
                     Image(systemName: model.showsVideo ? "sidebar.right" : "rectangle")
                 }
-                .accessibilityLabel(model.showsVideo ? "Ocultar vídeo" : "Mostrar vídeo")
-                .help(model.showsVideo ? "Ocultar vídeo (V)" : "Mostrar vídeo (V)")
+                .accessibilityLabel(model.showsVideo ? L("Ocultar vídeo", "Hide video") : L("Mostrar vídeo", "Show video"))
+                .help(model.showsVideo ? L("Ocultar vídeo (V)", "Hide video (V)") : L("Mostrar vídeo (V)", "Show video (V)"))
             }
             .controlSize(.regular)
 
@@ -209,16 +209,16 @@ struct SubtitleStudioView: View {
                         // O idioma do texto na tela, que não é o falado — e a
                         // lista é a do leitor de texto, não a do reconhecimento.
                         VStack(alignment: .leading, spacing: 5) {
-                            toolbarCaption("Idioma do texto")
+                            toolbarCaption(L("Idioma do texto", "Text language"))
                             ImageLanguagePicker(selection: $model.imageLanguage, width: 124)
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 5) {
-                            toolbarCaption("Reconhecimento")
+                            toolbarCaption(L("Reconhecimento", "Recognition"))
                             EnginePicker(selection: $model.recognitionEngine)
                         }
                         VStack(alignment: .leading, spacing: 5) {
-                            toolbarCaption("Idioma original")
+                            toolbarCaption(L("Idioma original", "Spoken language"))
                             SourceLanguagePicker(selection: $model.sourceLanguage,
                                                  engine: model.recognitionEngine, width: 124)
                         }
@@ -228,23 +228,23 @@ struct SubtitleStudioView: View {
                         .foregroundStyle(Color.inkSoft)
                         .padding(.bottom, 8)
                     VStack(alignment: .leading, spacing: 5) {
-                        toolbarCaption("Traduzir para")
-                        PillPicker(title: "Idioma da tradução", selection: $model.targetLanguage,
+                        toolbarCaption(L("Traduzir para", "Translate to"))
+                        PillPicker(title: L("Idioma da tradução", "Translation language"), selection: $model.targetLanguage,
                                    options: Language.allCases, label: \.displayName, width: 124)
                         .disabled(model.translationEngine == .transcriptionOnly)
                     }
                     VStack(alignment: .leading, spacing: 5) {
-                        toolbarCaption("Tradução")
+                        toolbarCaption(L("Tradução", "Translation"))
                         TranslationEnginePicker(selection: $model.translationEngine)
                     }
                     if !readsImage, model.recognitionEngine.supportsDiarization {
                         Menu {
-                            Toggle("Identificar quem fala", isOn: $model.diarizeSpeakers)
-                            Picker("Modelo de vozes", selection: $model.speakerModel) {
+                            Toggle(L("Identificar quem fala", "Identify speakers"), isOn: $model.diarizeSpeakers)
+                            Picker(L("Modelo de vozes", "Voice model"), selection: $model.speakerModel) {
                                 ForEach(SpeakerDiarizer.Model.allCases) { Text($0.displayName).tag($0) }
                             }
                             .disabled(!model.diarizeSpeakers)
-                            Toggle("Uma cor por locutor", isOn: $model.colorBySpeaker)
+                            Toggle(L("Uma cor por locutor", "One color per speaker"), isOn: $model.colorBySpeaker)
                                 .disabled(!model.diarizeSpeakers)
                         } label: {
                             HStack(spacing: 7) {
@@ -267,8 +267,8 @@ struct SubtitleStudioView: View {
                         .buttonStyle(.plain)
                         .menuIndicator(.hidden)
                         .fixedSize()
-                        .accessibilityLabel("Identificação de locutores")
-                        .help("Identificação, modelo e cores dos locutores")
+                        .accessibilityLabel(L("Identificação de locutores", "Speaker identification"))
+                        .help(L("Identificação, modelo e cores dos locutores", "Speaker identification, model and colors"))
                     }
                     Spacer(minLength: 8)
                     if model.duration > 0, !isWorking, !readsImage {
@@ -281,12 +281,12 @@ struct SubtitleStudioView: View {
                         showsGenerationOptions = false
                         model.retranslate()
                     } label: {
-                        Label("Traduzir", systemImage: "character.bubble")
+                        Label(L("Traduzir", "Translate"), systemImage: "character.bubble")
                     }
                     .disabled(!model.canRetranslate)
                     .help(readsImage
-                          ? "Traduz o texto lido da imagem, sem ler o vídeo de novo e sem mudar os tempos"
-                          : "Traduz o original com o tradutor escolhido, sem reconhecer o áudio novamente")
+                          ? L("Traduz o texto lido da imagem, sem ler o vídeo de novo e sem mudar os tempos", "Translates the text read from the image, without reading the video again or moving any timing")
+                          : L("Traduz o original com o tradutor escolhido, sem reconhecer o áudio novamente", "Translates the original with the chosen translator, without recognizing the audio again"))
                 }
                 .disabled(isWorking)
                 .fixedSize(horizontal: false, vertical: true)
@@ -310,7 +310,7 @@ struct SubtitleStudioView: View {
 
     private var cueListHeader: some View {
         HStack(spacing: 6) {
-            Text("Legendas")
+            Text(L("Legendas", "Subtitles"))
                 .font(.heading)
                 .foregroundStyle(Color.ink)
             if !model.cues.isEmpty {
@@ -333,16 +333,16 @@ struct SubtitleStudioView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help((origem.recognition == BurnedSubtitle.engineName
-                           ? "Lido da imagem" : "Reconhecido por \(origem.recognition)")
-                          + (origem.translation.isEmpty ? "" : ", traduzido por \(origem.translation)"))
+                           ? L("Lido da imagem", "Read from the image") : L("Reconhecido por \(origem.recognition)", "Recognized by \(origem.recognition)"))
+                          + (origem.translation.isEmpty ? "" : L(", traduzido por \(origem.translation)", ", translated by \(origem.translation)")))
             }
             Spacer()
             if model.isPartial {
-                Text("parcial")
+                Text(L("parcial", "partial"))
                     .font(.meta.weight(.medium))
                     .foregroundStyle(.orange)
             } else if model.loadedFromFile {
-                Label("de arquivo", systemImage: "doc")
+                Label(L("de arquivo", "from file"), systemImage: "doc")
                     .font(.meta)
                     .foregroundStyle(.tertiary)
             }
@@ -364,7 +364,7 @@ struct SubtitleStudioView: View {
                     if model.isPartial {
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.mini)
-                            Text("traduzindo o resto…")
+                            Text(L("traduzindo o resto…", "translating the rest…"))
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
                         }
@@ -477,7 +477,7 @@ struct SubtitleStudioView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Ir para \(SRTWriter.timecode(cue.start).prefix(8))")
+        .help(L("Ir para \(SRTWriter.timecode(cue.start).prefix(8))", "Go to \(SRTWriter.timecode(cue.start).prefix(8))"))
     }
 
     /// A falha, dita em voz alta, com o botão de tentar de novo.
@@ -496,12 +496,12 @@ struct SubtitleStudioView: View {
                     .font(.system(size: 11))
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Button("Tentar novamente") { model.retryFailed() }
+                Button(L("Tentar novamente", "Try again")) { model.retryFailed() }
                     .controlSize(.small)
                     .disabled(!model.canGenerate)
                     .help(model.canRetranslate
-                          ? "Refaz só a tradução, sem reconhecer o áudio nem ler o vídeo de novo"
-                          : (readsImage ? "Lê a legenda de novo" : "Gera a legenda de novo"))
+                          ? L("Refaz só a tradução, sem reconhecer o áudio nem ler o vídeo de novo", "Redoes only the translation, without recognizing the audio or reading the video again")
+                          : (readsImage ? L("Lê a legenda de novo", "Reads the subtitles again") : L("Gera a legenda de novo", "Generates the subtitles again")))
             }
             .padding(.vertical, 7)
             .padding(.horizontal, 9)
@@ -513,19 +513,19 @@ struct SubtitleStudioView: View {
         VStack(alignment: .leading, spacing: 6) {
             switch model.stage {
             case .empty:
-                Text("Escolha um vídeo para começar.")
+                Text(L("Escolha um vídeo para começar.", "Choose a video to start."))
             case .ready:
-                Text(readsImage ? "Vídeo carregado. Clique em Ler legenda."
-                                : "Vídeo carregado. Clique em Gerar legenda.")
+                Text(readsImage ? L("Vídeo carregado. Clique em Ler legenda.", "Video loaded. Click Read subtitles.")
+                                : L("Vídeo carregado. Clique em Gerar legenda.", "Video loaded. Click Generate."))
             case .working:
                 EmptyView()          // o painel de progresso cuida disso
             case .failed:
                 // A faixa acima da lista já diz o que houve, e traz o botão.
                 EmptyView()
             case .cancelled:
-                Text(readsImage ? "Leitura cancelada." : "Geração cancelada.")
+                Text(readsImage ? L("Leitura cancelada.", "Reading cancelled.") : L("Geração cancelada.", "Generation cancelled."))
             case .done:
-                Text("Nenhuma legenda gerada.")
+                Text(L("Nenhuma legenda gerada.", "No subtitles generated."))
             }
         }
         .font(.system(size: 11))
@@ -569,7 +569,7 @@ struct SubtitleStudioView: View {
             // Duplo clique volta ao tamanho de fábrica: é o que um divisor de
             // painel faz em todo lugar, e sai mais barato que caçar o valor.
             .onTapGesture(count: 2) { model.listWidth = SubtitleStudioModel.defaultListWidth }
-            .help("Arraste para redimensionar o vídeo")
+            .help(L("Arraste para redimensionar o vídeo", "Drag to resize the video"))
     }
 
     // MARK: Progresso
@@ -579,7 +579,7 @@ struct SubtitleStudioView: View {
         if case let .working(step) = model.stage {
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
-                    Text(step.kind.rawValue)
+                    Text(step.kind.displayName)
                         .font(.captionStrong)
                     Spacer()
                     Text("\(Int(step.overall * 100))%")
@@ -598,16 +598,16 @@ struct SubtitleStudioView: View {
                         if step.waiting {
                             ProgressView().controlSize(.mini)
                         }
-                        Text(step.waiting ? "\(step.detail) · aguardando" : step.detail)
+                        Text(step.waiting ? L("\(step.detail) · aguardando", "\(step.detail) · waiting") : step.detail)
                             .font(.system(size: 10))
                             .foregroundStyle(Color.inkSoft)
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
                     .help(step.kind == .readingImage
-                          ? "Na primeira vez o sistema prepara o leitor de texto, e isso leva alguns segundos"
+                          ? L("Na primeira vez o sistema prepara o leitor de texto, e isso leva alguns segundos", "The first time, the system prepares the text reader, which takes a few seconds")
                           : step.waiting
-                          ? "O tradutor do sistema responde o lote inteiro de uma vez, sem passos no meio"
+                          ? L("O tradutor do sistema responde o lote inteiro de uma vez, sem passos no meio", "The system translator answers the whole batch at once, with no steps in between")
                           : step.detail)
                 }
 
@@ -631,7 +631,7 @@ struct SubtitleStudioView: View {
                         .font(.system(size: 10).monospacedDigit())
                     Spacer()
                     if let remaining = model.estimatedRemaining {
-                        Text("faltam ~\(Self.clock(remaining))")
+                        Text(L("faltam ~\(Self.clock(remaining))", "~\(Self.clock(remaining)) left"))
                             .font(.system(size: 10).monospacedDigit())
                     }
                 }
@@ -640,7 +640,7 @@ struct SubtitleStudioView: View {
                 Button(role: .destructive) {
                     model.cancelGeneration()
                 } label: {
-                    Label("Cancelar", systemImage: "xmark.circle")
+                    Label(L("Cancelar", "Cancel"), systemImage: "xmark.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .controlSize(.small)
@@ -668,26 +668,26 @@ struct SubtitleStudioView: View {
             timeline
 
             HStack(spacing: 6) {
-                controlButton("gobackward.10", "Voltar 10 s") { model.skip(by: -10) }
+                controlButton("gobackward.10", L("Voltar 10 s", "Back 10 s")) { model.skip(by: -10) }
                 controlButton(
                     model.isPlaying ? "pause.fill" : "play.fill",
-                    model.isPlaying ? "Pausar" : "Reproduzir",
+                    model.isPlaying ? L("Pausar", "Pause") : L("Reproduzir", "Play"),
                     prominent: true
                 ) { model.togglePlay() }
-                controlButton("goforward.10", "Avançar 10 s") { model.skip(by: 10) }
+                controlButton("goforward.10", L("Avançar 10 s", "Forward 10 s")) { model.skip(by: 10) }
             }
 
             // Controle separado, pedido à parte: anda de fala em fala, não de
             // tempo em tempo. Cai sempre no instante em que a legenda começa.
             HStack(spacing: 6) {
-                controlButton("backward.end.alt.fill", "Legenda anterior") {
+                controlButton("backward.end.alt.fill", L("Legenda anterior", "Previous subtitle")) {
                     model.jumpToPreviousCue()
                 }
-                Text("legenda")
+                Text(L("legenda", "subtitle"))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.inkSoft)
                     .frame(maxWidth: .infinity)
-                controlButton("forward.end.alt.fill", "Próxima legenda") {
+                controlButton("forward.end.alt.fill", L("Próxima legenda", "Next subtitle")) {
                     model.jumpToNextCue()
                 }
             }
@@ -702,12 +702,12 @@ struct SubtitleStudioView: View {
                         .frame(width: 18)
                 }
                 .buttonStyle(.borderless)
-                .help(model.isMuted ? "Tirar do mudo" : "Silenciar")
+                .help(model.isMuted ? L("Tirar do mudo", "Unmute") : L("Silenciar", "Mute"))
 
                 Slider(value: $model.volume, in: 0...1)
                     .controlSize(.mini)
                     .frame(maxWidth: .infinity)
-                    .help("Volume")
+                    .help(L("Volume", "Volume"))
             }
             .foregroundStyle(Color.inkSoft)
             .disabled(model.player == nil)
@@ -724,12 +724,12 @@ struct SubtitleStudioView: View {
 
                 Spacer()
 
-                PillPicker(title: "Velocidade", selection: $model.rate,
+                PillPicker(title: L("Velocidade", "Speed"), selection: $model.rate,
                            options: [Float(0.75), 1.0, 1.25, 1.5],
-                           label: { $0 == 1 ? "1×" : "\($0.formatted(.number.locale(Locale(identifier: "pt_BR"))))×" },
+                           label: { $0 == 1 ? "1×" : "\($0.formatted(.number.locale(Interface.shared.language.locale)))×" },
                            width: 74)
                 .controlSize(.small)
-                .help("Velocidade de reprodução")
+                .help(L("Velocidade de reprodução", "Playback speed"))
 
                 if let active = model.activeIndex {
                     Text("\(active + 1)/\(model.cues.count)")
@@ -856,7 +856,7 @@ struct SubtitleStudioView: View {
                     // o cinza do vídeo vazio sumia contra a janela.
                     .fill(Color(hex: 0x121411))
                     .overlay(
-                        Text("Nenhum vídeo carregado")
+                        Text(L("Nenhum vídeo carregado", "No video loaded"))
                             .foregroundStyle(.white.opacity(0.4))
                             .font(.system(size: 13))
                     )
@@ -884,7 +884,7 @@ struct SubtitleStudioView: View {
                     .contentShape(Rectangle())
             }
             .disabled(model.subtitleScale <= range.lowerBound)
-            .help("Diminuir a legenda  (−)")
+            .help(L("Diminuir a legenda  (−)", "Smaller subtitles  (−)"))
 
             Button { model.subtitleScale = SubtitleStudioModel.defaultSubtitleScale } label: {
                 Text("\(Int((model.subtitleScale * 100).rounded()))%")
@@ -892,7 +892,7 @@ struct SubtitleStudioView: View {
                     .frame(width: 36, height: 22)
                     .contentShape(Rectangle())
             }
-            .help("Voltar ao tamanho padrão (\(Int(SubtitleStudioModel.defaultSubtitleScale * 100))%)")
+            .help(L("Voltar ao tamanho padrão (\(Int(SubtitleStudioModel.defaultSubtitleScale * 100))%)", "Back to default size (\(Int(SubtitleStudioModel.defaultSubtitleScale * 100))%)"))
 
             Button { model.resizeSubtitles(by: 1) } label: {
                 Image(systemName: "textformat.size.larger")
@@ -900,7 +900,7 @@ struct SubtitleStudioView: View {
                     .contentShape(Rectangle())
             }
             .disabled(model.subtitleScale >= range.upperBound)
-            .help("Aumentar a legenda  (+)")
+            .help(L("Aumentar a legenda  (+)", "Bigger subtitles  (+)"))
         }
         .buttonStyle(.plain)
         .font(.system(size: 11))
@@ -950,17 +950,17 @@ struct SubtitleStudioView: View {
 
     private func loadSRT() {
         let panel = NSOpenPanel()
-        panel.title = "Abrir legenda"
-        panel.prompt = "Abrir"
+        panel.title = L("Abrir legenda", "Open subtitles")
+        panel.prompt = L("Abrir", "Open")
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.allowsOtherFileTypes = true
-        panel.message = "Arquivo .srt"
+        panel.message = L("Arquivo .srt", ".srt file")
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let track = chooseSubtitleTrack(
-            title: "O que este SRT contém?",
-            message: "Importar substitui apenas a faixa escolhida e mantém a outra. Original e tradução aparecem juntos pelos tempos do vídeo. Não inicia tradução automática."
+            title: L("O que este SRT contém?", "What does this SRT contain?"),
+            message: L("Importar substitui apenas a faixa escolhida e mantém a outra. Original e tradução aparecem juntos pelos tempos do vídeo. Não inicia tradução automática.", "Importing replaces only the chosen track and keeps the other. Original and translation show together by the video's timing. It does not start translating.")
         ) else { return }
         model.loadSubtitles(from: url, as: track)
     }
@@ -969,15 +969,15 @@ struct SubtitleStudioView: View {
         guard !model.cues.isEmpty else { return }
 
         guard let track = chooseSubtitleTrack(
-            title: "O que deseja exportar?",
-            message: "Escolha entre as falas no idioma original e a tradução.",
+            title: L("O que deseja exportar?", "What do you want to export?"),
+            message: L("Escolha entre as falas no idioma original e a tradução.", "Choose between the lines in the original language and the translation."),
             originalAvailable: model.canExport(.original),
             translationAvailable: model.canExport(.translation)
         ) else { return }
 
         let panel = NSSavePanel()
-        panel.title = "Exportar legenda"
-        panel.prompt = "Exportar"
+        panel.title = L("Exportar legenda", "Export subtitles")
+        panel.prompt = L("Exportar", "Export")
         // Legenda ou texto corrido; o menu de formato do painel troca a
         // extensão, e é por ela que `export` decide.
         panel.allowedContentTypes = [UTType(filenameExtension: "srt") ?? .plainText, .plainText]
@@ -1001,7 +1001,7 @@ struct SubtitleStudioView: View {
         original.isEnabled = originalAvailable
         let translation = alert.addButton(withTitle: SubtitleStudioModel.SubtitleTrack.translation.displayName)
         translation.isEnabled = translationAvailable
-        alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: L("Cancelar", "Cancel"))
 
         switch alert.runModal() {
         case .alertFirstButtonReturn: return .original
@@ -1012,14 +1012,14 @@ struct SubtitleStudioView: View {
 
     private func pickVideo() {
         let panel = NSOpenPanel()
-        panel.title = "Escolha o vídeo"
-        panel.prompt = "Abrir"
+        panel.title = L("Escolha o vídeo", "Choose the video")
+        panel.prompt = L("Abrir", "Open")
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         // Mesmo critério da geração de SRT: quem julga o formato é a extração,
         // olhando os bytes, não a extensão do nome.
         panel.allowsOtherFileTypes = true
-        panel.message = "Vídeo ou áudio. Arquivos sem extensão no nome também servem."
+        panel.message = L("Vídeo ou áudio. Arquivos sem extensão no nome também servem.", "Video or audio. Files without an extension work too.")
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         model.open(url)

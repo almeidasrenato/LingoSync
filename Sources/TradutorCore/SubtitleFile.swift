@@ -46,6 +46,21 @@ public enum GenerationStep: String, CaseIterable, Sendable {
     /// na fatia do reconhecimento faria parecer que o Whisper está rodando.
     case readingImage = "Lendo a legenda na imagem"
 
+    /// O nome na interface. `rawValue` fica em português e fixo: é
+    /// identificador, não texto de tela.
+    public var displayName: String {
+        switch self {
+        case .extracting: L("Extraindo o áudio", "Extracting audio")
+        case .loadingASR: L("Carregando o reconhecedor", "Loading the recognizer")
+        case .diarizing: L("Identificando quem fala", "Identifying speakers")
+        case .transcribing: L("Reconhecendo a fala", "Recognizing speech")
+        case .loadingTranslator: L("Carregando o tradutor", "Loading the translator")
+        case .translating: L("Traduzindo", "Translating")
+        case .saving: L("Gravando o arquivo", "Saving the file")
+        case .readingImage: L("Lendo a legenda na imagem", "Reading the on-screen subtitle")
+        }
+    }
+
     /// Quanto do total cada passo costuma ocupar, medido na prática.
     public var share: ClosedRange<Double> {
         switch self {
@@ -766,10 +781,10 @@ public final class SubtitleFileBuilder {
             silences = SpeechEnergy.silences(samples)
         }
 
-        progress(.transcribing, 0, String(format: "0 de %.0f s de áudio", seconds), false)
+        progress(.transcribing, 0, String(format: L("0 de %.0f s de áudio", "0 of %.0f s of audio"), seconds), false)
         let timed = try await transcriber.transcribeForSubtitles(samples) { fraction in
             progress(.transcribing, fraction,
-                     String(format: "%.0f de %.0f s de áudio", fraction * seconds, seconds), false)
+                     String(format: L("%.0f de %.0f s de áudio", "%.0f of %.0f s of audio"), fraction * seconds, seconds), false)
         }
         try Task.checkCancellation()
 
@@ -838,7 +853,7 @@ public final class SubtitleFileBuilder {
         try await translator.prepare { _, _ in }
         try Task.checkCancellation()
 
-        progress(.translating, 0, "0 de \(draft.count)", false)
+        progress(.translating, 0, L("0 de \(draft.count)", "0 of \(draft.count)"), false)
         failedBatches = 0
         // Sem tradução o destino é o próprio idioma falado: é o que dá a
         // largura de linha certa sem um caso especial aqui dentro.
@@ -858,7 +873,7 @@ public final class SubtitleFileBuilder {
         // esta etapa.
         if failedBatches > 0 {
             throw SubtitleFileError.translationFailed(
-                translationNotice ?? "A tradução não foi concluída.")
+                translationNotice ?? L("A tradução não foi concluída.", "Translation did not finish."))
         }
         let avisos = [translationNotice, translator.completionNotice].compactMap { $0 }
         translationNotice = avisos.isEmpty ? nil : avisos.joined(separator: " ")
@@ -949,7 +964,7 @@ public final class SubtitleFileBuilder {
             // não tem passos intermediários.
             progress(Progress(
                 fraction: Double(done) / Double(max(cues.count, 1)),
-                label: "\(firstCue + 1)–\(lastCue + 1) de \(cues.count)",
+                label: L("\(firstCue + 1)–\(lastCue + 1) de \(cues.count)", "\(firstCue + 1)–\(lastCue + 1) of \(cues.count)"),
                 waiting: true
             ))
 
@@ -1012,7 +1027,7 @@ public final class SubtitleFileBuilder {
             done = lastCue + 1
             progress(Progress(
                 fraction: Double(done) / Double(max(cues.count, 1)),
-                label: "\(done) de \(cues.count)"
+                label: L("\(done) de \(cues.count)", "\(done) of \(cues.count)")
             ))
             // Só o que já foi traduzido: entregar as legendas ainda em branco
             // encheria a lista de linhas vazias que depois mudariam sozinhas.
@@ -1071,8 +1086,10 @@ public final class SubtitleFileBuilder {
         guard lotesFalhos > 0 else { return }
         failedBatches = lotesFalhos
         translationNotice = lotesFalhos == 1
-            ? "1 lote não foi traduzido — essas legendas saíram no idioma original."
-            : "\(lotesFalhos) lotes não foram traduzidos — essas legendas saíram no idioma original."
+            ? L("1 lote não foi traduzido — essas legendas saíram no idioma original.",
+                "1 batch was not translated — those subtitles stayed in the original language.")
+            : L("\(lotesFalhos) lotes não foram traduzidos — essas legendas saíram no idioma original.",
+                "\(lotesFalhos) batches were not translated — those subtitles stayed in the original language.")
     }
 
     /// Começo de frase com maiúscula.
@@ -1655,37 +1672,47 @@ public enum SubtitleFileError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .noSpeech:
-            return "Nenhuma fala foi reconhecida neste vídeo."
+            return L("Nenhuma fala foi reconhecida neste vídeo.", "No speech was recognized in this video.")
 
         case let .translationFailed(detalhe):
-            return "A tradução falhou: \(detalhe)"
+            return L("A tradução falhou: \(detalhe)", "Translation failed: \(detalhe)")
 
         case let .noAudioTrack(name):
-            return "\(name) não tem trilha de áudio que o sistema consiga ler."
+            return L("\(name) não tem trilha de áudio que o sistema consiga ler.",
+                     "\(name) has no audio track the system can read.")
 
         case let .cannotDecode(detail):
-            return "Não foi possível decodificar o áudio: \(detail)"
+            return L("Não foi possível decodificar o áudio: \(detail)", "Could not decode the audio: \(detail)")
 
         case let .notFound(name):
-            return "\(name) não está mais no lugar de onde foi escolhido."
+            return L("\(name) não está mais no lugar de onde foi escolhido.",
+                     "\(name) is no longer where it was chosen from.")
 
         case let .unreadable(name):
-            return """
+            return L("""
             O app não conseguiu abrir \(name). O arquivo existe, mas o acesso \
             foi negado.
 
             Isso costuma ser permissão de pasta: escolha o arquivo de novo pelo \
             botão Abrir vídeo, ou libere o acesso em Ajustes do Sistema > \
             Privacidade e Segurança > Arquivos e Pastas.
-            """
+            """, """
+            The app could not open \(name). The file exists, but access was \
+            denied.
+
+            This is usually a folder permission: choose the file again with \
+            Open video, or allow access in System Settings > Privacy & \
+            Security > Files and Folders.
+            """)
 
         case let .emptySubtitles(name):
-            return "\(name) não contém nenhuma legenda que o app consiga ler."
+            return L("\(name) não contém nenhuma legenda que o app consiga ler.",
+                     "\(name) has no subtitles the app can read.")
 
         case let .unsupportedFormat(file, detected):
             let aceitos = MediaProbe.supportedNames.joined(separator: ", ")
             if let detected {
-                return """
+                return L("""
                 \(file) é um arquivo \(detected), e esse formato de vídeo é \
                 diferente dos que o app aceita.
 
@@ -1693,14 +1720,27 @@ public enum SubtitleFileError: LocalizedError {
 
                 Converter para MP4 resolve — o ffmpeg faz isso sem recodificar \
                 o vídeo na maioria dos casos.
-                """
+                """, """
+                \(file) is a \(detected) file, a video format the app does not \
+                accept.
+
+                Accepted formats: \(aceitos).
+
+                Converting to MP4 fixes it — ffmpeg usually does it without \
+                re-encoding the video.
+                """)
             }
-            return """
+            return L("""
             Não foi possível reconhecer o formato de \(file). O conteúdo não \
             corresponde a nenhum container conhecido, mesmo tratando-o como MP4.
 
             Formatos aceitos: \(aceitos).
-            """
+            """, """
+            Could not recognize the format of \(file). The content matches no \
+            known container, even when treated as MP4.
+
+            Accepted formats: \(aceitos).
+            """)
         }
     }
 }

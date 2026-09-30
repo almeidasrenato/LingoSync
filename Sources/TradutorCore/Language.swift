@@ -24,26 +24,27 @@ public enum Language: String, CaseIterable, Identifiable, Sendable, Codable {
 
     public var id: String { rawValue }
 
+    /// No idioma da interface.
     public var displayName: String {
         switch self {
-        case .portuguese: "Português"
-        case .english: "Inglês"
-        case .spanish: "Espanhol"
-        case .french: "Francês"
-        case .german: "Alemão"
-        case .italian: "Italiano"
-        case .dutch: "Holandês"
-        case .polish: "Polonês"
-        case .russian: "Russo"
-        case .ukrainian: "Ucraniano"
-        case .japanese: "Japonês"
-        case .chinese: "Chinês"
-        case .korean: "Coreano"
-        case .arabic: "Árabe"
-        case .hindi: "Híndi"
-        case .turkish: "Turco"
-        case .vietnamese: "Vietnamita"
-        case .thai: "Tailandês"
+        case .portuguese: L("Português", "Portuguese")
+        case .english: L("Inglês", "English")
+        case .spanish: L("Espanhol", "Spanish")
+        case .french: L("Francês", "French")
+        case .german: L("Alemão", "German")
+        case .italian: L("Italiano", "Italian")
+        case .dutch: L("Holandês", "Dutch")
+        case .polish: L("Polonês", "Polish")
+        case .russian: L("Russo", "Russian")
+        case .ukrainian: L("Ucraniano", "Ukrainian")
+        case .japanese: L("Japonês", "Japanese")
+        case .chinese: L("Chinês", "Chinese")
+        case .korean: L("Coreano", "Korean")
+        case .arabic: L("Árabe", "Arabic")
+        case .hindi: L("Híndi", "Hindi")
+        case .turkish: L("Turco", "Turkish")
+        case .vietnamese: L("Vietnamita", "Vietnamese")
+        case .thai: L("Tailandês", "Thai")
         }
     }
 

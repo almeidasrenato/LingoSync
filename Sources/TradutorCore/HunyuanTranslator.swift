@@ -71,7 +71,7 @@ public final class HunyuanTranslator: Translator, @unchecked Sendable {
         guard Self.isInstalled else { throw HunyuanError.notInstalled }
         guard process == nil else { return }
 
-        progress(0.1, "carregando Hunyuan-MT…")
+        progress(0.1, L("carregando Hunyuan-MT…", "loading Hunyuan-MT…"))
 
         let entrada = Pipe()
         let saida = Pipe()
@@ -287,13 +287,14 @@ public enum HunyuanError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notInstalled:
-            "O Hunyuan-MT não está instalado. Rode Scripts/hunyuan-setup.sh."
+            L("O Hunyuan-MT não está instalado. Rode Scripts/hunyuan-setup.sh.",
+              "Hunyuan-MT is not installed. Run Scripts/hunyuan-setup.sh.")
         case .didNotStart:
-            "O Hunyuan-MT não terminou de carregar."
+            L("O Hunyuan-MT não terminou de carregar.", "Hunyuan-MT did not finish loading.")
         case .noAnswer:
-            "O Hunyuan-MT não respondeu a tempo."
+            L("O Hunyuan-MT não respondeu a tempo.", "Hunyuan-MT did not answer in time.")
         case let .model(detalhe):
-            "O Hunyuan-MT falhou: \(detalhe)"
+            L("O Hunyuan-MT falhou: \(detalhe)", "Hunyuan-MT failed: \(detalhe)")
         }
     }
 }

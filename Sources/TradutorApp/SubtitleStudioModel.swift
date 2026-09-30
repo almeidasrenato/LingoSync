@@ -17,8 +17,8 @@ final class SubtitleStudioModel {
 
         var displayName: String {
             switch self {
-            case .original: "Idioma original"
-            case .translation: "Tradução"
+            case .original: L("Idioma original", "Original")
+            case .translation: L("Tradução", "Translation")
             }
         }
     }
@@ -119,8 +119,8 @@ final class SubtitleStudioModel {
 
         var displayName: String {
             switch self {
-            case .speech: "Fala"
-            case .image: "Imagem"
+            case .speech: L("Fala", "Speech")
+            case .image: L("Imagem", "Image")
             }
         }
     }
@@ -235,7 +235,7 @@ final class SubtitleStudioModel {
         return elapsed / step.overall - elapsed
     }
 
-    var videoName: String { videoURL?.lastPathComponent ?? "Nenhum vídeo escolhido" }
+    var videoName: String { videoURL?.lastPathComponent ?? L("Nenhum vídeo escolhido", "No video chosen") }
 
     /// O idioma em que a legenda sai. Sem tradução é o próprio falado — ver
     /// `TranslationEngine.destination`.
@@ -317,7 +317,7 @@ final class SubtitleStudioModel {
     func export(to url: URL, track: SubtitleTrack) {
         exportError = nil
         guard canExport(track) else {
-            exportError = "Não há legenda disponível nesta faixa."
+            exportError = L("Não há legenda disponível nesta faixa.", "There are no subtitles in this track.")
             return
         }
         do {
@@ -731,7 +731,7 @@ final class SubtitleStudioModel {
             // A tradução fica para o clique, como no original importado.
             originalLanguage = imageLanguage
             translatedLanguage = nil
-            update(.readingImage, 0, "carregando o leitor", true)
+            update(.readingImage, 0, L("carregando o leitor", "loading the reader"), true)
             job = Task { await runImageReading(url) }
             return
         }
@@ -840,7 +840,7 @@ final class SubtitleStudioModel {
         do {
             let parsed = try SRTParser.parse(contentsOf: url)
             guard !parsed.isEmpty else {
-                stage = .failed("Nenhuma legenda encontrada em \(url.lastPathComponent).")
+                stage = .failed(L("Nenhuma legenda encontrada em \(url.lastPathComponent).", "No subtitles found in \(url.lastPathComponent)."))
                 return
             }
             job?.cancel()

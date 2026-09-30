@@ -96,17 +96,17 @@ public final class SubtitleStore {
 /// a menos ou um horario em formato outro so aparece la.
 public enum CaptureExport {
 
-    /// `dd/MM/aaaa HH:mm:ss`, fixo.
-    ///
-    /// Sem locale do sistema de proposito: o arquivo e lido por quem gravou,
-    /// e uma maquina em ingles gravaria `9/14/26` no meio de um relatorio em
-    /// portugues.
-    private static let stamp: DateFormatter = {
+    /// Formato fixo pelo idioma da interface, nunca o do sistema: o arquivo
+    /// é lido por quem gravou, e uma máquina em inglês gravaria `9/14/26` no
+    /// meio de um relatório em português. Em inglês, `aaaa-MM-dd`, que ninguém
+    /// lê errado dos dois lados do Atlântico.
+    private static var stamp: DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
-        formatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = Interface.shared.language == .portuguese
+            ? "dd/MM/yyyy HH:mm:ss" : "yyyy-MM-dd HH:mm:ss"
         return formatter
-    }()
+    }
 
     /// - Parameter target: `nil` quando so houve transcricao. Assim o
     ///   cabecalho nao promete uma traducao que nao existe, e os blocos saem
@@ -115,10 +115,12 @@ public enum CaptureExport {
         _ blocks: [SubtitleBlock], from source: Language, to target: Language?
     ) -> String {
         let par = target.map { "\(source.displayName) → \($0.displayName)" } ?? source.displayName
+        let stamp = stamp
         var linhas = [
-            "Tradutor Instantâneo — captura",
+            L("LingoSync — captura", "LingoSync — capture"),
             par,
-            blocks.first.map { "Início: " + stamp.string(from: $0.at) } ?? "Nada foi captado.",
+            blocks.first.map { L("Início: ", "Started: ") + stamp.string(from: $0.at) }
+                ?? L("Nada foi captado.", "Nothing was captured."),
             "",
         ]
         for block in blocks {
@@ -182,7 +184,7 @@ public enum CaptureExport {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "pt_BR")
         formatter.dateFormat = "yyyy-MM-dd-HHmm"
-        return "captura-\(formatter.string(from: date)).txt"
+        return L("captura-", "capture-") + "\(formatter.string(from: date)).txt"
     }
 }
 

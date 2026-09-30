@@ -201,14 +201,14 @@ public final class DeepLWebTranslator: Translator, @unchecked Sendable {
     public init() {}
 
     public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
-        progress(0.4, "abrindo o DeepL…")
+        progress(0.4, L("abrindo o DeepL…", "opening DeepL…"))
         await driver.warmUp()
         // Sem carga de aquecimento aqui, e isto foi medido: abrir o site antes
         // do primeiro bloco custava uma página inteira a mais em TODA geração
         // — 11 s no vídeo curto, 25 s no de 9 minutos — para adiantar um
         // desafio anti-robô que aparece de vez em quando. O desafio é
         // esperado onde ele aparece, em `esperar`.
-        progress(1.0, "DeepL pronto")
+        progress(1.0, L("DeepL pronto", "DeepL ready"))
     }
 
     public func reset() {
@@ -238,7 +238,7 @@ public final class DeepLWebTranslator: Translator, @unchecked Sendable {
         let blocos = DeepLWeb.chunks(of: cheias.map(\.element))
         for (numero, bloco) in blocos.enumerated() {
             let falas = bloco.map { cheias[$0].element }
-            let rotulo = "bloco \(numero + 1) de \(blocos.count)"
+            let rotulo = L("bloco \(numero + 1) de \(blocos.count)", "chunk \(numero + 1) of \(blocos.count)")
             let traduzidas: [String]
             do {
                 traduzidas = try await driver.translate(
@@ -267,11 +267,14 @@ public enum DeepLWebError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .pairNotSupported(source, target):
-            "O DeepL não cobre \(source.displayName) → \(target.displayName)."
+            L("O DeepL não cobre \(source.displayName) → \(target.displayName).",
+              "DeepL does not cover \(source.displayName) → \(target.displayName).")
         case let .timedOut(bloco):
-            "O DeepL não respondeu a tempo (\(bloco)). Pode ser limite de uso do site."
+            L("O DeepL não respondeu a tempo (\(bloco)). Pode ser limite de uso do site.",
+              "DeepL did not answer in time (\(bloco)). The site may be rate-limiting.")
         case .challenged:
-            "O site do DeepL pediu confirmação de que você é humano."
+            L("O site do DeepL pediu confirmação de que você é humano.",
+              "The DeepL site asked to confirm you are human.")
         }
     }
 }

@@ -203,8 +203,10 @@ public final class Pipeline {
         if process.isMicrophone {
             guard await MicrophoneTap.requestAccess() else {
                 state = .failed(
-                    "O Tradutor precisa de acesso ao microfone. "
-                    + "Ajustes do Sistema › Privacidade e Segurança › Microfone."
+                    L("O Tradutor precisa de acesso ao microfone. "
+                      + "Ajustes do Sistema › Privacidade e Segurança › Microfone.",
+                      "LingoSync needs microphone access. "
+                      + "System Settings › Privacy & Security › Microphone.")
                 )
                 return
             }

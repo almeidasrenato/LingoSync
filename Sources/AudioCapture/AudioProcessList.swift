@@ -41,13 +41,15 @@ public struct AudioProcess: Identifiable, Sendable {
     /// Existe como escolha explicita porque antes isso acontecia por acidente:
     /// sem selecao, o app pegava o primeiro processo com som e o usuario
     /// achava que tinha escolhido outra coisa.
-    public static let systemWide = AudioProcess(
+    /// Calculado, e não guardado: o nome segue o idioma da interface, que
+    /// pode trocar com o app aberto. A seleção compara por `id`.
+    public static var systemWide: AudioProcess { AudioProcess(
         id: systemWideID,
-        name: "Todo o áudio do sistema",
+        name: CaptureError.interfaceIsPortuguese ? "Todo o áudio do sistema" : "All system audio",
         objectIDs: [],
         pids: [],
         isPlaying: true
-    )
+    ) }
 
     public var isSystemWide: Bool { id == Self.systemWideID }
 
@@ -60,13 +62,13 @@ public struct AudioProcess: Identifiable, Sendable {
     /// uma so — "de onde vem o audio?" — e um segundo seletor ao lado dela
     /// seria um controle a mais para responder a mesma coisa. Qual microfone,
     /// ai sim, e outra pergunta, e so aparece quando esta e respondida.
-    public static let microphone = AudioProcess(
+    public static var microphone: AudioProcess { AudioProcess(
         id: microphoneID,
-        name: "Microfone",
+        name: CaptureError.interfaceIsPortuguese ? "Microfone" : "Microphone",
         objectIDs: [],
         pids: [],
         isPlaying: false
-    )
+    ) }
 
     public var isMicrophone: Bool { id == Self.microphoneID }
 

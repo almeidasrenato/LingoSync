@@ -8,15 +8,20 @@ struct EnginePicker: View {
     var width: CGFloat?
 
     var body: some View {
-        PillPicker(title: "Reconhecimento", selection: $selection,
+        PillPicker(title: L("Reconhecimento", "Recognition"), selection: $selection,
                    options: RecognitionEngine.allCases.filter(\.isAvailable),
                    label: \.displayName, width: width)
-        .help("""
+        .help(L("""
               Quem reconhece a fala. Parakeet é o mais rápido, mas só cobre os \
               idiomas europeus; Whisper cobre todos. Apple usa o \
               reconhecimento do macOS, com os idiomas instalados no sistema. \
               A lista de idiomas ao lado mostra só o que o escolhido cobre.
-              """)
+              """, """
+              Who recognizes speech. Parakeet is the fastest but only covers \
+              European languages; Whisper covers all of them. Apple uses macOS \
+              recognition, with the languages installed on the system. The \
+              language list next to it shows only what the chosen one covers.
+              """))
     }
 }
 
@@ -30,10 +35,10 @@ struct TranslationEnginePicker: View {
         // Só o que existe: o Hunyuan mora num ambiente que o usuário
         // instala à parte, e oferecer o que não está lá daria erro no
         // meio de uma geração.
-        PillPicker(title: "Tradução", selection: $selection,
+        PillPicker(title: L("Tradução", "Translation"), selection: $selection,
                    options: TranslationEngine.allCases.filter(\.isAvailable),
                    label: \.displayName, width: width)
-        .help("""
+        .help(L("""
               Quem traduz as legendas de vídeo. Apple é local e instantânea. \
               DeepL abre o site numa janela e traduz por lá — o melhor em \
               japonês, medido. Google é o mais rápido e chega perto dele. \
@@ -44,7 +49,17 @@ struct TranslationEnginePicker: View {
               "Só transcrever" pula a tradução e deixa o texto no idioma \
               falado. Todos valem ao vivo também — os de rede custam \
               segundos por bloco, e a nota abaixo diz quanto.
-              """)
+              """, """
+              Who translates. Apple is local and instant. DeepL drives its \
+              website — the best for Japanese, measured. Google is the fastest \
+              and comes close. Gemini talks to the site's chat, always in an \
+              anonymous session — no account, no saved history. Those three \
+              send the text off your Mac and need internet. Hunyuan-MT is local \
+              like Apple and runs out of process, when installed. "Transcribe \
+              only" skips translation and keeps the spoken language. All of \
+              them work live too — the network ones cost seconds per chunk, \
+              and the note below says how much.
+              """))
     }
 }
 
@@ -63,7 +78,7 @@ struct SourceLanguagePicker: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            PillPicker(title: "Idioma original", selection: $selection,
+            PillPicker(title: L("Idioma original", "Spoken language"), selection: $selection,
                        options: options, label: \.displayName, width: width)
 
             if engine == .apple { installControl }
@@ -98,10 +113,11 @@ struct SourceLanguagePicker: View {
             ProgressView(value: catalog.installProgress)
                 .progressViewStyle(.circular)
                 .controlSize(.small)
-                .help("Instalando \(installing.displayName)… \(Int(catalog.installProgress * 100))%")
+                .help(L("Instalando \(installing.displayName)… \(Int(catalog.installProgress * 100))%",
+                        "Installing \(installing.displayName)… \(Int(catalog.installProgress * 100))%"))
         } else {
             Menu {
-                Section("Instalar no reconhecimento da Apple") {
+                Section(L("Instalar no reconhecimento da Apple", "Install for Apple recognition")) {
                     ForEach(catalog.installable) { language in
                         Button(language.displayName) {
                             Task {
@@ -123,8 +139,8 @@ struct SourceLanguagePicker: View {
             .fixedSize()
             .disabled(catalog.installable.isEmpty)
             .help(catalog.installable.isEmpty
-                  ? "Todos os idiomas da Apple já estão instalados"
-                  : "Instalar mais um idioma no reconhecimento da Apple")
+                  ? L("Todos os idiomas da Apple já estão instalados", "All Apple languages are already installed")
+                  : L("Instalar mais um idioma no reconhecimento da Apple", "Install another language for Apple recognition"))
         }
     }
 }
@@ -140,12 +156,16 @@ struct ImageLanguagePicker: View {
     var width: CGFloat?
 
     var body: some View {
-        PillPicker(title: "Idioma do texto", selection: $selection,
+        PillPicker(title: L("Idioma do texto", "Text language"), selection: $selection,
                    options: options, label: \.displayName, width: width)
-        .help("""
+        .help(L("""
               O idioma em que a legenda está escrita no vídeo — não o que se \
               fala. O leitor usa isso para ler certo, e a tradução parte dele.
-              """)
+              """, """
+              The language the subtitle is written in on screen — not the \
+              spoken one. The reader uses it to read correctly, and translation \
+              starts from it.
+              """))
     }
 
     private var options: [Language] {

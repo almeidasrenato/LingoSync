@@ -48,6 +48,7 @@ Sem áudio no argumento, não carregam modelo e rodam em milissegundos.
 | `japones` | palavra partida, hesitação, pontuação do Qwen, repartição na vírgula |
 | `frase` | tradução por frase: o que junta, o que não junta, como reparte |
 | `atualizacao` | versão do GitHub contra a do app, formato da resposta, `.dmg` |
+| `interface` | idioma da interface: inglês por padrão, gravação, troca sem reabrir |
 
 Com áudio ou vídeo:
 
@@ -2454,6 +2455,32 @@ para nada sair no arquivo.
 `tradutor-verify texto` é o mesmo caminho sem app, com o texto no stdout. A
 skill `integrations/claude-code/lingosync-transcrever-audio` (ligada por symlink em `~/.claude/skills`) chama esse comando pelo `scripts/lingosync-transcrever`, que acha o repositório pelo próprio caminho e usa **Whisper e português** por padrão — o app continua na Apple
 quando alguém manda áudio ou vídeo para ler. 161 s de inglês: 1,2 s na Apple.
+
+## Idioma da interface (30/09/2026)
+
+Inglês por padrão, português à escolha no rodapé do menu (globo + menu em
+pílula, cada idioma escrito no próprio idioma). `Interface.shared` é
+`@Observable` e grava `idiomaDaInterface`; `L(pt, en)` devolve a frase no
+idioma escolhido. Toda view que chama `L` no `body` redesenha sozinha na
+troca, sem reabrir; o que o AppKit monta na hora (alerta, título de janela
+já aberta, painel de salvar) segue o idioma da próxima vez que abrir.
+
+- **Frase inteira nos dois lados**, nunca montada por pedaços: a ordem das
+  palavras muda entre os idiomas (`L("\(a) de \(b)", "\(a) of \(b)")`).
+- **`rawValue` não muda**: `GenerationStep.rawValue` é identificador, e a tela
+  lê `displayName`. `AudioProcess.systemWide`/`.microphone` viraram calculados
+  para o nome seguir o idioma; a seleção compara por `id`.
+- **`AudioCapture` não depende de nada**, então lê `idiomaDaInterface` direto
+  (`CaptureError.interfaceIsPortuguese`).
+- **A data do `.txt` exportado** segue o idioma: `dd/MM/aaaa` em português,
+  `aaaa-MM-dd` em inglês — nunca o formato do sistema.
+- **Relatórios de autoteste e logs continuam em português**: são para quem
+  mede, não para quem usa.
+- No painel estreito (380 px) a linha de controles não cabia em inglês nem em
+  português com tradução: `ViewThatFits` troca a pílula "Text" por só o ícone.
+- `tradutor-verify interface` confere padrão, gravação e troca na hora.
+  `--selftest-layout` renderiza em inglês e o menu de novo em português
+  (`menu-light-pt.png`), e apaga a preferência se ela não existia antes.
 
 ## Atualização pelo GitHub (30/09/2026)
 

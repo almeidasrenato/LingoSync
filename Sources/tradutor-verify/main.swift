@@ -214,6 +214,7 @@ struct Verify {
         case "motores": await engineGate()
         case "captura": await captureGate()
         case "atualizacao": updateGate()
+        case "interface": interfaceGate()
         case "texto":
             guard arguments.count >= 3 else {
                 print("uso: texto <audio-ou-video> [idioma] [motor] [--saida <arquivo.txt>]"); exit(1)
@@ -3138,6 +3139,40 @@ struct Verify {
         exit(failures == 0 ? 0 : 1)
     }
 
+    /// O idioma da interface: inglês por padrão, português à escolha, e a
+    /// troca vale na hora — sem reabrir o app.
+    static func interfaceGate() {
+        failures = 0
+        print("Idioma da interface\n")
+        let vazio = UserDefaults(suiteName: "tradutor-verify-interface")!
+        vazio.removePersistentDomain(forName: "tradutor-verify-interface")
+        expect(Interface(defaults: vazio).language == .english, "sem escolha gravada, a interface e em ingles")
+        let escolhida = Interface(defaults: vazio)
+        escolhida.language = .portuguese
+        expect(Interface(defaults: vazio).language == .portuguese, "a escolha fica gravada")
+        vazio.removePersistentDomain(forName: "tradutor-verify-interface")
+        expect(InterfaceLanguage.portuguese.displayName == "Português"
+               && InterfaceLanguage.english.displayName == "English",
+               "cada idioma aparece escrito no proprio idioma")
+
+        let antes = Interface.shared.language
+        Interface.shared.language = .english
+        let emIngles = (L("Traduzindo", "Translating"), Language.japanese.displayName,
+                        GenerationStep.translating.displayName, TranslationEngine.transcriptionOnly.displayName)
+        Interface.shared.language = .portuguese
+        let emPortugues = (L("Traduzindo", "Translating"), Language.japanese.displayName,
+                           GenerationStep.translating.displayName, TranslationEngine.transcriptionOnly.displayName)
+        Interface.shared.language = antes
+        expect(emIngles == ("Translating", "Japanese", "Translating", "Transcribe only"),
+               "em ingles: texto, idioma, passo e motor")
+        expect(emPortugues == ("Traduzindo", "Japonês", "Traduzindo", "Só transcrever"),
+               "em portugues: os mesmos, sem reabrir")
+        expect(GenerationStep.translating.rawValue == "Traduzindo",
+               "o rawValue do passo nao muda com a interface: e identificador")
+        print(failures == 0 ? "\ntudo certo" : "\n\(failures) falha(s)")
+        if failures > 0 { exit(1) }
+    }
+
     /// A versão do GitHub contra a do app, sem rede: o formato da resposta
     /// é o que o endereço devolveu para a v1.0.0 em 30/09/2026.
     static func updateGate() {
@@ -3243,10 +3278,11 @@ struct Verify {
         let comTraducao = CaptureExport.text(
             [SubtitleBlock(source: "こんにちは。", translated: "Olá.", at: instante)],
             from: .japanese, to: .portuguese)
-        expect(comTraducao.contains("Japonês → Português"), "o cabecalho diz o par")
+        expect(comTraducao.contains("\(Language.japanese.displayName) → \(Language.portuguese.displayName)"),
+               "o cabecalho diz o par")
         expect(comTraducao.contains("こんにちは。") && comTraducao.contains("Olá."),
                "original e traducao saem os dois")
-        expect(comTraducao.range(of: #"\[\d\d/\d\d/\d{4} \d\d:\d\d:\d\d\]"#,
+        expect(comTraducao.range(of: #"\[(\d\d/\d\d/\d{4}|\d{4}-\d\d-\d\d) \d\d:\d\d:\d\d\]"#,
                                  options: .regularExpression) != nil,
                "cada fala leva dia e hora")
 

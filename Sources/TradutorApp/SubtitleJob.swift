@@ -60,8 +60,8 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
     /// Abre o seletor e começa. Volta imediatamente.
     func run() {
         let panel = NSOpenPanel()
-        panel.title = "Escolha o vídeo ou áudio"
-        panel.prompt = writesText ? "Extrair texto" : "Gerar legenda"
+        panel.title = L("Escolha o vídeo ou áudio", "Choose a video or audio file")
+        panel.prompt = writesText ? L("Extrair texto", "Extract text") : L("Gerar legenda", "Make subtitles")
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         // Sem filtro por tipo, de proposito: arquivo sem extensao no nome —
@@ -69,7 +69,7 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         // sistema — ficaria acinzentado por um detalhe que nao diz nada sobre
         // o conteudo. Quem decide se serve e a extracao, olhando os bytes.
         panel.allowsOtherFileTypes = true
-        panel.message = "Vídeo ou áudio. Arquivos sem extensão no nome também servem."
+        panel.message = L("Vídeo ou áudio. Arquivos sem extensão no nome também servem.", "Video or audio. Files without an extension work too.")
 
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -126,14 +126,14 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
                     // Esperando a resposta do tradutor: o rótulo diz o que
                     // está no ar, e as reticências viram "aguardando".
                     let texto = detail.isEmpty
-                        ? "\(step.rawValue)…"
-                        : "\(step.rawValue): \(detail)\(waiting ? " (aguardando resposta)" : "")"
+                        ? "\(step.displayName)…"
+                        : "\(step.displayName): \(detail)\(waiting ? L(" (aguardando resposta)", " (waiting for a reply)") : "")"
                     self?.update(step.overall(fraction), texto)
                 }
             }
 
             if stopped { return }
-            update(GenerationStep.saving.overall(0), "\(GenerationStep.saving.rawValue)…")
+            update(GenerationStep.saving.overall(0), "\(GenerationStep.saving.displayName)…")
             // Sem tradução o sufixo é o idioma falado: `video.ja.srt` com
             // texto em português enganaria o player e quem procura o arquivo.
             let escrito = motor.destination(
@@ -165,12 +165,12 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "\(writesText ? "Texto" : "Legenda") de \(url.lastPathComponent)"
+        window.title = writesText ? L("Texto de \(url.lastPathComponent)", "Text of \(url.lastPathComponent)") : L("Legenda de \(url.lastPathComponent)", "Subtitles for \(url.lastPathComponent)")
         window.delegate = self          // fechar a janela também cancela
         window.center()
         window.isReleasedWhenClosed = false
 
-        let status = NSTextField(labelWithString: "preparando…")
+        let status = NSTextField(labelWithString: L("preparando…", "preparing…"))
         status.font = .systemFont(ofSize: 12)
         status.lineBreakMode = .byTruncatingMiddle
         status.frame = NSRect(x: 20, y: 66, width: 380, height: 20)
@@ -180,7 +180,7 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         bar.minValue = 0
         bar.maxValue = 1
 
-        let cancel = NSButton(title: "Cancelar", target: self, action: #selector(self.cancel))
+        let cancel = NSButton(title: L("Cancelar", "Cancel"), target: self, action: #selector(self.cancel))
         cancel.bezelStyle = .rounded
         cancel.keyEquivalent = "\u{1b}"        // Esc também cancela
         cancel.frame = NSRect(x: 310, y: 8, width: 90, height: 26)
@@ -213,14 +213,14 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         guard !silent else { return }
 
         let alert = NSAlert()
-        alert.messageText = writesText ? "Texto pronto" : "Legenda pronta"
+        alert.messageText = writesText ? L("Texto pronto", "Text ready") : L("Legenda pronta", "Subtitles ready")
         // O aviso do tradutor vai junto: é aqui que a troca do DeepL para a
         // Apple no meio do arquivo deixa de ser invisível.
         alert.informativeText = [
-            writesText ? "Texto gravado em \(url.lastPathComponent)."
-                : "\(cues) legendas gravadas em \(url.lastPathComponent).", notice,
+            writesText ? L("Texto gravado em \(url.lastPathComponent).", "Text saved to \(url.lastPathComponent).")
+                : L("\(cues) legendas gravadas em \(url.lastPathComponent).", "\(cues) subtitles saved to \(url.lastPathComponent)."), notice,
         ].compactMap { $0 }.joined(separator: "\n\n")
-        alert.addButton(withTitle: "Mostrar no Finder")
+        alert.addButton(withTitle: L("Mostrar no Finder", "Show in Finder"))
         alert.addButton(withTitle: "OK")
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
@@ -237,7 +237,7 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         guard !silent else { return }
 
         let alert = NSAlert()
-        alert.messageText = writesText ? "Não foi possível extrair o texto" : "Não foi possível gerar a legenda"
+        alert.messageText = writesText ? L("Não foi possível extrair o texto", "Could not extract the text") : L("Não foi possível gerar a legenda", "Could not make the subtitles")
         alert.informativeText = message
         alert.alertStyle = .warning
         NSApp.activate(ignoringOtherApps: true)

@@ -156,7 +156,7 @@ public final class QwenTranscriber: Transcriber, @unchecked Sendable {
         }
         // O modelo carrega dentro do processo Python, a cada chamada. Não há
         // o que manter quente aqui — e é por isso que ele não serve ao vivo.
-        progress(1, "\(engineName) pronto")
+        progress(1, L("\(engineName) pronto", "\(engineName) ready"))
     }
 
     public func transcribe(_ samples: [Float]) async throws -> String {

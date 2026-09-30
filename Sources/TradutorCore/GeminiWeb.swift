@@ -276,9 +276,9 @@ public final class GeminiWebTranslator: Translator, @unchecked Sendable {
     public init() {}
 
     public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
-        progress(0.4, "abrindo o Gemini…")
+        progress(0.4, L("abrindo o Gemini…", "opening Gemini…"))
         await driver.warmUp()
-        progress(1.0, "Gemini pronto")
+        progress(1.0, L("Gemini pronto", "Gemini ready"))
     }
 
     public func reset() {
@@ -307,7 +307,7 @@ public final class GeminiWebTranslator: Translator, @unchecked Sendable {
             let fim = min(inicio + GeminiWeb.preferredBatchSize, cheias.count)
             let bloco = Array(cheias[inicio..<fim])
             let falas = bloco.map(\.element)
-            let rotulo = "bloco \(numero) de \(total)"
+            let rotulo = L("bloco \(numero) de \(total)", "chunk \(numero) of \(total)")
             let traduzidas: [String]
             do {
                 traduzidas = try await driver.translate(falas, from: source, to: target, label: rotulo)
@@ -341,13 +341,17 @@ public enum GeminiWebError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .timedOut(bloco):
-            "O Gemini não respondeu a tempo (\(bloco)). Pode ser limite de uso do site."
+            L("O Gemini não respondeu a tempo (\(bloco)). Pode ser limite de uso do site.",
+              "Gemini did not answer in time (\(bloco)). The site may be rate-limiting.")
         case let .malformedResponse(bloco):
-            "O Gemini devolveu uma resposta fora do formato esperado (\(bloco)). Log em /tmp/tradutor-gemini-erro.txt."
+            L("O Gemini devolveu uma resposta fora do formato esperado (\(bloco)). Log em /tmp/tradutor-gemini-erro.txt.",
+              "Gemini answered outside the expected format (\(bloco)). Log at /tmp/tradutor-gemini-erro.txt.")
         case let .untranslated(bloco):
-            "O Gemini devolveu o texto sem traduzir (\(bloco)). Pode ser limite de uso do site. Log em /tmp/tradutor-gemini-erro.txt."
+            L("O Gemini devolveu o texto sem traduzir (\(bloco)). Pode ser limite de uso do site. Log em /tmp/tradutor-gemini-erro.txt.",
+              "Gemini returned the text untranslated (\(bloco)). The site may be rate-limiting. Log at /tmp/tradutor-gemini-erro.txt.")
         case let .pausedAfterFailures(bloco, segundos):
-            "O Gemini falhou várias vezes seguidas; o app parou de insistir por \(max(segundos, 1))s (\(bloco)). Log em /tmp/tradutor-gemini-erro.txt."
+            L("O Gemini falhou várias vezes seguidas; o app parou de insistir por \(max(segundos, 1))s (\(bloco)). Log em /tmp/tradutor-gemini-erro.txt.",
+              "Gemini failed several times in a row; the app paused it for \(max(segundos, 1))s (\(bloco)). Log at /tmp/tradutor-gemini-erro.txt.")
         }
     }
 }

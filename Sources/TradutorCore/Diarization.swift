@@ -25,7 +25,7 @@ public enum SpeakerDiarizer {
 
         public var displayName: String {
             switch self {
-            case .clustering: "Agrupamento de vozes"
+            case .clustering: L("Agrupamento de vozes", "Voice clustering")
             case .sortformer: "Sortformer"
             }
         }

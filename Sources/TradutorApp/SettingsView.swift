@@ -22,6 +22,8 @@ struct SettingsView: View {
     var onOpenStudio: () -> Void
     var onNewStudio: () -> Void
 
+    @Bindable private var interface = Interface.shared
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 11) {
@@ -33,11 +35,11 @@ struct SettingsView: View {
                     .frame(width: 40, height: 40)
                     .background(Color.brand, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Tradutor Instantâneo")
+                    Text("LingoSync")
                         .font(.display)
                         .foregroundStyle(Color.ink)
                         .fixedSize()
-                    Text("Áudio ao vivo e legendas de vídeo")
+                    Text(L("Áudio ao vivo e legendas de vídeo", "Live audio and video subtitles"))
                         .font(.caption)
                         .foregroundStyle(Color.inkSoft)
                 }
@@ -49,38 +51,52 @@ struct SettingsView: View {
                     Button {
                         updates.install()
                     } label: {
-                        Label(updates.downloading ? "Baixando…" : "Atualizar",
+                        Label(updates.downloading ? L("Baixando…", "Downloading…") : L("Atualizar", "Update"),
                               systemImage: "arrow.down.circle")
                     }
                     .buttonStyle(PastelButtonStyle(prominent: true))
                     .controlSize(.small)
                     .fixedSize()
                     .disabled(updates.downloading)
-                    .help("Versão \(release.version) disponível (esta é a \(updates.currentVersion)). "
-                          + "Baixa o .dmg e o abre; arraste o app para Aplicativos.")
+                    .help(L("Versão \(release.version) disponível (esta é a \(updates.currentVersion)). "
+                            + "Baixa o .dmg e o abre; arraste o app para Aplicativos.",
+                            "Version \(release.version) is available (this is \(updates.currentVersion)). "
+                            + "Downloads the .dmg and opens it; drag the app into Applications."))
                 }
             }
             .padding(.bottom, 2)
 
-            card("Idiomas e modelos", icon: "character.bubble", tint: .sage) { languages }
-            card("Ao vivo", icon: "waveform", tint: .clay) { liveControls }
-            card("Vídeos", icon: "film", tint: .sand) { videoControls }
+            card(L("Idiomas e modelos", "Languages and models"), icon: "character.bubble", tint: .sage) { languages }
+            card(L("Ao vivo", "Live"), icon: "waveform", tint: .clay) { liveControls }
+            card(L("Vídeos", "Videos"), icon: "film", tint: .sand) { videoControls }
 
             HStack {
                 if !pipeline.modelDiskUsage.isEmpty {
                     Label(pipeline.modelDiskUsage, systemImage: "internaldrive")
                         .monospacedDigit()
-                        .help("Espaço ocupado pelos modelos em disco")
+                        .help(L("Espaço ocupado pelos modelos em disco", "Disk space used by the models"))
                 }
                 Spacer()
+                // O idioma do app, no rodapé: escolhe-se uma vez, e cada nome
+                // vem escrito no próprio idioma, para quem não lê o atual.
+                HStack(spacing: 4) {
+                    Image(systemName: "globe")
+                        .accessibilityHidden(true)
+                    PillPicker(title: L("Idioma do app", "App language"),
+                               selection: $interface.language,
+                               options: InterfaceLanguage.allCases, label: \.displayName)
+                        .controlSize(.small)
+                }
+                .help(L("Idioma do app", "App language"))
                 Link(destination: AppUpdate.repository) {
                     Label("GitHub", systemImage: "arrow.up.right.square")
                 }
                 .buttonStyle(.borderless)
-                .help("Abre o repositório do app, com as versões e o código")
+                .help(L("Abre o repositório do app, com as versões e o código",
+                        "Opens the app's repository, with releases and source code"))
                 .foregroundStyle(Color.inkSoft)
                 Text("·")
-                Button("Encerrar") { NSApp.terminate(nil) }
+                Button(L("Encerrar", "Quit")) { NSApp.terminate(nil) }
                     .buttonStyle(.borderless)
                     .foregroundStyle(Color.inkSoft)
             }
@@ -124,7 +140,7 @@ struct SettingsView: View {
     private var languages: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                caption("Reconhecimento")
+                caption(L("Reconhecimento", "Recognition"))
                 Spacer()
                 EnginePicker(selection: $pipeline.recognitionEngine, width: 158)
                     .controlSize(.small)
@@ -132,7 +148,7 @@ struct SettingsView: View {
             }
 
             HStack {
-                caption("Tradução")
+                caption(L("Tradução", "Translation"))
                 Spacer()
                 TranslationEnginePicker(selection: $pipeline.translationEngine, width: 158)
                     .controlSize(.small)
@@ -141,7 +157,7 @@ struct SettingsView: View {
 
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 5) {
-                    caption("Ouvir em")
+                    caption(L("Ouvir em", "Listen in"))
                     SourceLanguagePicker(
                         selection: $pipeline.sourceLanguage,
                         engine: pipeline.recognitionEngine,
@@ -156,8 +172,8 @@ struct SettingsView: View {
                     .padding(.top, 16)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    caption("Traduzir para")
-                    PillPicker(title: "Traduzir para", selection: $pipeline.targetLanguage,
+                    caption(L("Traduzir para", "Translate to"))
+                    PillPicker(title: L("Traduzir para", "Translate to"), selection: $pipeline.targetLanguage,
                                options: Language.allCases, label: \.displayName, width: 124)
                     // Sem tradução o destino não é usado por ninguém —
                     // apagado diz isso; escondido faria a linha saltar.
@@ -196,15 +212,20 @@ struct SettingsView: View {
         // Um motor que não serve ao vivo precisa dizer isso aqui: o painel é
         // o mesmo para os dois caminhos.
         if !pipeline.recognitionEngine.supportsLive {
-            return "\(pipeline.recognitionEngine.displayName) só vale para vídeos · "
-                + "ao vivo usa \(pipeline.recognitionEngine.forLive.displayName)"
+            let video = pipeline.recognitionEngine.displayName
+            let live = pipeline.recognitionEngine.forLive.displayName
+            return L("\(video) só vale para vídeos · ao vivo usa \(live)",
+                     "\(video) works on videos only · live uses \(live)")
         }
         return switch TranscriberKind(for: pipeline.sourceLanguage, engine: pipeline.recognitionEngine) {
-        case .apple: "Reconhecimento do macOS · idiomas instalados no sistema"
-        case .parakeet: "Parakeet v3 · reconhecimento rápido"
-        case .whisper: "Whisper turbo · cobertura ampla, mais lento"
-        case .qwen: "Qwen3-ASR 0.6B · melhor em japonês, 27× tempo real"
-        case .qwenLarge: "Qwen3-ASR 1.7B · o mais preciso, 7× tempo real"
+        case .apple: L("Reconhecimento do macOS · idiomas instalados no sistema",
+                       "macOS recognition · languages installed on the system")
+        case .parakeet: L("Parakeet v3 · reconhecimento rápido", "Parakeet v3 · fast recognition")
+        case .whisper: L("Whisper turbo · cobertura ampla, mais lento", "Whisper turbo · broad coverage, slower")
+        case .qwen: L("Qwen3-ASR 0.6B · melhor em japonês, 27× tempo real",
+                      "Qwen3-ASR 0.6B · best for Japanese, 27× real time")
+        case .qwenLarge: L("Qwen3-ASR 1.7B · o mais preciso, 7× tempo real",
+                           "Qwen3-ASR 1.7B · most accurate, 7× real time")
         }
     }
 
@@ -213,16 +234,17 @@ struct SettingsView: View {
         let engine = pipeline.translationEngine
         guard engine != .apple else { return nil }
         if engine == .transcriptionOnly {
-            return "Só o texto reconhecido, em \(pipeline.sourceLanguage.displayName)"
-                + " · vale ao vivo e nos vídeos"
+            let idioma = pipeline.sourceLanguage.displayName
+            return L("Só o texto reconhecido, em \(idioma) · vale ao vivo e nos vídeos",
+                     "Only the recognized text, in \(idioma) · live and on videos")
         }
         // Ao vivo agora passa qualquer motor. O que custa precisa dizer
         // quanto custa aqui, senão o usuário descobre pelo atraso na tela.
         if let custo = engine.liveCostNote {
             let cobertura = engine.supports(pipeline.sourceLanguage, pipeline.targetLanguage)
-                ? "" : " · não cobre este par de idiomas"
-            return "\(engine.displayName) ao vivo: \(custo)"
-                + (engine.leavesTheMachine ? " · o texto sai da máquina" : "")
+                ? "" : L(" · não cobre este par de idiomas", " · does not cover this language pair")
+            return L("\(engine.displayName) ao vivo: \(custo)", "\(engine.displayName) live: \(custo)")
+                + (engine.leavesTheMachine ? L(" · o texto sai da máquina", " · text leaves your Mac") : "")
                 + cobertura
         }
         return nil
@@ -234,7 +256,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
-                    caption("Capturar o áudio de")
+                    caption(L("Capturar o áudio de", "Capture audio from"))
                     Spacer()
                     Button(action: onRefresh) {
                         Image(systemName: "arrow.clockwise")
@@ -242,16 +264,16 @@ struct SettingsView: View {
                             .foregroundStyle(Color.brandInk)
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Atualizar a lista")
-                    .help("Atualizar a lista de aplicativos e de microfones")
+                    .accessibilityLabel(L("Atualizar a lista", "Refresh the list"))
+                    .help(L("Atualizar a lista de aplicativos e de microfones", "Refresh the list of apps and microphones"))
                 }
 
                 // Quem esta tocando som aparece marcado: e quase sempre
                 // o que o usuario quer, e evita escolher o app errado.
-                PillPicker(title: "Capturar o áudio de", selection: $pipeline.selectedProcess,
+                PillPicker(title: L("Capturar o áudio de", "Capture audio from"), selection: $pipeline.selectedProcess,
                            options: [nil] + pipeline.availableProcesses.map(Optional.some),
                            label: { process in
-                               guard let process else { return "Escolha a fonte" }
+                               guard let process else { return L("Escolha a fonte", "Choose a source") }
                                return process.isPlaying ? "● \(process.name)" : process.name
                            },
                            width: .infinity)
@@ -262,10 +284,10 @@ struct SettingsView: View {
                 // que continua valendo quando o usuário troca de fone no meio
                 // da reunião — um ID gravado ficaria apontando para o anterior.
                 if pipeline.selectedProcess?.isMicrophone == true {
-                    PillPicker(title: "Microfone", selection: $pipeline.selectedInputDevice,
+                    PillPicker(title: L("Microfone", "Microphone"), selection: $pipeline.selectedInputDevice,
                                options: [nil] + pipeline.availableInputs.map(Optional.some),
                                label: { device in
-                                   device?.name ?? "Padrão do sistema"
+                                   device?.name ?? L("Padrão do sistema", "System default")
                                        + (AudioInputList.systemDefault.map { " (\($0.name))" } ?? "")
                                },
                                width: .infinity)
@@ -278,15 +300,17 @@ struct SettingsView: View {
                     // processos ela cobre — o Chrome, por exemplo, toca audio
                     // num helper, nao no processo principal.
                     Text(selected.pids.count > 1
-                         ? "\(selected.name) · \(selected.pids.count) processos"
-                         : "\(selected.name) · 1 processo")
+                         ? L("\(selected.name) · \(selected.pids.count) processos",
+                             "\(selected.name) · \(selected.pids.count) processes")
+                         : L("\(selected.name) · 1 processo", "\(selected.name) · 1 process"))
                         .font(.meta)
                         .foregroundStyle(Color.inkSoft)
                 }
             }
 
             Button(action: onToggle) {
-                Label(pipeline.isRunning ? "Parar tradução" : "Iniciar tradução",
+                Label(pipeline.isRunning ? L("Parar tradução", "Stop translating")
+                                         : L("Iniciar tradução", "Start translating"),
                       systemImage: pipeline.isRunning ? "stop.fill" : "waveform")
                     .frame(maxWidth: .infinity)
             }
@@ -300,12 +324,13 @@ struct SettingsView: View {
                 Circle()
                     .fill(pipeline.isWarm ? Color.green : Color.orange)
                     .frame(width: 6, height: 6)
-                Text(pipeline.isWarm ? "modelos carregados" : "carregando modelos…")
+                Text(pipeline.isWarm ? L("modelos carregados", "models loaded")
+                                     : L("carregando modelos…", "loading models…"))
                     .font(.meta)
                     .foregroundStyle(Color.inkSoft)
                     .help(pipeline.engineNames)
                 Spacer()
-                Text("atalho")
+                Text(L("atalho", "shortcut"))
                     .font(.meta)
                     .foregroundStyle(Color.inkSoft)
                 Text(GlobalHotKey.displayName)
@@ -319,11 +344,12 @@ struct SettingsView: View {
             // O painel nao tem barra de titulo, entao se for arrastado para
             // fora da tela ou encolhido demais nao ha como recupera-lo a nao
             // ser por aqui.
-            Button("Restaurar tamanho do painel", action: onResetPanel)
+            Button(L("Restaurar tamanho do painel", "Reset panel size"), action: onResetPanel)
                 .buttonStyle(.borderless)
                 .font(.caption)
                 .foregroundStyle(Color.brandInk)
-                .help("Arraste as bordas do painel para escolher o tamanho; ele é lembrado.")
+                .help(L("Arraste as bordas do painel para escolher o tamanho; ele é lembrado.",
+                        "Drag the panel edges to resize it; the size is remembered."))
         }
     }
 
@@ -335,12 +361,15 @@ struct SettingsView: View {
             Button {
                 onOpenStudio()
             } label: {
-                Label("Assistir com legenda…", systemImage: "play.rectangle")
+                Label(L("Assistir com legenda…", "Watch with subtitles…"), systemImage: "play.rectangle")
                     .frame(maxWidth: .infinity)
             }
-            .help("Gera a legenda e reproduz o vídeo com ela, com navegação por "
-                  + "fala — pelo áudio ou lendo a legenda que já está desenhada no "
-                  + "vídeo. Se já houver uma janela aberta, traz ela de volta.")
+            .help(L("Gera a legenda e reproduz o vídeo com ela, com navegação por "
+                    + "fala — pelo áudio ou lendo a legenda que já está desenhada no "
+                    + "vídeo. Se já houver uma janela aberta, traz ela de volta.",
+                    "Generates subtitles and plays the video with them, line by line — "
+                    + "from the audio or by reading subtitles already burned into the "
+                    + "video. If a window is already open, brings it back."))
 
             // Visível sempre, inclusive sem janela nenhuma aberta. Escondida
             // atrás de uma condição, ninguém a acharia — é a mesma lição dos
@@ -353,20 +382,21 @@ struct SettingsView: View {
             Button {
                 onNewStudio()
             } label: {
-                Label("Abrir outra janela", systemImage: "plus.rectangle.on.rectangle")
+                Label(L("Abrir outra janela", "Open another window"), systemImage: "plus.rectangle.on.rectangle")
                     .frame(maxWidth: .infinity)
             }
             .controlSize(.small)
-            .help("Abre mais uma janela de legendas, para outro vídeo")
+            .help(L("Abre mais uma janela de legendas, para outro vídeo", "Opens another subtitle window, for another video"))
 
             Button {
                 onMakeSubtitles()
             } label: {
-                Label("Só gerar o .srt de um vídeo…", systemImage: "text.badge.plus")
+                Label(L("Só gerar o .srt de um vídeo…", "Just make an .srt…"), systemImage: "text.badge.plus")
                     .frame(maxWidth: .infinity)
             }
             .disabled(pipeline.isRunning)
-            .help("Transcreve e traduz um arquivo, gerando um .srt com os tempos")
+            .help(L("Transcreve e traduz um arquivo, gerando um .srt com os tempos",
+                    "Transcribes and translates a file into a timed .srt"))
 
             // Irmão do de cima, e não opção dentro dele: quem quer o texto de
             // um áudio não está pensando em legenda. Segue o tradutor
@@ -374,20 +404,24 @@ struct SettingsView: View {
             Button {
                 onMakeText()
             } label: {
-                Label("Só extrair o texto (.txt)…", systemImage: "text.alignleft")
+                Label(L("Só extrair o texto (.txt)…", "Just extract the text (.txt)…"), systemImage: "text.alignleft")
                     .frame(maxWidth: .infinity)
             }
             .disabled(pipeline.isRunning)
-            .help("Transcreve um vídeo ou áudio num .txt corrido, sem tempos nem "
-                  + "cortes de legenda. Traduz se houver tradutor escolhido.")
+            .help(L("Transcreve um vídeo ou áudio num .txt corrido, sem tempos nem "
+                    + "cortes de legenda. Traduz se houver tradutor escolhido.",
+                    "Transcribes a video or audio file into running .txt, with no "
+                    + "timecodes or subtitle breaks. Translates if a translator is chosen."))
 
             // Aparece quando o reconhecimento escolhido tem como marcar quem
             // fala. Vale só aqui: o ao vivo não tem o áudio inteiro.
             if pipeline.recognitionEngine.supportsDiarization {
-                Toggle("Identificar quem fala", isOn: $pipeline.diarizeSpeakers)
+                Toggle(L("Identificar quem fala", "Identify speakers"), isOn: $pipeline.diarizeSpeakers)
                     .font(.control)
-                    .help("Separa as legendas por locutor e marca a troca com travessão. "
-                          + "Acrescenta um passo à geração.")
+                    .help(L("Separa as legendas por locutor e marca a troca com travessão. "
+                            + "Acrescenta um passo à geração.",
+                            "Splits subtitles by speaker and marks each change with a dash. "
+                            + "Adds a step to generation."))
 
                 // Visíveis mesmo desligadas, e apagadas.
                 //
@@ -396,28 +430,32 @@ struct SettingsView: View {
                 // descobre que existe escolha de modelo nem de cor.
                 Group {
                     HStack(spacing: 6) {
-                        caption("Por")
-                        PillPicker(title: "Modelo de vozes", selection: $pipeline.speakerModel,
+                        caption(L("Por", "With"))
+                        PillPicker(title: L("Modelo de vozes", "Voice model"), selection: $pipeline.speakerModel,
                                    options: SpeakerDiarizer.Model.allCases, label: \.displayName,
                                    width: .infinity)
                         .controlSize(.small)
-                        .help("Sortformer é um modelo só, ponta a ponta: mais rápido, marca mais legendas e devolve sempre o mesmo resultado. Agrupamento de vozes segmenta, extrai a voz e agrupa — acha menos vozes em conversa de duas pessoas.")
+                        .help(L("Sortformer é um modelo só, ponta a ponta: mais rápido, marca mais legendas e devolve sempre o mesmo resultado. Agrupamento de vozes segmenta, extrai a voz e agrupa — acha menos vozes em conversa de duas pessoas.",
+                                "Sortformer is a single end-to-end model: faster, labels more subtitles and always returns the same result. Voice clustering segments, extracts voices and groups them — it finds fewer voices in two-person conversations."))
                     }
                     .padding(.leading, 18)
 
-                    Toggle("Uma cor por locutor", isOn: $pipeline.colorBySpeaker)
+                    Toggle(L("Uma cor por locutor", "One color per speaker"), isOn: $pipeline.colorBySpeaker)
                         .font(.control)
                         // O rótulo da caixa não apaga sozinho quando está
                         // desligada: sem isto ela parecia disponível.
                         .foregroundStyle(pipeline.diarizeSpeakers ? Color.ink : Color.inkSoft.opacity(0.6))
                         .padding(.leading, 18)
-                        .help("Na janela de legendas e no .srt exportado, cada voz ganha "
-                              + "uma cor (branco, amarelo, ciano, verde)")
+                        .help(L("Na janela de legendas e no .srt exportado, cada voz ganha "
+                                + "uma cor (branco, amarelo, ciano, verde)",
+                                "In the subtitle window and the exported .srt, each voice gets "
+                                + "a color (white, yellow, cyan, green)"))
                 }
                 .disabled(!pipeline.diarizeSpeakers)
             }
 
-            Text("Assista e revise na janela de legendas, ou gere apenas o .srt ou o texto.")
+            Text(L("Assista e revise na janela de legendas, ou gere apenas o .srt ou o texto.",
+                   "Watch and review in the subtitle window, or just make the .srt or the text."))
                 .font(.caption)
                 .foregroundStyle(Color.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)

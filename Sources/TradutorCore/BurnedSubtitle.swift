@@ -20,7 +20,7 @@ import Vision
 public enum BurnedSubtitle {
 
     /// O que o cabeçalho da janela diz que produziu a legenda.
-    public static let engineName = "Imagem"
+    public static var engineName: String { L("Imagem", "Image") }
 
     /// De quanto em quanto tempo a faixa é lida.
     ///
@@ -596,20 +596,29 @@ public enum BurnedSubtitle {
         public var errorDescription: String? {
             switch self {
             case let .unsupportedLanguage(language):
-                "O leitor de texto do macOS não lê \(language.displayName.lowercased())."
+                L("O leitor de texto do macOS não lê \(language.displayName.lowercased()).",
+                  "The macOS text reader cannot read \(language.displayName).")
             case let .cannotOpen(name):
-                "Não consegui ler os quadros de \(name)."
+                L("Não consegui ler os quadros de \(name).", "Could not read the frames of \(name).")
             case let .noVideo(name):
-                "\(name) não tem imagem — só áudio. A legenda desenhada precisa de vídeo."
+                L("\(name) não tem imagem — só áudio. A legenda desenhada precisa de vídeo.",
+                  "\(name) has no picture — audio only. Burned-in subtitles need video.")
             case let .rotated(name):
-                "\(name) foi gravado girado, e a leitura da legenda ainda não trata vídeo girado."
+                L("\(name) foi gravado girado, e a leitura da legenda ainda não trata vídeo girado.",
+                  "\(name) was recorded rotated, and subtitle reading does not handle rotated video yet.")
             case let .noText(language, true, drawn):
-                "Encontrei texto \(drawn ? "na área escolhida" : "na parte de baixo do vídeo"), mas não em "
-                    + "\(language.displayName.lowercased()). Confira o idioma do texto."
+                drawn
+                    ? L("Encontrei texto na área escolhida, mas não em \(language.displayName.lowercased()). Confira o idioma do texto.",
+                        "Found text in the chosen area, but not in \(language.displayName). Check the text language.")
+                    : L("Encontrei texto na parte de baixo do vídeo, mas não em \(language.displayName.lowercased()). Confira o idioma do texto.",
+                        "Found text at the bottom of the video, but not in \(language.displayName). Check the text language.")
             case let .noText(_, false, drawn):
-                "Não encontrei legenda \(drawn ? "na área escolhida" : "na parte de baixo do vídeo")."
+                drawn
+                    ? L("Não encontrei legenda na área escolhida.", "No subtitle found in the chosen area.")
+                    : L("Não encontrei legenda na parte de baixo do vídeo.", "No subtitle found at the bottom of the video.")
             case .areaTooSmall:
-                "A área escolhida é pequena demais para ler texto. Desenhe um retângulo maior."
+                L("A área escolhida é pequena demais para ler texto. Desenhe um retângulo maior.",
+                  "The chosen area is too small to read text. Draw a bigger rectangle.")
             }
         }
     }
@@ -794,7 +803,7 @@ public enum BurnedSubtitle {
             }
         }
 
-        progress(0, "carregando o leitor", true)
+        progress(0, L("carregando o leitor", "loading the reader"), true)
         try await withThrowingTaskGroup(of: (Int, [Line]).self) { group in
             var inFlight = 0
 
@@ -837,7 +846,7 @@ public enum BurnedSubtitle {
                 }
                 if !samples.isEmpty, time - reported >= 1 {
                     reported = time
-                    progress(min(1, time / total), String(format: "%.0f de %.0f s", time, total), false)
+                    progress(min(1, time / total), String(format: L("%.0f de %.0f s", "%.0f of %.0f s"), time, total), false)
                 }
             }
             // O que houver depois da última amostra é lido no último quadro:

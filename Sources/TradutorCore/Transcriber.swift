@@ -254,17 +254,18 @@ public final class ParakeetTranscriber: Transcriber, @unchecked Sendable {
         let directory = ModelStorage.parakeet
         // Só diz "baixando" quando vai baixar: o rótulo fixo fazia parecer
         // que o modelo era baixado de novo a cada uso.
-        let verb = AsrModels.modelsExist(at: directory, version: .v3) ? "carregando" : "baixando"
-        progress(0.1, "\(verb) \(name)")
+        let label = AsrModels.modelsExist(at: directory, version: .v3)
+            ? L("carregando \(name)", "loading \(name)") : L("baixando \(name)", "downloading \(name)")
+        progress(0.1, label)
         let models = try await AsrModels.downloadAndLoad(to: directory, version: .v3) { fraction in
-            progress(0.1 + fraction.fractionCompleted * 0.7, "\(verb) \(name)")
+            progress(0.1 + fraction.fractionCompleted * 0.7, label)
         }
-        progress(0.8, "carregando \(name) no Neural Engine")
+        progress(0.8, L("carregando \(name) no Neural Engine", "loading \(name) on the Neural Engine"))
         let manager = AsrManager(config: .default)
         try await manager.loadModels(models)
         self.manager = manager
         self.decoderState = try TdtDecoderState()
-        progress(1.0, "Parakeet pronto")
+        progress(1.0, L("Parakeet pronto", "Parakeet ready"))
         log.info("Parakeet v3 pronto para \(self.language.rawValue, privacy: .public)")
     }
 
@@ -414,13 +415,13 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
             // Download separado do `WhisperKitConfig(download: true)` só para
             // ter progresso: são 1,2 GB, e na primeira vez a barra ficava
             // parada minutos em "baixando".
-            progress(0.05, "baixando \(nome)")
+            progress(0.05, L("baixando \(nome)", "downloading \(nome)"))
             folder = try await WhisperKit.download(
                 variant: variant,
                 downloadBase: ModelStorage.whisper
             ) { baixado in
                 progress(0.05 + baixado.fractionCompleted * 0.45,
-                         String(format: "baixando %@: %.0f%%", nome, baixado.fractionCompleted * 100))
+                         String(format: L("baixando %@: %.0f%%", "downloading %@: %.0f%%"), nome, baixado.fractionCompleted * 100))
             }
         }
         // Com ASR_DEBUG o WhisperKit conta por que descartou cada janela
@@ -455,9 +456,9 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         )
         // Na primeira vez o sistema compila o modelo para o Neural Engine, e
         // isso não reporta progresso nenhum.
-        progress(0.5, "carregando \(nome)")
+        progress(0.5, L("carregando \(nome)", "loading \(nome)"))
         pipeline = try await WhisperKit(config)
-        progress(1.0, "Whisper pronto")
+        progress(1.0, L("Whisper pronto", "Whisper ready"))
         log.info("Whisper turbo pronto para \(self.language.rawValue, privacy: .public)")
     }
 
@@ -679,13 +680,16 @@ public enum TranscriberError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notPrepared:
-            "O reconhecedor ainda nao terminou de carregar os modelos."
+            L("O reconhecedor ainda não terminou de carregar os modelos.",
+              "The recognizer has not finished loading its models yet.")
         case let .qwenMissing(path):
-            "O Qwen3-ASR não está instalado. Rode Scripts/qwen-setup.sh, que cria o ambiente em \(path)."
+            L("O Qwen3-ASR não está instalado. Rode Scripts/qwen-setup.sh, que cria o ambiente em \(path).",
+              "Qwen3-ASR is not installed. Run Scripts/qwen-setup.sh, which sets it up in \(path).")
         case let .qwenFailed(detail):
-            "O Qwen3-ASR falhou: \(detail)"
+            L("O Qwen3-ASR falhou: \(detail)", "Qwen3-ASR failed: \(detail)")
         case let .unsupportedLanguage(engine, language):
-            "\(engine) não reconhece \(language.displayName). Escolha outro reconhecimento ou outro idioma."
+            L("\(engine) não reconhece \(language.displayName). Escolha outro reconhecimento ou outro idioma.",
+              "\(engine) does not recognize \(language.displayName). Pick another recognizer or language.")
         }
     }
 }

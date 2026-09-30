@@ -24,9 +24,10 @@ clean text of any recording. All on-device: no API key, no account, no cloud.
 </div>
 
 > [!NOTE]
-> The interface is currently in **Portuguese**. Translation works between any of
-> the supported languages (English, Japanese, Portuguese, Spanish, French,
-> German, Italian, Chinese, Korean and more).
+> The interface is in **English** by default, with **Português** one click away
+> in the menu footer. Translation works between any of the supported languages
+> (English, Japanese, Portuguese, Spanish, French, German, Italian, Chinese,
+> Korean and more).
 
 ---
 
@@ -104,7 +105,9 @@ Every engine states its cost **before** you pick it: the panel warns that DeepL
 takes 2–3 s per chunk live, that a resident Hunyuan uses 4.5 GB, and that Qwen
 only works on video files. Your choice is never silently swapped.
 
-When a new version is out, an **Update** button appears at the top. It
+The app speaks **English or Portuguese** — switch in the footer and every
+window follows at once, no restart. When a new version is out, an **Update**
+button appears at the top. It
 downloads the `.dmg` and opens it — the app never replaces itself, which would
 drop its screen-recording permission. The GitHub link lives in the footer.
 

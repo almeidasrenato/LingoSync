@@ -52,7 +52,7 @@ public enum TranslatorError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notPrepared:
-            "O tradutor ainda não terminou de carregar."
+            L("O tradutor ainda não terminou de carregar.", "The translator has not finished loading yet.")
         }
     }
 }
@@ -141,7 +141,7 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
         case .google: "Google (site)"
         case .gemini: "Gemini (site)"
         case .hunyuan: "Hunyuan-MT 7B"
-        case .transcriptionOnly: "Só transcrever"
+        case .transcriptionOnly: L("Só transcrever", "Transcribe only")
         }
     }
 
@@ -183,10 +183,14 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
     public var liveCostNote: String? {
         switch self {
         case .apple, .transcriptionOnly: nil
-        case .google: "cada bloco vai à rede · ~1 s de atraso"
-        case .deepl: "cada bloco carrega o site · 2 a 3 s de atraso"
-        case .gemini: "cada bloco manda uma mensagem ao chat · alguns segundos de atraso"
-        case .hunyuan: "modelo de 4,5 GB residente · disputa a GPU com o reconhecimento"
+        case .google: L("cada bloco vai à rede · ~1 s de atraso",
+                        "each chunk goes over the network · ~1 s delay")
+        case .deepl: L("cada bloco carrega o site · 2 a 3 s de atraso",
+                       "each chunk loads the site · 2–3 s delay")
+        case .gemini: L("cada bloco manda uma mensagem ao chat · alguns segundos de atraso",
+                        "each chunk sends a chat message · a few seconds of delay")
+        case .hunyuan: L("modelo de 4,5 GB residente · disputa a GPU com o reconhecimento",
+                         "4.5 GB model stays loaded · shares the GPU with recognition")
         }
     }
 
@@ -287,12 +291,12 @@ public enum TranslationEngine: String, CaseIterable, Identifiable, Sendable {
 /// geração da janela e a do menu divergiram uma vez.
 public final class IdentityTranslator: Translator, @unchecked Sendable {
 
-    public let engineName = "Sem tradução"
+    public var engineName: String { L("Sem tradução", "No translation") }
 
     public init() {}
 
     public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
-        progress(1.0, "sem tradução")
+        progress(1.0, L("sem tradução", "no translation"))
     }
 
     public func reset() {}

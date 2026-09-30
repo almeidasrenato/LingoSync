@@ -79,9 +79,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(
-            systemSymbolName: "captions.bubble", accessibilityDescription: "Tradutor"
+            systemSymbolName: "captions.bubble", accessibilityDescription: "LingoSync"
         )
-        statusItem.button?.toolTip = "Tradutor Instantâneo"
+        statusItem.button?.toolTip = "LingoSync"
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
 
@@ -264,7 +264,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             defer: false
         )
         studioCounter += 1
-        window.title = studioCounter == 1 ? "Legendas" : "Legendas \(studioCounter)"
+        window.title = studioCounter == 1 ? L("Legendas", "Subtitles") : L("Legendas \(studioCounter)", "Subtitles \(studioCounter)")
         window.center()
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(
@@ -301,10 +301,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // aplicativo diferente do que o usuario acreditava ter escolhido.
         guard let target = pipeline.selectedProcess else {
             notify(
-                "Escolha o que capturar",
-                """
-                Abra o menu do Tradutor e selecione o aplicativo, ou                 "Todo o áudio do sistema".
-                """
+                L("Escolha o que capturar", "Choose what to capture"),
+                L("Abra o menu do LingoSync e selecione o aplicativo, ou “Todo o áudio do sistema”.",
+                  "Open the LingoSync menu and pick the app, or “All system audio”.")
             )
             togglePopover()
             return
@@ -314,7 +313,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         showPanel()
         Task { await pipeline.start(on: target) }
         statusItem.button?.image = NSImage(
-            systemSymbolName: "captions.bubble.fill", accessibilityDescription: "Traduzindo"
+            systemSymbolName: "captions.bubble.fill", accessibilityDescription: L("Traduzindo", "Translating")
         )
     }
 
@@ -322,7 +321,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         pipeline.stop()
         hidePanel()
         statusItem.button?.image = NSImage(
-            systemSymbolName: "captions.bubble", accessibilityDescription: "Tradutor"
+            systemSymbolName: "captions.bubble", accessibilityDescription: "LingoSync"
         )
     }
 

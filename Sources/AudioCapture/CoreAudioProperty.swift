@@ -10,12 +10,23 @@ public enum CaptureError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .osStatus(op, status):
-            return "\(op) falhou (OSStatus \(status)\(Self.fourCC(status).map { " '\($0)'" } ?? ""))"
+            let code = "OSStatus \(status)\(Self.fourCC(status).map { " '\($0)'" } ?? "")"
+            return Self.interfaceIsPortuguese ? "\(op) falhou (\(code))" : "\(op) failed (\(code))"
         case let .processNotFound(pid):
-            return "Nenhum objeto de audio para o processo \(pid). Ele provavelmente nao esta tocando som."
+            return Self.interfaceIsPortuguese
+                ? "Nenhum objeto de áudio para o processo \(pid). Ele provavelmente não está tocando som."
+                : "No audio object for process \(pid). It is probably not playing sound."
         case let .unsupportedFormat(detail):
-            return "Formato de audio inesperado no tap: \(detail)"
+            return Self.interfaceIsPortuguese
+                ? "Formato de áudio inesperado no tap: \(detail)"
+                : "Unexpected audio format in the tap: \(detail)"
         }
+    }
+
+    /// O mesmo ajuste de `TradutorCore.Interface`, lido direto: esta camada
+    /// não depende de nada, de propósito.
+    static var interfaceIsPortuguese: Bool {
+        UserDefaults.standard.string(forKey: "idiomaDaInterface") == "pt"
     }
 
     /// OSStatus do Core Audio costuma ser um four-char code legivel.

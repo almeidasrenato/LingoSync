@@ -12,6 +12,11 @@ enum LayoutPreview {
         // O motor de tradução do Pipeline é preferência gravada: a do
         // usuário volta no fim, antes do `exit`.
         let motorDoUsuario = pipeline.translationEngine
+        // O idioma da interface também é preferência: renderiza em inglês,
+        // que é o padrão, e o menu de novo em português no fim.
+        let idiomaDoUsuario = Interface.shared.language
+        let idiomaGravado = UserDefaults.standard.object(forKey: Interface.preferenceKey) != nil
+        Interface.shared.language = .english
         pipeline.translationEngine = .apple
         pipeline.sourceLanguage = .japanese
         pipeline.targetLanguage = .english
@@ -113,6 +118,15 @@ enum LayoutPreview {
         await render(OverlayView(pipeline: pipeline, onClose: {}).defaultAppStorage(painel),
                      "live-texto-620", width: 620, height: 300, dark: true)
         painel.removePersistentDomain(forName: "tradutor-layout-preview")
+        Interface.shared.language = .portuguese
+        pipeline.translationEngine = .apple
+        pipeline.sourceLanguage = .japanese
+        await render(SettingsView(pipeline: pipeline, updates: updates, onRefresh: {}, onToggle: {},
+            onResetPanel: {}, onMakeSubtitles: {}, onMakeText: {}, onOpenStudio: {}, onNewStudio: {}),
+            "menu-light-pt", width: 372, height: nil, dark: false)
+        Interface.shared.language = idiomaDoUsuario
+        // Quem nunca escolheu continua sem escolha gravada.
+        if !idiomaGravado { UserDefaults.standard.removeObject(forKey: Interface.preferenceKey) }
         pipeline.translationEngine = motorDoUsuario
         model.stop()
         try? report.write(to: folder.appendingPathComponent("layout.txt"), atomically: true, encoding: .utf8)

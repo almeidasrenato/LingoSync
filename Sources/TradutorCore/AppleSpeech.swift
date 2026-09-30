@@ -70,7 +70,7 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
     }
 
     public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
-        progress(0.2, "verificando o reconhecimento da Apple")
+        progress(0.2, L("verificando o reconhecimento da Apple", "checking Apple recognition"))
         guard let locale = await AppleSpeechLocales.locale(for: language) else {
             throw AppleSpeechError.unsupported(language)
         }
@@ -78,7 +78,7 @@ public final class AppleSpeechTranscriber: Transcriber, @unchecked Sendable {
             throw AppleSpeechError.notInstalled(language)
         }
         self.locale = locale
-        progress(1, "reconhecimento da Apple pronto")
+        progress(1, L("reconhecimento da Apple pronto", "Apple recognition ready"))
     }
 
     public func transcribe(_ samples: [Float]) async throws -> String {
@@ -440,7 +440,8 @@ public final class AppleSpeechLanguages {
             await refresh()
             return installed.contains(language)
         } catch {
-            lastError = "Não foi possível instalar \(language.displayName): \(error.localizedDescription)"
+            lastError = L("Não foi possível instalar \(language.displayName): \(error.localizedDescription)",
+                          "Could not install \(language.displayName): \(error.localizedDescription)")
             return false
         }
     }
@@ -454,11 +455,14 @@ public enum AppleSpeechError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .unsupported(language):
-            "O reconhecimento da Apple não cobre \(language.displayName). Escolha Parakeet / Whisper no seletor de reconhecimento."
+            L("O reconhecimento da Apple não cobre \(language.displayName). Escolha Parakeet / Whisper no seletor de reconhecimento.",
+              "Apple recognition does not cover \(language.displayName). Pick Parakeet or Whisper in the recognition menu.")
         case let .notInstalled(language):
-            "\(language.displayName) ainda não está instalado no reconhecimento da Apple. Use o botão + ao lado do idioma."
+            L("\(language.displayName) ainda não está instalado no reconhecimento da Apple. Use o botão + ao lado do idioma.",
+              "\(language.displayName) is not installed for Apple recognition yet. Use the + button next to the language.")
         case .audioFormat:
-            "Não foi possível converter o áudio para o formato do reconhecimento da Apple."
+            L("Não foi possível converter o áudio para o formato do reconhecimento da Apple.",
+              "Could not convert the audio to Apple recognition's format.")
         }
     }
 }

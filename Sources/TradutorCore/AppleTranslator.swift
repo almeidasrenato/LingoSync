@@ -27,7 +27,7 @@ public final class AppleTranslator: Translator, @unchecked Sendable {
     public func prepare(progress: @escaping @Sendable (Double, String) -> Void) async throws {
         // A sessão depende do par de idiomas, que só é conhecido na primeira
         // tradução. Aqui só se confirma que o framework responde.
-        progress(1.0, "tradutor do sistema pronto")
+        progress(1.0, L("tradutor do sistema pronto", "system translator ready"))
     }
 
     public func reset() {
@@ -115,13 +115,18 @@ public enum AppleTranslatorError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .languageNotInstalled(source, target):
-            """
+            L("""
             O par \(source.displayName) → \(target.displayName) não está instalado.
             Abra Ajustes do Sistema > Idioma e Região > Idiomas Traduzidos e \
             baixe os dois, depois tente de novo.
-            """
+            """, """
+            The \(source.displayName) → \(target.displayName) pair is not installed.
+            Open System Settings > Language & Region > Translation Languages, \
+            download both, then try again.
+            """)
         case .needsNewerSystem:
-            "O modo rápido de tradução precisa do macOS 26 ou mais recente."
+            L("O modo rápido de tradução precisa do macOS 26 ou mais recente.",
+              "Fast translation needs macOS 26 or later.")
         }
     }
 }

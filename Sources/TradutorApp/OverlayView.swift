@@ -195,7 +195,7 @@ struct OverlayView: View {
                         Circle()
                             .fill(Color.redZone)
                             .frame(width: 5, height: 5)
-                        Text("captando")
+                        Text(L("captando", "hearing"))
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Color.redZone.opacity(0.75))
                     }
@@ -208,7 +208,7 @@ struct OverlayView: View {
             } else if subtitles.isTranslating, !proseMode {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(.white.opacity(0.5))
-                    Text("traduzindo")
+                    Text(L("traduzindo", "translating"))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.4))
                 }
@@ -233,13 +233,13 @@ struct OverlayView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "pause.fill")
                         .font(.system(size: 9))
-                    Text("pausado")
+                    Text(L("pausado", "paused"))
                         .font(.system(size: 11, weight: .medium))
                 }
                 .foregroundStyle(.white.opacity(0.45))
             } else if subtitles.history.isEmpty, subtitles.current == nil,
                       subtitles.partial.isEmpty {
-                Text("Aguardando fala em \(pipeline.sourceLanguage.displayName)…")
+                Text(L("Aguardando fala em \(pipeline.sourceLanguage.displayName)…", "Waiting for speech in \(pipeline.sourceLanguage.displayName)…"))
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.35))
             }
@@ -312,53 +312,65 @@ struct OverlayView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .shadow(color: readingShadow, radius: 2, y: 1)
-                    .help("Reconhecimento e tradução usados nesta captura")
+                    .help(L("Reconhecimento e tradução usados nesta captura", "Recognition and translation used in this capture"))
             }
-            HStack(spacing: 6) {
-                copyButton(pipeline.sourceLanguage, "Copiar o texto original") { $0.source }
-                if translating {
-                    copyButton(pipeline.targetLanguage, "Copiar a tradução") { $0.translated }
-                }
-                proseToggle
-                Spacer(minLength: 4)
-                HStack(spacing: 5) {
-                    Image(systemName: "circle.lefthalf.filled")
-                        .foregroundStyle(Color.panelIcon)
-                    Slider(value: $backgroundOpacity, in: 0.35...1.0)
-                        .controlSize(.mini)
-                        .frame(minWidth: 36, maxWidth: 64)
-                        .accessibilityLabel("Opacidade do fundo do painel")
-                }
-                .padding(.horizontal, seeThrough ? 7 : 0)
-                .frame(height: 26)
-                .background(seeThrough ? controlFill : .clear, in: Capsule())
-                .font(.system(size: 10))
-                .help("Transparência do fundo")
+            // Largo, com o rótulo "Texto"; sem espaço (380 px com tradução),
+            // a pílula vira só ícone e o controle encolhe — antes as pílulas
+            // de copiar truncavam em "…" e perdiam o idioma.
+            ViewThatFits(in: .horizontal) {
+                controls(compact: false)
+                controls(compact: true)
+            }
+        }
+    }
 
-                icon(pipeline.isPaused ? "play.fill" : "pause.fill",
-                     pipeline.isPaused ? "Retomar a transcrição" : "Pausar a transcrição") {
-                    pipeline.togglePause()
-                }
-                icon("square.and.arrow.down", "Exportar a captura com data e hora") { exportCapture() }
-                    .disabled(subtitles.transcript.isEmpty)
-                icon("trash", "Limpar o que foi captado") { pipeline.subtitles.clear() }
-                    .disabled(subtitles.transcript.isEmpty && subtitles.current == nil)
-                icon("xmark", "Parar a tradução", bold: true, action: onClose)
+    private func controls(compact: Bool) -> some View {
+        HStack(spacing: 6) {
+            copyButton(pipeline.sourceLanguage, L("Copiar o texto original", "Copy the original text")) { $0.source }
+            if translating {
+                copyButton(pipeline.targetLanguage, L("Copiar a tradução", "Copy the translation")) { $0.translated }
             }
+            proseToggle(showsLabel: !compact)
+            Spacer(minLength: 4)
+            HStack(spacing: 5) {
+                Image(systemName: "circle.lefthalf.filled")
+                    .foregroundStyle(Color.panelIcon)
+                Slider(value: $backgroundOpacity, in: 0.35...1.0)
+                    .controlSize(.mini)
+                    .frame(width: compact ? 40 : 64)
+                    .accessibilityLabel(L("Opacidade do fundo do painel", "Panel background opacity"))
+            }
+            .padding(.horizontal, seeThrough ? 7 : 0)
+            .frame(height: 26)
+            .background(seeThrough ? controlFill : .clear, in: Capsule())
+            .font(.system(size: 10))
+            .help(L("Transparência do fundo", "Background transparency"))
+
+            icon(pipeline.isPaused ? "play.fill" : "pause.fill",
+                 pipeline.isPaused ? L("Retomar a transcrição", "Resume transcription") : L("Pausar a transcrição", "Pause transcription")) {
+                pipeline.togglePause()
+            }
+            icon("square.and.arrow.down", L("Exportar a captura com data e hora", "Export the capture with date and time")) { exportCapture() }
+                .disabled(subtitles.transcript.isEmpty)
+            icon("trash", L("Limpar o que foi captado", "Clear what was captured")) { pipeline.subtitles.clear() }
+                .disabled(subtitles.transcript.isEmpty && subtitles.current == nil)
+            icon("xmark", L("Parar a tradução", "Stop translating"), bold: true, action: onClose)
         }
     }
 
     /// Legenda ou texto corrido. Pílula como a de copiar, cheia quando ligada:
     /// o estado tem de se ler sem passar o mouse.
-    private var proseToggle: some View {
+    private func proseToggle(showsLabel: Bool) -> some View {
         Button {
             proseMode.toggle()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "text.alignleft")
                     .font(.system(size: 10, weight: .medium))
-                Text("Texto")
-                    .font(.system(size: 10, weight: .semibold))
+                if showsLabel {
+                    Text(L("Texto", "Text"))
+                        .font(.system(size: 10, weight: .semibold))
+                }
             }
             .fixedSize()
             .foregroundStyle(proseMode ? Color.panelInk : Color.panelIcon)
@@ -368,8 +380,8 @@ struct OverlayView: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help(proseMode ? "Voltar às legendas" : "Mostrar como texto corrido, para copiar")
-        .accessibilityLabel("Texto corrido")
+        .help(proseMode ? L("Voltar às legendas", "Back to subtitles") : L("Mostrar como texto corrido, para copiar", "Show as running text, for copying"))
+        .accessibilityLabel(L("Texto corrido", "Running text"))
         .accessibilityAddTraits(proseMode ? .isSelected : [])
     }
 
@@ -397,6 +409,7 @@ struct OverlayView: View {
                 Text(language.rawValue.uppercased())
                     .font(.system(size: 10, weight: .semibold))
             }
+            .fixedSize()
             .foregroundStyle(Color.blueZone)
             .padding(.horizontal, 9)
             .frame(height: 22)
@@ -422,7 +435,7 @@ struct OverlayView: View {
         }
         .buttonStyle(.plain)
         .disabled(text.isEmpty)
-        .help("Copiar esta fala em \(language.displayName)")
+        .help(L("Copiar esta fala em \(language.displayName)", "Copy this line in \(language.displayName)"))
     }
 
     private func copyToPasteboard(_ text: String) {
@@ -433,7 +446,7 @@ struct OverlayView: View {
     /// O par de idiomas, ou só o falado quando não há tradução.
     private var pair: String {
         let source = pipeline.sourceLanguage.displayName
-        guard translating else { return source + " · só transcrição" }
+        guard translating else { return source + L(" · só transcrição", " · transcription only") }
         return "\(source) → \(pipeline.targetLanguage.displayName)"
     }
 
@@ -465,7 +478,7 @@ struct OverlayView: View {
             subtitles.transcript, from: pipeline.sourceLanguage, to: target
         )
         let panel = NSSavePanel()
-        panel.title = "Exportar a captura"
+        panel.title = L("Exportar a captura", "Export the capture")
         panel.nameFieldStringValue = CaptureExport.suggestedName()
         panel.allowedContentTypes = [.plainText]
         NSApp.activate(ignoringOtherApps: true)
@@ -483,7 +496,7 @@ struct OverlayView: View {
             ProgressView(value: fraction)
                 .tint(Color.blueZone)
                 .frame(maxWidth: 320)
-            Text("Os modelos são baixados uma vez e ficam no disco.")
+            Text(L("Os modelos são baixados uma vez e ficam no disco.", "Models download once and stay on disk."))
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.35))
         }
@@ -491,7 +504,7 @@ struct OverlayView: View {
 
     private func failure(_ message: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Não foi possível iniciar")
+            Text(L("Não foi possível iniciar", "Could not start"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.redZone)
             Text(message)
