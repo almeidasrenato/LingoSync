@@ -213,6 +213,17 @@ struct Verify {
         case "sobreposicao": await overlapGate()
         case "motores": await engineGate()
         case "captura": await captureGate()
+        case "atualizacao": updateGate()
+        case "texto":
+            guard arguments.count >= 3 else {
+                print("uso: texto <audio-ou-video> [idioma] [motor] [--saida <arquivo.txt>]"); exit(1)
+            }
+            await transcribeToText(
+                path: arguments[2],
+                language: arguments.count >= 4 ? (Language(rawValue: arguments[3]) ?? .portuguese) : .portuguese,
+                engine: arguments.count >= 5
+                    ? (RecognitionEngine(rawValue: arguments[4]) ?? .apple) : .apple,
+                output: option("--saida"))
         case "locutores": speakerGate()
         case "deepl": deepLGate()
         case "webapi": await webAPIGate()
@@ -3127,6 +3138,63 @@ struct Verify {
         exit(failures == 0 ? 0 : 1)
     }
 
+    /// A versão do GitHub contra a do app, sem rede: o formato da resposta
+    /// é o que o endereço devolveu para a v1.0.0 em 30/09/2026.
+    static func updateGate() {
+        failures = 0
+        print("Aviso de versao nova\n")
+        expect(!AppUpdate.isNewer("1.0.0", than: "1.0"), "1.0.0 e 1.0 sao a mesma versao")
+        expect(!AppUpdate.isNewer("v1.0.0", than: "1.0.0"), "o v da tag nao conta")
+        expect(AppUpdate.isNewer("1.0.1", than: "1.0"), "1.0.1 e mais nova que 1.0")
+        expect(AppUpdate.isNewer("1.10.0", than: "1.9.3"), "compara por numero, nao por texto")
+        expect(!AppUpdate.isNewer("1.0.0", than: "1.2"), "versao mais velha nao oferece atualizacao")
+        let json = """
+        {"tag_name":"v1.2.0","html_url":"https://github.com/almeidasrenato/LingoSync/releases/tag/v1.2.0",
+         "assets":[{"name":"LingoSync.zip","browser_download_url":"https://example.com/LingoSync.zip"},
+                   {"name":"LingoSync.dmg","browser_download_url":"https://example.com/LingoSync.dmg"}]}
+        """
+        let release = try? AppUpdate.parse(Data(json.utf8))
+        expect(release?.version == "1.2.0", "a versao sai da tag, sem o v")
+        expect(release?.diskImage?.lastPathComponent == "LingoSync.dmg", "o botao baixa o .dmg, nao o .zip")
+        print(failures == 0 ? "\ntudo certo" : "\n\(failures) falha(s)")
+        if failures > 0 { exit(1) }
+    }
+
+    /// A fala de um arquivo em texto corrido, no stdout: o mesmo `.txt` do
+    /// item de menu "Só extrair o texto", sem abrir o app. É o que a skill de
+    /// transcrição do Claude Code chama. Progresso vai para o stderr, para o
+    /// stdout ser só o texto.
+    static func transcribeToText(
+        path: String, language: Language, engine: RecognitionEngine, output: String?
+    ) async {
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            FileHandle.standardError.write(Data("arquivo nao encontrado: \(path)\n".utf8)); exit(1)
+        }
+        let builder = SubtitleFileBuilder()
+        defer { builder.finish() }
+        let comecou = Date()
+        do {
+            let cues = try await builder.generate(
+                from: url, source: language, target: language, engine: engine,
+                translation: .transcriptionOnly, diarize: false
+            ) { step, _, _, _ in
+                FileHandle.standardError.write(Data("\(step.rawValue)...\n".utf8))
+            }
+            let texto = CaptureExport.prose(cues: cues)
+            if let output {
+                try texto.write(toFile: output, atomically: true, encoding: .utf8)
+            }
+            print(texto)
+            FileHandle.standardError.write(Data(String(
+                format: "%d trechos, %d caracteres, %.1fs\n",
+                cues.count, texto.count, Date().timeIntervalSince(comecou)).utf8))
+        } catch {
+            FileHandle.standardError.write(Data("FALHA: \(error.localizedDescription)\n".utf8))
+            exit(1)
+        }
+    }
+
     /// So transcrever (sem traduzir) e a exportacao do painel ao vivo.
     @MainActor
     static func captureGate() async {
@@ -3190,6 +3258,22 @@ struct Verify {
                "sem traducao a fala nao aparece duas vezes")
         expect(CaptureExport.suggestedName(at: instante).hasSuffix(".txt"),
                "o nome sugerido e um .txt")
+        // Texto corrido: o modo texto do painel e o `.txt` de arquivo.
+        let corrido = CaptureExport.prose([
+            ("Bom dia.", 0, 2), ("Tudo bem?", 2.5, 4), ("", 5, 6),
+            ("Outro assunto.", 20, 22),
+        ])
+        expect(corrido == "Bom dia. Tudo bem?\n\nOutro assunto.",
+               "texto corrido junta as falas e abre paragrafo na pausa longa (\(corrido))")
+        expect(CaptureExport.prose([("こんにちは。", 0, 1), ("元気です。", 1, 2)])
+               == "こんにちは。元気です。", "texto corrido em japones nao ganha espaco")
+        expect(CaptureExport.prose([]).isEmpty, "sem fala o texto corrido e vazio")
+        let blocosCorridos = [
+            SubtitleBlock(source: "um", translated: "one", at: instante),
+            SubtitleBlock(source: "dois", translated: "two", at: instante.addingTimeInterval(3)),
+        ]
+        expect(CaptureExport.prose(blocosCorridos, field: \.source) == "um dois",
+               "o painel em modo texto mostra a fala original, corrida")
         store.beginTranslating()
         store.endTranslating()
         expect(!store.isTranslating, "traducao que falha tira o \"traduzindo\" da tela")

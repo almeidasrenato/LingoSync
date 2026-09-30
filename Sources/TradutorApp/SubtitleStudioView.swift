@@ -978,7 +978,10 @@ struct SubtitleStudioView: View {
         let panel = NSSavePanel()
         panel.title = "Exportar legenda"
         panel.prompt = "Exportar"
-        panel.allowedContentTypes = [UTType(filenameExtension: "srt") ?? .plainText]
+        // Legenda ou texto corrido; o menu de formato do painel troca a
+        // extensão, e é por ela que `export` decide.
+        panel.allowedContentTypes = [UTType(filenameExtension: "srt") ?? .plainText, .plainText]
+        panel.showsContentTypes = true
         panel.nameFieldStringValue = model.suggestedSRTName(for: track)
         panel.canCreateDirectories = true
 

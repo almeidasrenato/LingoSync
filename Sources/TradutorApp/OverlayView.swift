@@ -17,9 +17,16 @@ struct OverlayView: View {
 
     @Bindable var pipeline: Pipeline
     var onClose: () -> Void
-    var onOpacityChange: (Double) -> Void
 
-    @State private var windowOpacity = OverlayPanel.minimumOpacity
+    /// Opacidade do fundo, não da janela. Era `alphaValue` entre 0,82 e 1,
+    /// começando no mínimo: o controle só deixava o painel mais opaco, e o
+    /// texto apagava junto com o fundo. Agora o texto fica inteiro e o fundo
+    /// vai até 0,35, com sombra na letra quando o vídeo começa a aparecer.
+    @AppStorage("opacidadeDoFundoDoPainel") private var backgroundOpacity = 0.9
+
+    /// Texto corrido em vez de legenda: para ditar, ou tirar o texto de um
+    /// áudio, e colar em outro lugar.
+    @AppStorage("painelEmTextoCorrido") private var proseMode = false
 
     private var subtitles: SubtitleStore { pipeline.subtitles }
     private let bottomAnchor = "fim-do-historico"
@@ -30,6 +37,8 @@ struct OverlayView: View {
                 .padding(.horizontal, 22)
                 .padding(.top, 16)
                 .padding(.bottom, 10)
+                .contentShape(Rectangle())
+                .gesture(WindowDragGesture())
 
             switch pipeline.state {
             case let .loading(label, fraction):
@@ -41,16 +50,22 @@ struct OverlayView: View {
                     .padding(.horizontal, 22)
                 Spacer(minLength: 0)
             default:
-                history
-                    .frame(minHeight: 0)
-                    .layoutPriority(-1)
+                Group {
+                    if proseMode { prose } else { history }
+                }
+                .shadow(color: readingShadow, radius: 2, y: 1)
+                .frame(minHeight: 0)
+                .layoutPriority(-1)
                 pinned
+                    .shadow(color: readingShadow, radius: 2, y: 1)
                     .fixedSize(horizontal: false, vertical: true)
                     .layoutPriority(1)
+                    .contentShape(Rectangle())
+                    .gesture(WindowDragGesture())
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.panelInk)
+        .background(Color.panelInk.opacity(backgroundOpacity))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -58,6 +73,20 @@ struct OverlayView: View {
         )
         .tint(Color.blueZone)
     }
+
+    /// Com o fundo transparente, legenda clara sobre cena clara some. Só no
+    /// texto de leitura: nos controles a sombra borrava o rótulo da pílula.
+    private var readingShadow: Color {
+        .black.opacity(seeThrough ? 0.8 : 0)
+    }
+
+    /// Fundo quase transparente: os controles ganham chão próprio, senão o
+    /// véu branco de 7% some sobre cena clara e o botão vira ícone solto.
+    private var seeThrough: Bool { backgroundOpacity < 0.75 }
+    /// O cinza de apoio some sobre cena clara; com o fundo transparente o
+    /// apoio sobe para o tom do texto e a hierarquia fica no tamanho.
+    private var muted: Color { seeThrough ? .panelText : .panelMuted }
+    private var controlFill: Color { seeThrough ? Color.panelInk.opacity(0.75) : .white.opacity(0.07) }
 
     // MARK: Zona amarela — a unica que rola
 
@@ -99,12 +128,56 @@ struct OverlayView: View {
         }
     }
 
+    // MARK: Texto corrido — a sessão inteira, selecionável
+
+    /// A fala original inteira, sem hora nem corte de legenda, e o que ainda
+    /// está sendo captado emendado no fim, em coral. É a fala e não a
+    /// tradução porque o modo existe para tirar o texto do que foi dito; a
+    /// tradução continua no botão de copiar do cabeçalho.
+    private var prose: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 0) {
+                    let text = CaptureExport.prose(subtitles.transcript) { $0.source }
+                    let partial = subtitles.partial.isEmpty
+                        ? "" : (text.isEmpty ? "" : " ") + subtitles.partial
+                    Text("\(text)\(Text(partial).foregroundStyle(Color.redZone))")
+                        .font(.system(size: 15))
+                        .lineSpacing(4)
+                        .foregroundStyle(Color.panelText)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Color.clear
+                        .frame(height: 1)
+                        .id(bottomAnchor)
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 6)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: .infinity)
+            .onChange(of: subtitles.transcript.count) { scrollToEnd(proxy) }
+            .onChange(of: subtitles.partial) { scrollToEnd(proxy) }
+            .onAppear { proxy.scrollTo(bottomAnchor, anchor: .bottom) }
+        }
+    }
+
+    private func scrollToEnd(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.18)) {
+            proxy.scrollTo(bottomAnchor, anchor: .bottom)
+        }
+    }
+
     // MARK: Zonas azul e vermelha — ancoradas, nunca rolam
 
     private var pinned: some View {
         VStack(alignment: .leading, spacing: 9) {
-            if subtitles.current != nil || !subtitles.partial.isEmpty
-                || subtitles.isTranslating || pipeline.translationError != nil
+            // No texto corrido a fala atual e a captada já estão no texto.
+            let current = proseMode ? nil : subtitles.current
+            let partial = proseMode ? "" : subtitles.partial
+            if current != nil || !partial.isEmpty
+                || (subtitles.isTranslating && !proseMode) || pipeline.translationError != nil
                 || pipeline.isPaused {
                 Rectangle()
                     .fill(.white.opacity(0.07))
@@ -112,11 +185,11 @@ struct OverlayView: View {
                     .padding(.bottom, 3)
             }
 
-            if let current = subtitles.current {
+            if let current {
                 block_(current, size: 21, color: .blueZone, opacity: 1, weight: .semibold)
             }
 
-            if !subtitles.partial.isEmpty {
+            if !partial.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Circle()
@@ -126,13 +199,13 @@ struct OverlayView: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Color.redZone.opacity(0.75))
                     }
-                    ForEach(LineBreaker.wrap(subtitles.partial), id: \.self) { line in
+                    ForEach(LineBreaker.wrap(partial), id: \.self) { line in
                         Text(line)
                             .font(.system(size: 14))
                             .foregroundStyle(Color.redZone)
                     }
                 }
-            } else if subtitles.isTranslating {
+            } else if subtitles.isTranslating, !proseMode {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(.white.opacity(0.5))
                     Text("traduzindo")
@@ -195,7 +268,7 @@ struct OverlayView: View {
                 if block.source != block.translated {
                     Text(block.source)
                         .font(.system(size: sourceSize))
-                        .foregroundStyle(Color.panelMuted)
+                        .foregroundStyle(muted)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -228,15 +301,17 @@ struct OverlayView: View {
                     .font(.system(size: 13, weight: .semibold, design: .serif))
                     .foregroundStyle(Color.panelText)
                     .lineLimit(1)
+                    .shadow(color: readingShadow, radius: 2, y: 1)
                     .layoutPriority(1)
                 Spacer(minLength: 4)
                 Text(pipeline.engineNames + (pipeline.lastTranslateMs > 0
                     ? " · \(pipeline.lastTranscribeMs + pipeline.lastTranslateMs) ms" : ""))
                     .font(.system(size: 11))
                     .monospacedDigit()
-                    .foregroundStyle(Color.panelMuted)
+                    .foregroundStyle(muted)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .shadow(color: readingShadow, radius: 2, y: 1)
                     .help("Reconhecimento e tradução usados nesta captura")
             }
             HStack(spacing: 6) {
@@ -244,18 +319,21 @@ struct OverlayView: View {
                 if translating {
                     copyButton(pipeline.targetLanguage, "Copiar a tradução") { $0.translated }
                 }
+                proseToggle
                 Spacer(minLength: 4)
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Image(systemName: "circle.lefthalf.filled")
                         .foregroundStyle(Color.panelIcon)
-                    Slider(value: $windowOpacity, in: OverlayPanel.minimumOpacity...1.0)
+                    Slider(value: $backgroundOpacity, in: 0.35...1.0)
                         .controlSize(.mini)
-                        .frame(width: 54)
-                        .accessibilityLabel("Opacidade do painel")
+                        .frame(minWidth: 36, maxWidth: 64)
+                        .accessibilityLabel("Opacidade do fundo do painel")
                 }
+                .padding(.horizontal, seeThrough ? 7 : 0)
+                .frame(height: 26)
+                .background(seeThrough ? controlFill : .clear, in: Capsule())
                 .font(.system(size: 10))
-                .help("Transparência da janela")
-                .onChange(of: windowOpacity) { _, value in onOpacityChange(value) }
+                .help("Transparência do fundo")
 
                 icon(pipeline.isPaused ? "play.fill" : "pause.fill",
                      pipeline.isPaused ? "Retomar a transcrição" : "Pausar a transcrição") {
@@ -270,6 +348,31 @@ struct OverlayView: View {
         }
     }
 
+    /// Legenda ou texto corrido. Pílula como a de copiar, cheia quando ligada:
+    /// o estado tem de se ler sem passar o mouse.
+    private var proseToggle: some View {
+        Button {
+            proseMode.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "text.alignleft")
+                    .font(.system(size: 10, weight: .medium))
+                Text("Texto")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .fixedSize()
+            .foregroundStyle(proseMode ? Color.panelInk : Color.panelIcon)
+            .padding(.horizontal, 9)
+            .frame(height: 22)
+            .background(proseMode ? Color.blueZone : controlFill, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help(proseMode ? "Voltar às legendas" : "Mostrar como texto corrido, para copiar")
+        .accessibilityLabel("Texto corrido")
+        .accessibilityAddTraits(proseMode ? .isSelected : [])
+    }
+
     /// Há tradução nesta sessão, ou só transcrição?
     private var translating: Bool { pipeline.translationEngine != .transcriptionOnly }
 
@@ -282,10 +385,10 @@ struct OverlayView: View {
         _ language: Language, _ help: String, _ field: @escaping (SubtitleBlock) -> String
     ) -> some View {
         Button {
-            let texto = subtitles.transcript
-                .map(field)
-                .filter { !$0.isEmpty }
-                .joined(separator: "\n")
+            // O que se copia é o que está na tela: no texto corrido, corrido.
+            let texto = proseMode
+                ? CaptureExport.prose(subtitles.transcript, field: field)
+                : subtitles.transcript.map(field).filter { !$0.isEmpty }.joined(separator: "\n")
             copyToPasteboard(texto)
         } label: {
             HStack(spacing: 4) {
@@ -297,7 +400,7 @@ struct OverlayView: View {
             .foregroundStyle(Color.blueZone)
             .padding(.horizontal, 9)
             .frame(height: 22)
-            .background(Color.blueZone.opacity(0.14), in: Capsule())
+            .background(seeThrough ? controlFill : Color.blueZone.opacity(0.14), in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -315,7 +418,7 @@ struct OverlayView: View {
                 Text(language.rawValue.uppercased())
                     .font(.system(size: 9, weight: .semibold))
             }
-            .foregroundStyle(Color.panelMuted)
+            .foregroundStyle(muted)
         }
         .buttonStyle(.plain)
         .disabled(text.isEmpty)
@@ -342,7 +445,7 @@ struct OverlayView: View {
                 .font(.system(size: 11, weight: bold ? .bold : .semibold))
                 .foregroundStyle(Color.panelIcon)
                 .frame(width: 26, height: 26)
-                .background(.white.opacity(0.07), in: Circle())
+                .background(controlFill, in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

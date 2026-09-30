@@ -37,10 +37,14 @@ enum LayoutPreview {
             }
             window.close()
         }
+        // Com uma versão nova à vista, para o botão de atualizar sair no quadro.
+        let updates = UpdateChecker()
+        updates.available = AppUpdate.Release(
+            version: "9.9.9", page: AppUpdate.repository, diskImage: nil)
         for dark in [false, true] {
             let mode = dark ? "dark" : "light"
-            await render(SettingsView(pipeline: pipeline, onRefresh: {}, onToggle: {},
-                onResetPanel: {}, onMakeSubtitles: {}, onOpenStudio: {}, onNewStudio: {}),
+            await render(SettingsView(pipeline: pipeline, updates: updates, onRefresh: {}, onToggle: {},
+                onResetPanel: {}, onMakeSubtitles: {}, onMakeText: {}, onOpenStudio: {}, onNewStudio: {}),
                 "menu-\(mode)", width: 372, height: nil, dark: dark)
             await render(SubtitleStudioView(model: model), "studio-empty-\(mode)",
                          width: 1080, height: 700, dark: dark)
@@ -69,10 +73,20 @@ enum LayoutPreview {
         for text in ["A conversa fica guardada no histórico.", "Agora os controles estão mais fáceis de encontrar."] {
             pipeline.subtitles.commit(SubtitleBlock(source: "Sample source text.", translated: text))
         }
+        // Preferências do painel num domínio à parte: teste não escreve no
+        // do usuário.
+        let painel = UserDefaults(suiteName: "tradutor-layout-preview")!
+        painel.removePersistentDomain(forName: "tradutor-layout-preview")
         for width: CGFloat in [380, 620] {
-            await render(OverlayView(pipeline: pipeline, onClose: {}, onOpacityChange: { _ in }),
+            await render(OverlayView(pipeline: pipeline, onClose: {}).defaultAppStorage(painel),
                          "live-\(Int(width))", width: width, height: 300, dark: true)
         }
+        pipeline.subtitles.setPartial("e isto ainda está sendo captado")
+        painel.set(true, forKey: "painelEmTextoCorrido")
+        painel.set(0.5, forKey: "opacidadeDoFundoDoPainel")
+        await render(OverlayView(pipeline: pipeline, onClose: {}).defaultAppStorage(painel),
+                     "live-texto-620", width: 620, height: 300, dark: true)
+        painel.removePersistentDomain(forName: "tradutor-layout-preview")
         model.stop()
         try? report.write(to: folder.appendingPathComponent("layout.txt"), atomically: true, encoding: .utf8)
         print(report)

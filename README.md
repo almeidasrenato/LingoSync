@@ -44,7 +44,11 @@ Cutting split words, and neither half was recognizable ("reported" became
 "Reaper's" at the end of one chunk and "ported" at the start of the next).
 
 Pausing keeps the capture alive, the copy buttons take the whole session, and
-the export includes timestamps and the language pair.
+the export includes timestamps and the language pair. **Text** switches the
+panel from subtitles to one running, selectable transcript — for dictating or
+grabbing what someone said and pasting it elsewhere. The panel is draggable by
+its header, and the transparency control fades only the background, never the
+text.
 
 <br clear="right">
 
@@ -59,6 +63,9 @@ track, and re-translation without recognizing the audio again — seconds instea
 of minutes. It can also **read subtitles already burned into the video** (OCR)
 and translate them.
 
+Only need the words? **Extract text (.txt)** turns any video or audio file into
+plain running text, no timecodes — and the subtitle window exports `.txt` too.
+
 <img src="docs/legendas.png" width="820" alt="The real subtitle window">
 
 ### Everything from the menu bar
@@ -67,7 +74,9 @@ and translate them.
 
 The app lives in the menu bar, with no Dock icon. From there you choose the
 language pair, the recognition engine, the translator, the audio source, and
-open subtitle windows.
+open subtitle windows. When a newer release is out, an **Update** button
+appears there; it downloads the `.dmg` for you (the app never replaces itself,
+which would drop its screen-recording permission).
 
 Every engine states its cost **before** you pick it: the panel warns that DeepL
 takes 2–3 s per chunk live, that a resident Hunyuan uses 4.5 GB, and that Qwen

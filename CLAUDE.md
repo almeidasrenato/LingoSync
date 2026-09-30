@@ -47,11 +47,14 @@ Sem áudio no argumento, não carregam modelo e rodam em milissegundos.
 | `imagem` | legenda desenhada no vídeo: filtros de linha, montagem, instante exato |
 | `japones` | palavra partida, hesitação, pontuação do Qwen, repartição na vírgula |
 | `frase` | tradução por frase: o que junta, o que não junta, como reparte |
+| `atualizacao` | versão do GitHub contra a do app, formato da resposta, `.dmg` |
 
 Com áudio ou vídeo:
 
 ```bash
 tradutor-verify fonte <video> [idioma] [motor]        # as falas reconhecidas
+tradutor-verify texto <audio|video> [idioma] [motor] [--saida <txt>]
+                                                      # texto corrido no stdout (skill)
 tradutor-verify traduzir <linhas.txt> [orig] [dest] [motor]
                                                       # apple|deepl|google|hunyuan
 tradutor-verify srt <video> <orig> <dest> <motor> [--locutores]
@@ -117,7 +120,14 @@ open -n build/Tradutor.app --args --selftest-janelas              # → /tmp/tra
 open -n build/Tradutor.app --args --selftest-microfone 4          # → /tmp/tradutor-microfone.txt
 open -n build/Tradutor.app --args --selftest-imagem video.mp4 en  # → /tmp/tradutor-imagem.txt, .png
 open -n build/Tradutor.app --args --selftest-traduzir-srt legenda.srt gemini  # → /tmp/tradutor-traduzir-srt.txt
+open -n build/Tradutor.app --args --selftest-painel                # → /tmp/tradutor-painel.txt, fica 60 s aberto
 ```
+
+`--selftest-job ... --texto` exercita "Só extrair o texto" (grava `.txt`).
+`--selftest-painel` abre o painel ao vivo sem captura e anota posição,
+transparência e modo texto a cada 0,5 s; quem arrasta é um script de fora com
+`CGEvent` (arrasto e controle de mouse só se provam com evento de verdade).
+Preferências num domínio à parte, posição não guardada.
 
 Bandeiras: `--motor <parakeet|whisper|qwen|qwenLarge>`, `--tradutor
 <apple|deepl|google|hunyuan>`, `--locutores`, `--cores`, `--modelo
@@ -265,9 +275,29 @@ device.
 ### Os controles do painel ao vivo
 
 No cabeçalho, da esquerda para a direita: o par de idiomas, os dois botões de
-copiar, e à direita pausar, exportar, limpar e ✕. Exportar antes de limpar, na
+copiar, "Texto", e à direita transparência, pausar, exportar, limpar e ✕. Exportar antes de limpar, na
 ordem em que se usam — quem vai apagar a tela costuma querer guardar antes.
 
+- **O painel se move pelo `WindowDragGesture`, não por
+  `isMovableByWindowBackground`.** O conteúdo inteiro é um `NSHostingView`, que
+  fica com o clique: a janela nunca via o arrasto, e o painel não se movia
+  (relatado em 30/09/2026). O gesto fica no cabeçalho e na área ancorada, não
+  no histórico — lá o arrasto é seleção de texto. Medido com `CGEvent` pelo
+  `--selftest-painel`: pelo título e pelo vazio entre os botões, a janela anda.
+- **A transparência é do fundo, não da janela.** Era `alphaValue` de 0,82 a 1,
+  começando em 0,82: o controle só deixava o painel **mais opaco**, e o texto
+  apagava junto. Agora é `panelInk` de 0,35 a 1 (`opacidadeDoFundoDoPainel`),
+  com o texto inteiro. Abaixo de 0,75 a letra ganha sombra, os controles
+  ganham chão escuro e o cinza de apoio sobe para `panelText` — sem isso, sobre
+  cena clara, botão e origem sumiam. E o painel declara `.darkAqua`: com a
+  aparência clara o trilho do `Slider` do sistema sumia no fundo escuro.
+- **"Texto" troca a legenda por texto corrido** (`painelEmTextoCorrido`): a
+  fala original da sessão inteira (`transcript`, não o histórico de 60),
+  selecionável, com o que está sendo captado emendado em coral. É para ditar
+  ou tirar o texto de um áudio e colar. Os botões de copiar passam a copiar
+  corrido também — o que se copia é o que está na tela.
+  `CaptureExport.prose` junta por `Tokens.join` (japonês sem espaço) e abre
+  parágrafo em pausa de 10 s, não medida; o `.txt` de arquivo usa a mesma.
 - **Pausar não solta a captura.** O tap, o aggregate device e os modelos ficam
   de pé; o áudio é lido do anel e jogado fora. Parar e religar custaria uma
   volta inteira pelo Core Audio, e o que se quer ao pausar é voltar no instante
@@ -2389,6 +2419,33 @@ Não reintroduzir especulativa, sincronização rápida ou laço async: não tro
 ganho consistente suficiente nesta máquina.
 
 ---
+
+## Só o texto de um arquivo (30/09/2026)
+
+"Só extrair o texto (.txt)…" no menu e o formato `.txt` na exportação da
+janela de legendas (`showsContentTypes`, decidido pela extensão). É a mesma
+geração da legenda — hesitação removida, pontuação, frase inteira —, gravada
+por `CaptureExport.prose(cues:)` em vez do `SRTWriter`. Segue o tradutor
+escolhido: com "Só transcrever" sai a fala; com tradutor, a tradução corrida.
+O item de menu não identifica locutor para `.txt` — seria um passo a mais
+para nada sair no arquivo.
+
+`tradutor-verify texto` é o mesmo caminho sem app, com o texto no stdout. A
+skill `~/.claude/skills/lingosync-transcrever-audio` do Claude Code chama esse comando (pelo `scripts/lingosync-transcrever`, que só repassa)
+quando alguém manda áudio ou vídeo para ler. 161 s de inglês: 1,2 s na Apple.
+
+## Atualização pelo GitHub (30/09/2026)
+
+O menu consulta `api.github.com/.../releases/latest` ao abrir, no máximo a
+cada 6 h, e mostra **Atualizar** só quando a release é mais nova
+(`AppUpdate.isNewer`: `1.0` e `1.0.0` são iguais, o `v` da tag não conta). É
+o único contato com a rede que o app faz sozinho: GET público, sem conta nem
+dado da máquina. Sem rede, calado.
+
+**O botão não troca o app sozinho**: assinatura ad-hoc, e um `.app` trocado
+perde a permissão de Gravação de Tela e Áudio — a mesma que cai ao recompilar.
+Ele baixa o `.dmg` da release para Downloads e o abre; sem `.dmg`, ou se o
+download falhar, abre a página da release. O rodapé tem o link do repositório.
 
 ## Legenda desenhada no vídeo (22/09/2026)
 

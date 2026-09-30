@@ -13,11 +13,13 @@ final class OverlayPanel: NSPanel {
     /// Nome sob o qual o AppKit guarda posicao e tamanho entre execucoes.
     private static let frameAutosaveName = "TradutorOverlayFrame"
 
-    static let minimumOpacity = 0.82
     static let defaultSize = NSSize(width: 620, height: 300)
     static let minimumSize = NSSize(width: 380, height: 160)
 
-    init(pipeline: Pipeline, onClose: @escaping () -> Void) {
+    /// - Parameter defaults: onde ficam transparência e modo texto. O
+    ///   autoteste passa um domínio à parte e não guarda posição nenhuma:
+    ///   teste não escreve no que o usuário deixou.
+    init(pipeline: Pipeline, defaults: UserDefaults? = .standard, onClose: @escaping () -> Void) {
         super.init(
             contentRect: NSRect(origin: .zero, size: Self.defaultSize),
             // .nonactivatingPanel: clicar no painel nao tira o foco do video.
@@ -27,13 +29,21 @@ final class OverlayPanel: NSPanel {
         )
 
         level = .floating
-        alphaValue = Self.minimumOpacity
+        // A transparência é do fundo, não da janela (ver `OverlayView`): o
+        // texto fica inteiro enquanto o vídeo aparece atrás. E o painel é
+        // sempre escuro, então os controles do sistema precisam desenhar
+        // para escuro — com a aparência clara o trilho do controle de
+        // transparência sumia no fundo.
+        appearance = NSAppearance(named: .darkAqua)
         collectionBehavior = [
             .canJoinAllSpaces,      // segue o usuario entre desktops
             .stationary,            // nao desliza no Mission Control
             .fullScreenAuxiliary,   // aparece por cima de video em tela cheia
         ]
-        isMovableByWindowBackground = true
+        // Não serve para mover: o conteúdo inteiro é um `NSHostingView`, que
+        // fica com o clique, e a janela nunca via o arrasto. Quem move é o
+        // `WindowDragGesture` do `OverlayView`.
+        isMovableByWindowBackground = false
         backgroundColor = .clear
         isOpaque = false
         hasShadow = true
@@ -48,11 +58,8 @@ final class OverlayPanel: NSPanel {
         contentMaxSize = NSSize(width: 1400, height: 900)
 
         let hosting = NSHostingView(
-            rootView: OverlayView(
-                pipeline: pipeline,
-                onClose: onClose,
-                onOpacityChange: { [weak self] value in self?.alphaValue = value }
-            )
+            rootView: OverlayView(pipeline: pipeline, onClose: onClose)
+                .defaultAppStorage(defaults ?? .standard)
         )
         hosting.sizingOptions = []
         hosting.autoresizingMask = [.width, .height]
@@ -60,6 +67,10 @@ final class OverlayPanel: NSPanel {
 
         // Restaura o que o usuario deixou da ultima vez; so posiciona no
         // padrao quando nao ha nada guardado.
+        guard defaults == .standard else {
+            setContentSize(Self.defaultSize)
+            return
+        }
         if !setFrameUsingName(Self.frameAutosaveName) {
             setContentSize(Self.defaultSize)
             positionAtBottomCenter()

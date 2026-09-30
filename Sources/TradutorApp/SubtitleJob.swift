@@ -40,8 +40,12 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
     /// usuário mora em `UserDefaults` e teste não mexe em dado de usuário.
     var translation: TranslationEngine?
 
-    init(pipeline: Pipeline) {
+    /// `.srt` com tempos, ou `.txt` só com o texto corrido.
+    let writesText: Bool
+
+    init(pipeline: Pipeline, writesText: Bool = false) {
         self.pipeline = pipeline
+        self.writesText = writesText
         super.init()
     }
 
@@ -57,7 +61,7 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
     func run() {
         let panel = NSOpenPanel()
         panel.title = "Escolha o vídeo ou áudio"
-        panel.prompt = "Gerar legenda"
+        panel.prompt = writesText ? "Extrair texto" : "Gerar legenda"
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         // Sem filtro por tipo, de proposito: arquivo sem extensao no nome —
@@ -114,7 +118,9 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
                 target: pipeline.targetLanguage,
                 engine: pipeline.recognitionEngine,
                 translation: motor,
-                diarize: pipeline.diarizeSpeakers
+                // Texto corrido não marca quem fala: seria um passo a mais
+                // para nada sair no arquivo.
+                diarize: pipeline.diarizeSpeakers && !writesText
             ) { [weak self] step, fraction, detail, waiting in
                 Task { @MainActor in
                     // Esperando a resposta do tradutor: o rótulo diz o que
@@ -134,11 +140,13 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
                 from: pipeline.sourceLanguage, to: pipeline.targetLanguage)
             let output = url
                 .deletingPathExtension()
-                .appendingPathExtension("\(escrito.rawValue).srt")
-            try SRTWriter.render(
-                translated, colorBySpeaker: pipeline.diarizeSpeakers && pipeline.colorBySpeaker,
-                charactersPerLine: builder.charactersPerLine
-            ).write(to: output, atomically: true, encoding: .utf8)
+                .appendingPathExtension("\(escrito.rawValue).\(writesText ? "txt" : "srt")")
+            let conteudo = writesText
+                ? CaptureExport.prose(cues: translated)
+                : SRTWriter.render(
+                    translated, colorBySpeaker: pipeline.diarizeSpeakers && pipeline.colorBySpeaker,
+                    charactersPerLine: builder.charactersPerLine)
+            try conteudo.write(to: output, atomically: true, encoding: .utf8)
 
             notice = builder.translationNotice
             finish(savedAt: output, cues: translated.count)
@@ -157,7 +165,7 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Legenda de \(url.lastPathComponent)"
+        window.title = "\(writesText ? "Texto" : "Legenda") de \(url.lastPathComponent)"
         window.delegate = self          // fechar a janela também cancela
         window.center()
         window.isReleasedWhenClosed = false
@@ -205,11 +213,12 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         guard !silent else { return }
 
         let alert = NSAlert()
-        alert.messageText = "Legenda pronta"
+        alert.messageText = writesText ? "Texto pronto" : "Legenda pronta"
         // O aviso do tradutor vai junto: é aqui que a troca do DeepL para a
         // Apple no meio do arquivo deixa de ser invisível.
         alert.informativeText = [
-            "\(cues) legendas gravadas em \(url.lastPathComponent).", notice,
+            writesText ? "Texto gravado em \(url.lastPathComponent)."
+                : "\(cues) legendas gravadas em \(url.lastPathComponent).", notice,
         ].compactMap { $0 }.joined(separator: "\n\n")
         alert.addButton(withTitle: "Mostrar no Finder")
         alert.addButton(withTitle: "OK")
@@ -228,7 +237,7 @@ final class SubtitleJob: NSObject, NSWindowDelegate {
         guard !silent else { return }
 
         let alert = NSAlert()
-        alert.messageText = "Não foi possível gerar a legenda"
+        alert.messageText = writesText ? "Não foi possível extrair o texto" : "Não foi possível gerar a legenda"
         alert.informativeText = message
         alert.alertStyle = .warning
         NSApp.activate(ignoringOtherApps: true)

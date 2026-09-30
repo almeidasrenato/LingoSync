@@ -341,6 +341,13 @@ final class SubtitleStudioModel {
                 layout.charactersPerLine = SubtitleFileBuilder.lineWidth(for: subtitleLanguage(for: track))
                 output = layout.enforceLineLimit(output)
             }
+            // `.txt` é o texto corrido, sem tempo nem corte de legenda: para
+            // quem quer só o que foi dito. `savedSRT` fica no `.srt` — é o
+            // que "Mostrar no Finder" e o autoteste procuram.
+            if url.pathExtension.lowercased() == "txt" {
+                try CaptureExport.prose(cues: output).write(to: url, atomically: true, encoding: .utf8)
+                return
+            }
             try SRTWriter.render(
                 output, colorBySpeaker: diarizeSpeakers && colorBySpeaker,
                 charactersPerLine: SubtitleFileBuilder.lineWidth(for: subtitleLanguage(for: track))

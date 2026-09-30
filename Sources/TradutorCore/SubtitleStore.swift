@@ -134,6 +134,49 @@ public enum CaptureExport {
         return linhas.joined(separator: "\n")
     }
 
+    /// A fala como texto corrido: sem hora, sem corte de legenda, para colar.
+    ///
+    /// É o que o modo texto do painel mostra e o que o `.txt` de um arquivo
+    /// grava — os dois caminhos passam por aqui para não divergirem. As falas
+    /// se juntam por `Tokens.join`, que não põe espaço entre japonês; uma
+    /// pausa de `paragraphPause` ou mais abre parágrafo, senão uma reunião
+    /// inteira vira um bloco só. Os 10 s não foram medidos: é o silêncio que
+    /// em conversa já troca de assunto.
+    public static func prose(
+        _ pieces: [(text: String, start: TimeInterval, end: TimeInterval)],
+        paragraphPause: TimeInterval = 10
+    ) -> String {
+        var paragraphs: [[String]] = []
+        var lastEnd: TimeInterval?
+        for piece in pieces {
+            let text = piece.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            if let lastEnd, piece.start - lastEnd < paragraphPause, !paragraphs.isEmpty {
+                paragraphs[paragraphs.count - 1].append(text)
+            } else {
+                paragraphs.append([text])
+            }
+            lastEnd = piece.end
+        }
+        return paragraphs.map(Tokens.join).joined(separator: "\n\n")
+    }
+
+    /// A captura ao vivo em texto corrido. O instante de cada bloco é o de
+    /// quando ele saiu, então a pausa medida inclui o tempo de reconhecer.
+    public static func prose(_ blocks: [SubtitleBlock], field: (SubtitleBlock) -> String) -> String {
+        prose(blocks.map { block in
+            let at = block.at.timeIntervalSinceReferenceDate
+            return (field(block), at, at)
+        })
+    }
+
+    /// Legenda de arquivo em texto corrido: o texto escrito de cada legenda
+    /// (a tradução, ou a fala quando só se transcreveu), com a pausa medida
+    /// entre elas decidindo o parágrafo.
+    public static func prose(cues: [Cue]) -> String {
+        prose(cues.map { ($0.translated, $0.start, $0.end) })
+    }
+
     /// Nome sugerido no seletor: `captura-2026-09-14-1532.txt`.
     public static func suggestedName(at date: Date = Date()) -> String {
         let formatter = DateFormatter()

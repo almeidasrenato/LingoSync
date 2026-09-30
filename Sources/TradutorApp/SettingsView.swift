@@ -13,10 +13,12 @@ import TradutorCore
 struct SettingsView: View {
 
     @Bindable var pipeline: Pipeline
+    var updates: UpdateChecker
     var onRefresh: () -> Void
     var onToggle: () -> Void
     var onResetPanel: () -> Void
     var onMakeSubtitles: () -> Void
+    var onMakeText: () -> Void
     var onOpenStudio: () -> Void
     var onNewStudio: () -> Void
 
@@ -34,9 +36,28 @@ struct SettingsView: View {
                     Text("Tradutor Instantâneo")
                         .font(.display)
                         .foregroundStyle(Color.ink)
+                        .fixedSize()
                     Text("Áudio ao vivo e legendas de vídeo")
                         .font(.caption)
                         .foregroundStyle(Color.inkSoft)
+                }
+                Spacer(minLength: 8)
+                // Só existe quando há versão nova: um botão "procurar
+                // atualização" sempre à vista seria ruído no menu que se abre
+                // dez vezes por dia.
+                if let release = updates.available {
+                    Button {
+                        updates.install()
+                    } label: {
+                        Label(updates.downloading ? "Baixando…" : "Atualizar",
+                              systemImage: "arrow.down.circle")
+                    }
+                    .buttonStyle(PastelButtonStyle(prominent: true))
+                    .controlSize(.small)
+                    .fixedSize()
+                    .disabled(updates.downloading)
+                    .help("Versão \(release.version) disponível (esta é a \(updates.currentVersion)). "
+                          + "Baixa o .dmg e o abre; arraste o app para Aplicativos.")
                 }
             }
             .padding(.bottom, 2)
@@ -52,6 +73,13 @@ struct SettingsView: View {
                         .help("Espaço ocupado pelos modelos em disco")
                 }
                 Spacer()
+                Link(destination: AppUpdate.repository) {
+                    Label("GitHub", systemImage: "arrow.up.right.square")
+                }
+                .buttonStyle(.borderless)
+                .help("Abre o repositório do app, com as versões e o código")
+                .foregroundStyle(Color.inkSoft)
+                Text("·")
                 Button("Encerrar") { NSApp.terminate(nil) }
                     .buttonStyle(.borderless)
                     .foregroundStyle(Color.inkSoft)
@@ -340,6 +368,19 @@ struct SettingsView: View {
             .disabled(pipeline.isRunning)
             .help("Transcreve e traduz um arquivo, gerando um .srt com os tempos")
 
+            // Irmão do de cima, e não opção dentro dele: quem quer o texto de
+            // um áudio não está pensando em legenda. Segue o tradutor
+            // escolhido — com "Só transcrever" sai a fala como foi dita.
+            Button {
+                onMakeText()
+            } label: {
+                Label("Só extrair o texto (.txt)…", systemImage: "text.alignleft")
+                    .frame(maxWidth: .infinity)
+            }
+            .disabled(pipeline.isRunning)
+            .help("Transcreve um vídeo ou áudio num .txt corrido, sem tempos nem "
+                  + "cortes de legenda. Traduz se houver tradutor escolhido.")
+
             // Aparece quando o reconhecimento escolhido tem como marcar quem
             // fala. Vale só aqui: o ao vivo não tem o áudio inteiro.
             if pipeline.recognitionEngine.supportsDiarization {
@@ -376,10 +417,64 @@ struct SettingsView: View {
                 .disabled(!pipeline.diarizeSpeakers)
             }
 
-            Text("Assista e revise na janela de legendas, ou gere apenas o arquivo SRT.")
+            Text("Assista e revise na janela de legendas, ou gere apenas o .srt ou o texto.")
                 .font(.caption)
                 .foregroundStyle(Color.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// A versão nova no GitHub, se houver. Ver `AppUpdate`.
+@MainActor
+@Observable
+final class UpdateChecker {
+    /// Público para o autoteste de layout poder mostrar o botão.
+    var available: AppUpdate.Release?
+    private(set) var downloading = false
+    private var lastCheck: Date?
+
+    let currentVersion = Bundle.main.object(
+        forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+
+    /// Na abertura do menu, no máximo a cada 6 h: o menu abre muitas vezes
+    /// por dia, e a resposta muda uma vez por release. Sem rede, calado —
+    /// não ter como saber não é defeito para mostrar.
+    func checkIfDue() {
+        if let lastCheck, Date().timeIntervalSince(lastCheck) < 6 * 3600 { return }
+        lastCheck = Date()
+        Task {
+            guard let release = try? await AppUpdate.latest(),
+                  AppUpdate.isNewer(release.version, than: currentVersion) else { return }
+            available = release
+        }
+    }
+
+    /// Baixa o `.dmg` para Downloads e o abre. Sem `.dmg`, ou se o download
+    /// falhar, abre a página da release: o usuário chega lá de qualquer jeito.
+    func install() {
+        guard let release = available, !downloading else { return }
+        guard let dmg = release.diskImage else {
+            NSWorkspace.shared.open(release.page)
+            return
+        }
+        downloading = true
+        Task {
+            defer { downloading = false }
+            do {
+                let (temp, response) = try await URLSession.shared.download(from: dmg)
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                    throw URLError(.badServerResponse)
+                }
+                let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+                let destination = downloads.appendingPathComponent(
+                    "LingoSync-\(release.version).dmg")
+                try? FileManager.default.removeItem(at: destination)
+                try FileManager.default.moveItem(at: temp, to: destination)
+                NSWorkspace.shared.open(destination)
+            } catch {
+                NSWorkspace.shared.open(release.page)
+            }
         }
     }
 }

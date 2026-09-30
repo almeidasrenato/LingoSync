@@ -39,6 +39,7 @@ final class SelfTestReport {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private let pipeline = Pipeline()
+    private let updates = UpdateChecker()
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     /// Criado uma vez e reaproveitado. Trocar o controller a cada abertura
@@ -64,6 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         if CommandLine.arguments.contains("--selftest-layout") {
             Task { await LayoutPreview.run() }
+            return
+        }
+        if CommandLine.arguments.contains("--selftest-painel") {
+            runPanelSelfTest()
             return
         }
         if CommandLine.arguments.contains("--selftest-srt") {
@@ -199,6 +204,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             popover.performClose(nil)
         } else {
             pipeline.refreshProcesses()
+            updates.checkIfDue()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
@@ -207,12 +213,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func makeSettingsView() -> SettingsView {
         SettingsView(
             pipeline: pipeline,
+            updates: updates,
             onRefresh: { [weak self] in
                 self?.pipeline.refreshProcesses()
             },
             onToggle: { [weak self] in self?.toggleTranslation() },
             onResetPanel: { [weak self] in self?.panel?.resetToDefaultSize() },
             onMakeSubtitles: { [weak self] in self?.makeSubtitles() },
+            onMakeText: { [weak self] in self?.makeSubtitles(writesText: true) },
             onOpenStudio: { [weak self] in self?.openStudio() },
             onNewStudio: { [weak self] in self?.openStudio(nova: true) }
         )
@@ -269,9 +277,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         studios[window] = model
     }
 
-    private func makeSubtitles() {
+    private func makeSubtitles(writesText: Bool = false) {
         popover.performClose(nil)
-        let job = SubtitleJob(pipeline: pipeline)
+        let job = SubtitleJob(pipeline: pipeline, writesText: writesText)
         subtitleJob = job          // o trabalho precisa sobreviver ao escopo
         job.run()
     }
@@ -316,6 +324,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusItem.button?.image = NSImage(
             systemSymbolName: "captions.bubble", accessibilityDescription: "Tradutor"
         )
+    }
+
+    /// Abre o painel ao vivo sem captura e anota, a cada meio segundo, onde
+    /// ele está e o que o usuário escolheu nele. Quem arrasta e clica é o
+    /// script de fora (`scratchpad/painel/`): arrastar pelo cabeçalho e
+    /// mexer na transparência eram os dois defeitos, e nenhum dos dois se
+    /// prova sem evento de mouse de verdade.
+    ///
+    ///   open -n build/Tradutor.app --args --selftest-painel   → /tmp/tradutor-painel.txt
+    private func runPanelSelfTest() {
+        let domain = "tradutor-selftest-painel"
+        let defaults = UserDefaults(suiteName: domain)!
+        defaults.removePersistentDomain(forName: domain)
+        let pipeline = Pipeline()
+        for (source, text) in [("First line.", "Primeira fala."), ("Second.", "Segunda fala.")] {
+            pipeline.subtitles.commit(SubtitleBlock(source: source, translated: text))
+        }
+        let panel = OverlayPanel(pipeline: pipeline, defaults: defaults) {}
+        panel.setFrameOrigin(NSPoint(x: 200, y: 200))
+        panel.orderFrontRegardless()
+        self.panel = panel
+        let url = URL(fileURLWithPath: "/tmp/tradutor-painel.txt")
+        let start = Date()
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            MainActor.assumeIsolated {
+                let f = panel.frame
+                let linha = "janela=\(panel.windowNumber) x=\(Int(f.minX)) y=\(Int(f.minY)) "
+                    + "l=\(Int(f.width)) a=\(Int(f.height)) "
+                    + "fundo=\(defaults.object(forKey: "opacidadeDoFundoDoPainel") ?? "padrao") "
+                    + "texto=\(defaults.bool(forKey: "painelEmTextoCorrido"))\n"
+                try? linha.write(to: url, atomically: true, encoding: .utf8)
+                if Date().timeIntervalSince(start) > 60 {
+                    defaults.removePersistentDomain(forName: domain)
+                    exit(0)
+                }
+            }
+        }
     }
 
     private func showPanel() {
@@ -534,13 +579,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // transcrever" a legenda sai em japones e o teste esperava um
             // `.pt.srt` que ninguem ia gravar.
             let escrito = motorDeTraducao.destination(from: source, to: target)
+            // `--texto`: o item "Só extrair o texto", que grava `.txt`.
+            let soTexto = CommandLine.arguments.contains("--texto")
             let destino = URL(fileURLWithPath: path)
                 .deletingPathExtension()
-                .appendingPathExtension("\(escrito.rawValue).srt")
+                .appendingPathExtension("\(escrito.rawValue).\(soTexto ? "txt" : "srt")")
             try? FileManager.default.removeItem(at: destino)
 
             let inicio = Date()
-            let job = SubtitleJob(pipeline: pipeline)
+            let job = SubtitleJob(pipeline: pipeline, writesText: soTexto)
             job.translation = motorDeTraducao
             // Sem alerta: o modal segura o laço principal e o relatório ficava
             // parado em "gerando…" com o .srt já gravado.
@@ -561,11 +608,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             let segundos = Int(Date().timeIntervalSince(inicio))
             expect(FileManager.default.fileExists(atPath: destino.path),
-                   "grava o .srt ao lado do video (\(segundos)s)")
+                   "grava o \(destino.pathExtension) ao lado do video (\(segundos)s)")
 
             guard let texto = try? String(contentsOf: destino, encoding: .utf8) else {
                 write("FALHA: nao consegui ler o arquivo gravado")
                 exit(1)
+            }
+            if soTexto {
+                write("caracteres: \(texto.count)")
+                expect(!texto.isEmpty, "o .txt tem texto")
+                expect(!texto.contains(" --> "), "o .txt nao tem tempo de legenda")
+                expect(!texto.contains("\n\n\n"), "paragrafos separados por uma linha so")
+                write(relatorio.failures == 0 ? "PASSOU" : "\(relatorio.failures) falhas")
+                exit(relatorio.failures == 0 ? 0 : 1)
             }
             let blocos = SRTParser.parse(texto)
             write("legendas: \(blocos.count)")

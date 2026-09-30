@@ -48,6 +48,14 @@ enum SubtitleIOCheck {
             expect(roundtrip.map(\.translated) == model.cues.map(\.source), "exportar original preserva todas as falas")
             expect(roundtrip.first?.start == 1.001 && roundtrip.first?.end == 1.101,
                    "ida e volta preserva milissegundos e legendas menores que 200 ms")
+            // Exportar em `.txt`: o texto corrido, sem tempo, e o `.srt`
+            // salvo continua sendo o de antes.
+            let texto = folder.appendingPathComponent("exportada.txt")
+            model.export(to: texto, track: .original)
+            let corrido = (try? String(contentsOf: texto, encoding: .utf8)) ?? ""
+            expect(corrido == japanese + "ありがとうございます。",
+                   "exportar .txt dá o texto corrido, sem tempo nem espaço entre japonês")
+            expect(model.savedSRT == output, "exportar .txt não muda o .srt salvo")
             let saved = try Data(contentsOf: output)
             model.export(to: output, track: .translation)
             let unchanged = try Data(contentsOf: output)
