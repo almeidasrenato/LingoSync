@@ -4175,6 +4175,16 @@ struct Verify {
                "o teto de tentativas fica entre 2 e 4")
         expect(WhisperTranscriber.coverageFloor > 0.5 && WhisperTranscriber.coverageFloor < 1,
                "o piso de alcance fica entre 50% e 100%")
+        // A régua de voz junta as pessoas e as pausas curtas, e é ela que
+        // decide a repetição quando a energia recusa.
+        let vozes = WhisperTranscriber.voiceRegions([
+            .init(speaker: "B", start: 5.8, end: 8),
+            .init(speaker: "A", start: 0, end: 3),
+            .init(speaker: "B", start: 2.5, end: 5),
+        ])
+        expect(vozes == [0...5, 5.8...8], "vozes sobrepostas se juntam, pausa acima de 0,5 s separa")
+        expect(WhisperTranscriber.reached(vozes, by: [.init(text: "oi", start: 1, end: 2)]) == 0.5,
+               "texto só no primeiro trecho de voz alcança metade")
         // A repetição congelava a janela em "8092 de 8092 s": a fração
         // recomeçava de zero e a janela ignora fração que volta.
         let meio = WhisperTranscriber.pass(of: 0.5), fim = WhisperTranscriber.pass(of: 1)

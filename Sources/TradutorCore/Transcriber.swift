@@ -487,7 +487,8 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
         _ samples: [Float],
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> [TimedText] {
-        let regioes = SpeechEnergy.regions(samples, minimumPause: 0.5)
+        var regioes = SpeechEnergy.regions(samples, minimumPause: 0.5)
+        var mediuVoz = false
 
         var melhor: [TimedText] = []
         var melhorCobertura = -1.0
@@ -505,9 +506,24 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
             }
             // Uma frase suspeita não pode fazer uma passada pobre parecer
             // completa. Preserve-a na saída para a conferência posterior.
-            let cobertura = Self.reached(regioes, by: saida.filter {
-                !Hallucinations.isIsolatedFiller($0.text)
-            })
+            let semSuspeitas = saida.filter { !Hallucinations.isIsolatedFiller($0.text) }
+            var cobertura = Self.reached(regioes, by: semSuspeitas)
+            // A régua de energia conta música, vento e ruído como fala, e a
+            // passada boa parecia pobre: o vídeo de 2 h 15 relia tudo três
+            // vezes, 46 min. Antes de repetir, a régua passa a ser a voz que o
+            // Sortformer ouve. Nos 8 arquivos medidos em 30/09/2026 o texto
+            // final saiu idêntico, e onde havia repetição o tempo caiu de 2 a
+            // 3,4 vezes (30 min do mesmo vídeo: 351 s → 102 s). Quando a
+            // energia já aceita, o Sortformer nem roda.
+            if cobertura < Self.coverageFloor, !mediuVoz {
+                mediuVoz = true
+                let turnos = try? await SpeakerDiarizer.turns(in: samples, model: .sortformer)
+                try Task.checkCancellation()
+                if let turnos, !turnos.isEmpty {
+                    regioes = Self.voiceRegions(turnos)
+                    cobertura = Self.reached(regioes, by: semSuspeitas)
+                }
+            }
             if cobertura > melhorCobertura {
                 melhorCobertura = cobertura
                 melhor = saida
@@ -533,6 +549,18 @@ public final class WhisperTranscriber: Transcriber, @unchecked Sendable {
     /// de 9 minutos ele cobre 51% do tempo com a legenda inteira certa, e
     /// repetir ali seria triplicar o tempo à toa.
     public static let coverageFloor = 0.75
+
+    /// Trechos em que alguém fala, juntando as vozes e as pausas de até
+    /// 0,5 s — a mesma pausa da régua de energia.
+    public static func voiceRegions(_ turns: [SpeakerDiarizer.Turn]) -> [ClosedRange<Double>] {
+        turns.sorted { $0.start < $1.start }.reduce(into: []) { regioes, turno in
+            if let ultima = regioes.last, turno.start - ultima.upperBound <= 0.5 {
+                regioes[regioes.count - 1] = ultima.lowerBound...max(ultima.upperBound, turno.end)
+            } else {
+                regioes.append(turno.start...turno.end)
+            }
+        }
+    }
 
     /// Teto de tentativas. Três porque a terceira já raspa o que a primeira
     /// deixou: medido no vídeo difícil, 4 · 14 · 9 trechos nas três.
