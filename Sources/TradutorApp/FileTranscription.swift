@@ -149,9 +149,11 @@ final class FileTranscriptionModel {
         let overall = step.overall(part)
         guard overall >= fraction else { return }
         fraction = overall
+        // O detalhe vai junto: na repetição do Whisper a barra fica cheia, e
+        // só "nova passada 2 de 3" diz que a leitura continua.
         stepLabel = waiting
             ? L("\(step.displayName): aguardando resposta", "\(step.displayName): waiting for a reply")
-            : step.displayName + "…"
+            : detail.isEmpty ? step.displayName + "…" : "\(step.displayName): \(detail)"
     }
 
     // MARK: Copiar e exportar
