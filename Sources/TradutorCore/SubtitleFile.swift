@@ -197,6 +197,10 @@ public final class SubtitleFileBuilder {
     /// Quantos lotes a tradução perdeu na última passada. Acima de zero, a
     /// geração falha em vez de entregar legenda pela metade.
     public private(set) var failedBatches = 0
+    /// O que o tradutor disse na última falha de lote. É o que a faixa
+    /// vermelha precisa mostrar: "1 lote não foi traduzido" escondia se foi
+    /// limite de uso do site, pausa depois de falhas seguidas ou rede.
+    public private(set) var lastBatchError: String?
 
     /// As legendas como saíram do reconhecimento, antes de traduzir.
     ///
@@ -878,7 +882,7 @@ public final class SubtitleFileBuilder {
         // esta etapa.
         if failedBatches > 0 {
             throw SubtitleFileError.translationFailed(
-                translationNotice ?? L("A tradução não foi concluída.", "Translation did not finish."))
+                lastBatchError ?? translationNotice ?? L("A tradução não foi concluída.", "Translation did not finish."))
         }
         let avisos = [translationNotice, translator.completionNotice].compactMap { $0 }
         translationNotice = avisos.isEmpty ? nil : avisos.joined(separator: " ")
@@ -911,6 +915,7 @@ public final class SubtitleFileBuilder {
         var result = cues
         var done = 0
         var lotesFalhos = 0
+        lastBatchError = nil
         // A linha da legenda tem a largura do idioma que vai ser lido, não a
         // do que foi falado. É aqui porque é aqui que o destino é conhecido.
         charactersPerLine = Self.lineWidth(for: target)
@@ -978,6 +983,7 @@ public final class SubtitleFileBuilder {
             // reload interno do `GeminiDriver`, e refazer só este pedaço custa
             // uma requisição, não a tradução inteira de novo.
             var translations: [String]?
+            var motivo: String?
             for tentativa in 0..<2 {
                 do {
                     let resultado = try await translator.translate(texts, from: source, to: target)
@@ -993,6 +999,7 @@ public final class SubtitleFileBuilder {
                     break
                 } catch {
                     log.error("lote \(start) falhou (tentativa \(tentativa + 1)): \(error.localizedDescription, privacy: .public)")
+                    motivo = error.localizedDescription
                 }
                 if Task.isCancelled { break }
             }
@@ -1002,6 +1009,7 @@ public final class SubtitleFileBuilder {
                 // pedaço no idioma de origem, e sem aviso isso parece geração
                 // completa. Ver `translationNotice`.
                 lotesFalhos += 1
+                lastBatchError = motivo ?? lastBatchError
                 continue
             }
 

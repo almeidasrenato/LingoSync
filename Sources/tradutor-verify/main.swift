@@ -1922,8 +1922,14 @@ struct Verify {
         // 14/09/2026.
         expect(comFalha.failedBatches == 1,
                "o lote perdido fica contado para a geracao poder falhar (\(comFalha.failedBatches))")
-        expect(SubtitleFileError.translationFailed("x").errorDescription?.contains("falhou") == true,
+        // Nos dois idiomas da interface, que nasce em inglês.
+        expect(SubtitleFileError.translationFailed("x").errorDescription
+                   .map { $0.contains("falhou") || $0.contains("failed") } == true,
                "o erro diz que foi a traducao que falhou")
+        // E diz por quê: "1 lote não foi traduzido" escondia se o Gemini
+        // estava em limite de uso, pausado ou sem rede (02/10/2026).
+        expect(comFalha.lastBatchError == TradutorQuebrado.Falha.sempre.localizedDescription,
+               "o motivo do tradutor chega ao erro (\(comFalha.lastBatchError ?? "nenhum"))")
         // O `.srt` cai no original — e por isso que o aviso precisa existir.
         expect(SRTWriter.render(semTraducao).contains("This is English."),
                "sem traducao, o arquivo sai no idioma de origem")
