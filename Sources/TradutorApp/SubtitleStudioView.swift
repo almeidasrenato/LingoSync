@@ -498,7 +498,8 @@ struct SubtitleStudioView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button(L("Tentar novamente", "Try again")) { model.retryFailed() }
                     .controlSize(.small)
-                    .disabled(!model.canGenerate)
+                    // `.srt` importado sem vídeo aberto também se retraduz.
+                    .disabled(!model.canGenerate && !model.canRetranslate)
                     .help(model.canRetranslate
                           ? L("Refaz só a tradução, sem reconhecer o áudio nem ler o vídeo de novo", "Redoes only the translation, without recognizing the audio or reading the video again")
                           : (readsImage ? L("Lê a legenda de novo", "Reads the subtitles again") : L("Gera a legenda de novo", "Generates the subtitles again")))

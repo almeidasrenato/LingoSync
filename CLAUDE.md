@@ -125,6 +125,9 @@ open -n build/Tradutor.app --args --selftest-painel                # → /tmp/tr
 ```
 
 `--selftest-job ... --texto` exercita "Só extrair o texto" (grava `.txt`).
+`--selftest-imagem ... --tradutor <motor>` traduz o texto lido com o motor
+(rede, se for de rede), cancela no meio e traduz de novo na hora, com o mesmo
+motor e com a Apple.
 `--selftest-painel` abre o painel ao vivo sem captura e anota posição,
 transparência e modo texto a cada 0,5 s; quem arrasta é um script de fora com
 `CGEvent` (arrasto e controle de mouse só se provam com evento de verdade).
@@ -1163,6 +1166,24 @@ Limites:
 
 ### Gemini: motor de chat travestido de motor de tradução
 
+### O WebKit corrigia o prompt enquanto ele era digitado (02/10/2026)
+
+Gerando legenda de um vídeo inglês, um lote de cinco foi recusado nas quatro
+tentativas com `não consegui enviar (inserir=false)` e os outros passaram —
+a geração inteira caía. O WebKit faz no campo o que faz com quem digita:
+`--` vira `—` na quebra de parágrafo. A conferência de `inserir` via outro
+prompt e recusava; reproduzido com `wait --`, 18 de 18 tentativas.
+`GeminiWeb.clearFieldScript` põe `spellcheck=false` no campo, o que desliga
+a troca na origem; `semTipografia` fica como segunda rede.
+`--selftest-gemini` digita `wait --` num campo local e reprova se a troca
+voltar (sem o atributo sai `wait —`).
+
+A faixa vermelha também passou a dizer **por que** o lote falhou
+(`lastBatchError`: limite de uso, pausa depois de falhas seguidas, rede) em
+vez de "1 lote não foi traduzido — essas legendas saíram no idioma
+original", que nem era verdade: a tradução inteira é descartada. Cancelar
+deixou de gravar dump de página no log de erro do Gemini.
+
 ### A conferência do prompt lia por `innerText`, e isso matou o Gemini
 
 Em 17/09/2026 a inserção ganhou uma conferência do editor antes de enviar —
@@ -1604,6 +1625,14 @@ Quatro decisões:
 - **Igualdade estrita só vale para tradutor determinístico** — o DeepL mudou 5
   de 20 numa terceira passada. E **cancelar e retomar no mesmo instante** deixa
   o lote anterior em voo: 19,6 s contra 10,4 s.
+- **Traduzir de novo espera a tradução cancelada acabar** (02/10/2026). As
+  duas dividem o builder — tradutor vivo e contagem de lotes perdidos —, e a
+  cancelada encerrava o tradutor da nova e lhe deixava o lote que perdeu ao
+  cancelar: toda tradução feita logo depois de cancelar outra saía como
+  "1 lote não foi traduzido", com o mesmo motor ou outro. Pelo mesmo motivo
+  progresso e `onBatch` levam o número do trabalho (`jobNumber`): o
+  reconhecimento cancelado continua emitindo, e o painel do trabalho novo
+  mostrava o passo do velho e recusava o próprio progresso.
 
 ### Falhou, falhou: nenhum tradutor de reserva
 

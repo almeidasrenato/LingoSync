@@ -933,7 +933,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                   + (model.imageArea.map { "\($0)" } ?? "padrao"))
             expect(model.duration > 1, String(format: "a duracao do video e lida (%.1fs)", model.duration))
 
+            // O trabalho cancelado continua mandando progresso — o
+            // reconhecimento não é interrompível —, e o painel só anda para
+            // frente: aceitar o do velho travava o do novo.
             model.generate()
+            model.advance(model.jobNumber - 1, .readingImage, 0.9, "da leitura cancelada")
+            if case let .working(passo) = model.stage {
+                expect(passo.withinStep < 0.5, "o progresso de um trabalho anterior nao entra no painel")
+            }
             var passos = Set<String>()
             let deadline = Date().addingTimeInterval(900)
             while Date() < deadline {
@@ -1030,6 +1037,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             expect(mesmos, "o original exportado tem os blocos e os tempos lidos (\(relidas.count))")
             expect(model.suggestedSRTName(for: .original).hasSuffix(".\(language.rawValue).srt"),
                    "o arquivo do original leva o idioma do texto (\(model.suggestedSRTName(for: .original)))")
+
+            // `--tradutor <motor>`: traduz o texto lido com um tradutor de
+            // verdade e cancela no meio, voltando a traduzir na hora — com o
+            // mesmo motor e com outro. Atrás de bandeira porque Gemini, DeepL
+            // e Google mandam texto para a rede.
+            if let flag = CommandLine.arguments.firstIndex(of: "--tradutor"),
+               CommandLine.arguments.count > flag + 1,
+               let motor = TranslationEngine(rawValue: CommandLine.arguments[flag + 1]) {
+                @MainActor func aguardar(_ segundos: TimeInterval) async -> String? {
+                    let limite = Date().addingTimeInterval(segundos)
+                    while Date() < limite {
+                        switch model.stage {
+                        case .done: return nil
+                        case let .failed(mensagem): return mensagem
+                        case .cancelled: return "cancelado"
+                        default: try? await Task.sleep(for: .milliseconds(40))
+                        }
+                    }
+                    return "nao terminou em \(Int(segundos)) s"
+                }
+                let nome = TranslatorFactory.make(motor).engineName
+                write("")
+                write("traduzindo com \(nome)")
+                model.translationEngine = motor
+                model.retranslate()
+                let erro = await aguardar(600)
+                expect(erro == nil, "\(nome) traduz o texto lido (\(erro ?? String(format: "%.1fs", model.elapsed)))")
+                for cue in model.cues.prefix(3) { write("  \(cue.source)  =>  \(cue.translated)") }
+                let traduzidas = model.cues.filter { !$0.translated.isEmpty && $0.translated != $0.source }.count
+                expect(traduzidas * 10 >= model.cues.count * 8,
+                       "a maioria sai traduzida (\(traduzidas) de \(model.cues.count))")
+                expect(model.cues.map { [$0.start, $0.end] } == tempos, "e nenhum tempo se move")
+                expect(model.origin?.translation == nome, "o cabecalho diz \(model.origin?.translation ?? "-")")
+                expect(model.suggestedSRTName(for: .translation).hasSuffix(".\(model.targetLanguage.rawValue).srt"),
+                       "a traducao exporta com o idioma de destino (\(model.suggestedSRTName(for: .translation)))")
+
+                // Cancelar e mandar traduzir de novo antes de a tradução
+                // cancelada acabar de morrer: as duas dividem o builder.
+                for (segundo, rotulo) in [(motor, "o mesmo motor"), (.apple, "a Apple")] {
+                    let naTela = model.cues.map(\.translated)
+                    model.translationEngine = motor
+                    model.retranslate()
+                    try? await Task.sleep(for: .milliseconds(2500))
+                    model.cancelGeneration()
+                    expect(model.stage == .cancelled && model.cues.map(\.translated) == naTela,
+                           "cancelar \(nome) no meio mantem a traducao da tela")
+                    model.translationEngine = segundo
+                    model.retranslate()
+                    let erroDeNovo = await aguardar(600)
+                    let nomeSegundo = TranslatorFactory.make(segundo).engineName
+                    expect(erroDeNovo == nil && model.origin?.translation == nomeSegundo,
+                           "traduzir de novo com \(rotulo) logo depois de cancelar termina (\(erroDeNovo ?? nomeSegundo))")
+                    expect(model.cues.map { [$0.start, $0.end] } == tempos
+                           && model.cues.allSatisfy { !$0.translated.isEmpty },
+                           "e entrega todas as legendas nos mesmos tempos")
+                }
+            }
 
             window.contentView?.layoutSubtreeIfNeeded()
             try? await Task.sleep(for: .milliseconds(500))

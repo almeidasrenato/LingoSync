@@ -199,6 +199,11 @@ final class SubtitleStudioModel {
     /// Quem avisa que o vídeo chegou ao fim.
     private var endObserver: (any NSObjectProtocol)?
     private var job: Task<Void, Never>?
+    /// Qual trabalho é o da tela. O cancelado continua mandando progresso —
+    /// o reconhecimento não é interrompível — e, sem conferir, o painel do
+    /// trabalho novo mostrava o passo do velho e recusava o próprio progresso
+    /// por parecer andar para trás.
+    private(set) var jobNumber = 0
     private var clock: Timer?
     /// Apelido `.mp4` mantido vivo enquanto o vídeo estiver aberto.
     private var playableAlias: URL?
@@ -732,13 +737,17 @@ final class SubtitleStudioModel {
             originalLanguage = imageLanguage
             translatedLanguage = nil
             update(.readingImage, 0, L("carregando o leitor", "loading the reader"), true)
-            job = Task { await runImageReading(url) }
+            jobNumber += 1
+            let number = jobNumber
+            job = Task { await runImageReading(url, job: number) }
             return
         }
         originalLanguage = sourceLanguage
         translatedLanguage = translationEngine.destination(from: sourceLanguage, to: targetLanguage)
         update(.extracting)
-        job = Task { await runGeneration(url) }
+        jobNumber += 1
+        let number = jobNumber
+        job = Task { await runGeneration(url, job: number) }
     }
 
     /// Traduz de novo, com o tradutor escolhido agora, sem reconhecer nada.
@@ -750,7 +759,14 @@ final class SubtitleStudioModel {
     func retranslate() {
         guard canRetranslate, let builder else { return }
 
-        job?.cancel()
+        // A tradução cancelada pode ainda estar devolvendo o lote que estava
+        // no ar, e as duas dividem o builder: o tradutor vivo e a contagem de
+        // lotes perdidos. Sem esperar, a cancelada encerrava o tradutor da
+        // nova e deixava nela o lote que perdeu ao cancelar — "A tradução
+        // falhou: 1 lote não foi traduzido" em toda tradução feita logo depois
+        // de cancelar outra, com o mesmo motor ou outro (02/10/2026).
+        let anterior = job
+        anterior?.cancel()
         retranslating = true
         jobStartedAt = Date()
         elapsed = 0
@@ -765,8 +781,12 @@ final class SubtitleStudioModel {
         let source = originalLanguage ?? sourceLanguage
         let target = targetLanguage
         let engine = translationEngine
+        let preservesTiming = keepsOriginalTiming
+        jobNumber += 1
+        let number = jobNumber
 
         job = Task { [weak self] in
+            await anterior?.value
             guard let self, !Task.isCancelled else { return }
             do {
                 let translated = try await builder.retranslate(
@@ -774,9 +794,9 @@ final class SubtitleStudioModel {
                     from: source,
                     to: target,
                     progress: { [weak self] step, fraction, detail, waiting in
-                        Task { @MainActor in self?.advance(step, fraction, detail, waiting) }
+                        Task { @MainActor in self?.advance(number, step, fraction, detail, waiting) }
                     },
-                    preserveCueTiming: self.keepsOriginalTiming
+                    preserveCueTiming: preservesTiming
                 )
                 guard !Task.isCancelled else { return }
                 self.importedTranslation = nil
@@ -816,8 +836,8 @@ final class SubtitleStudioModel {
     /// descartado e que nenhuma etapa seguinte comece.
     func cancelGeneration() {
         guard isWorking else { return }
+        // Fica em `job`, cancelado: traduzir de novo espera ele acabar.
         job?.cancel()
-        job = nil
         clock?.invalidate()
         clock = nil
         jobStartedAt = nil
@@ -844,7 +864,6 @@ final class SubtitleStudioModel {
                 return
             }
             job?.cancel()
-            job = nil
             clock?.invalidate()
             clock = nil
             retranslating = false
@@ -930,10 +949,10 @@ final class SubtitleStudioModel {
     /// frente: uma atualização atrasada chegando depois de cancelar punha a
     /// janela de volta em "trabalhando", e uma chegando depois do passo
     /// seguinte fazia a barra andar para trás.
-    private func advance(
-        _ kind: Step.Kind, _ within: Double, _ detail: String, _ waiting: Bool = false
+    func advance(
+        _ number: Int, _ kind: Step.Kind, _ within: Double, _ detail: String, _ waiting: Bool = false
     ) {
-        guard case let .working(step) = stage else { return }
+        guard number == jobNumber, case let .working(step) = stage else { return }
         let order = Step.Kind.allCases
         let current = order.firstIndex(of: step.kind) ?? 0
         let next = order.firstIndex(of: kind) ?? 0
@@ -947,13 +966,13 @@ final class SubtitleStudioModel {
     /// Não toca em áudio nem em modelo de fala: é outra fonte, não um desvio
     /// da geração. E não traduz sozinha — importar original também não
     /// traduz (18/09/2026); traduzir é o botão, com `keepsOriginalTiming`.
-    private func runImageReading(_ url: URL) async {
+    private func runImageReading(_ url: URL, job number: Int) async {
         guard !Task.isCancelled else { return }
         let language = imageLanguage
         do {
             notice = nil
             let reading = try await BurnedSubtitle.read(from: url, language: language, area: imageArea) { [weak self] fraction, detail, waiting in
-                Task { @MainActor in self?.advance(.readingImage, fraction, detail, waiting) }
+                Task { @MainActor in self?.advance(number, .readingImage, fraction, detail, waiting) }
             }
             guard !Task.isCancelled else { return }
             builder?.finish()
@@ -969,7 +988,7 @@ final class SubtitleStudioModel {
         }
     }
 
-    private func runGeneration(_ url: URL) async {
+    private func runGeneration(_ url: URL, job number: Int) async {
         guard !Task.isCancelled else { return }
         // O anterior encerra aqui: a janela do DeepL e o servidor do Hunyuan
         // ficam vivos até alguém mandar parar.
@@ -990,14 +1009,14 @@ final class SubtitleStudioModel {
                 translation: translationEngine,
                 diarize: diarizeSpeakers,
                 progress: { [weak self] step, fraction, detail, waiting in
-                    Task { @MainActor in self?.advance(step, fraction, detail, waiting) }
+                    Task { @MainActor in self?.advance(number, step, fraction, detail, waiting) }
                 },
                 onBatch: { [weak self] partial in
                     // As legendas prontas vão para a tela na hora. Dá para
                     // começar a assistir enquanto o resto é traduzido, em vez
                     // de esperar o arquivo inteiro.
                     Task { @MainActor in
-                        guard let self, self.isWorking else { return }
+                        guard let self, self.jobNumber == number, self.isWorking else { return }
                         self.cues = partial
                         self.activeIndex = self.index(at: self.currentTime)
                     }
