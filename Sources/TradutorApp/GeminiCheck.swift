@@ -118,6 +118,26 @@ enum GeminiCheck {
             )) as? String ?? ""
             check(!comScript.contains("function") && comScript.contains("linha um"),
                   "não traz script nem style para o texto")
+            // O WebKit troca `--` por `—` ao digitar, a conferência via outro
+            // prompt e recusava o lote em todas as tentativas (02/10/2026).
+            func digitado(_ linha: String, limpando: Bool) async -> String {
+                let campo = WKWebView()
+                campo.loadHTMLString("<div contenteditable=\"true\"></div>", baseURL: nil)
+                for _ in 0..<50 where (try? await campo.evaluateJavaScript(GeminiWeb.freshFieldScript)) as? Bool != true {
+                    try? await Task.sleep(for: .milliseconds(20))
+                }
+                if limpando { _ = try? await campo.evaluateJavaScript(GeminiWeb.clearFieldScript) }
+                // Como o driver digita: a troca vem na quebra de parágrafo.
+                _ = try? await campo.evaluateJavaScript(GeminiWeb.insertLineScript(linha, quebra: true))
+                _ = try? await campo.evaluateJavaScript(GeminiWeb.insertLineScript("fim", quebra: false))
+                return (try? await campo.evaluateJavaScript(
+                    "(\(GeminiWeb.responseTextScript))(document.querySelector('[contenteditable=\"true\"]'))"
+                )) as? String ?? ""
+            }
+            let linha = "Wait a second, wait --"
+            record("sem desligar a correção: \(await digitado(linha, limpando: false))")
+            let semCorrecao = await digitado(linha, limpando: true)
+            check(semCorrecao.hasPrefix(linha), "o campo recebe o texto sem correção do WebKit (\(semCorrecao))")
             // Recarregar a página deixava a velha de pé por um instante, e o
             // campo e a contagem de respostas eram lidos nela: a conversa nova
             // nunca passava da contagem velha. A página marcada não conta.

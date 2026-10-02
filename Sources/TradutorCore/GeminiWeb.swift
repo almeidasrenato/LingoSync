@@ -163,6 +163,64 @@ public enum GeminiWeb {
         }
         """
 
+    /// Esvazia o campo, se existir, e desliga nele a correção do WebKit.
+    ///
+    /// O WebKit corrige o que se digita como se fosse gente: `--` vira `—`.
+    /// A conferência de `inserir` via então um prompt diferente do enviado
+    /// e recusava o lote em todas as tentativas, e a tradução inteira caía.
+    /// Visto em 02/10/2026 num vídeo inglês — um lote de cinco recusado nas
+    /// quatro tentativas, os outros traduzidos — e reproduzido com
+    /// `wait --`: 18 de 18 tentativas recusadas. `spellcheck=false` desliga
+    /// a troca na origem; `semTipografia` continua como segunda rede.
+    public static let clearFieldScript = """
+        (function () {
+          var campo = document.querySelector('[contenteditable="true"]');
+          if (!campo) return "sem-campo";
+          campo.setAttribute('spellcheck', 'false');
+          campo.setAttribute('autocorrect', 'off');
+          campo.focus();
+          document.execCommand('selectAll', false, null);
+          document.execCommand('delete', false, null);
+          return "ok";
+        })();
+        """
+
+    /// Insere uma linha e, se não for a última, a quebra de parágrafo.
+    ///
+    /// Ao contrário do DeepL, `execCommand('insertText')` funciona aqui — o
+    /// editor do Gemini (Quill) aceita, e o do DeepL ignora. Mas **um só**
+    /// `execCommand` com o prompt inteiro (2000+ caracteres, dezenas de
+    /// linhas) truncava no meio às vezes — medido em 15/09/2026, sempre logo
+    /// depois de uma carga de página: o campo ficava com 224 dos 2401
+    /// caracteres enviados, e a mensagem saía cortada no meio de uma regra.
+    /// Inserir linha por linha, do jeito que alguém digitando faria, não
+    /// truncou nenhuma vez depois disso.
+    /// Devolver `"ok"` sempre escondia a falha: `execCommand` recusado num
+    /// editor que não aceita entrada é indistinguível de escrita bem-sucedida,
+    /// e aí a única coisa que enxergava era a conferência de `inserir` — que
+    /// não sabe dizer "editor vazio" de "leitura indisponível". Agora o
+    /// retorno do `execCommand` sobe, com o tamanho do campo junto.
+    ///
+    /// Linha vazia não passa por `insertText`: com string vazia o comando
+    /// pode recusar legitimamente, e o prompt tem uma linha em branco antes
+    /// de `Items:`.
+    public static func insertLineScript(_ linha: String, quebra: Bool) -> String {
+        let insercao = linha.isEmpty
+            ? "var escreveu = true;"
+            : "var escreveu = document.execCommand('insertText', false, \(DeepLWeb.jsLiteral(linha)));"
+        return """
+        (function () {
+          var campo = document.querySelector('[contenteditable="true"]');
+          if (!campo) return "sem-campo";
+          campo.focus();
+          \(insercao)
+          if (!escreveu) return 'recusado:' + (campo.textContent || '').length;
+          \(quebra ? "if (!document.execCommand('insertParagraph', false, null)) return 'sem-quebra';" : "")
+          return "ok";
+        })();
+        """
+    }
+
     /// Marca o documento que está na tela antes de carregar a página de
     /// novo.
     ///
@@ -488,54 +546,6 @@ final class GeminiDriver {
         return view
     }
 
-    /// Esvazia o campo, se existir.
-    private static let limpar = """
-        (function () {
-          var campo = document.querySelector('[contenteditable="true"]');
-          if (!campo) return "sem-campo";
-          campo.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('delete', false, null);
-          return "ok";
-        })();
-        """
-
-    /// Insere uma linha e, se não for a última, a quebra de parágrafo.
-    ///
-    /// Ao contrário do DeepL, `execCommand('insertText')` funciona aqui — o
-    /// editor do Gemini (Quill) aceita, e o do DeepL ignora. Mas **um só**
-    /// `execCommand` com o prompt inteiro (2000+ caracteres, dezenas de
-    /// linhas) truncava no meio às vezes — medido em 15/09/2026, sempre logo
-    /// depois de uma carga de página: o campo ficava com 224 dos 2401
-    /// caracteres enviados, e a mensagem saía cortada no meio de uma regra.
-    /// Inserir linha por linha, do jeito que alguém digitando faria, não
-    /// truncou nenhuma vez depois disso.
-    /// Devolver `"ok"` sempre escondia a falha: `execCommand` recusado num
-    /// editor que não aceita entrada é indistinguível de escrita bem-sucedida,
-    /// e aí a única coisa que enxergava era a conferência de `inserir` — que
-    /// não sabe dizer "editor vazio" de "leitura indisponível". Agora o
-    /// retorno do `execCommand` sobe, com o tamanho do campo junto.
-    ///
-    /// Linha vazia não passa por `insertText`: com string vazia o comando
-    /// pode recusar legitimamente, e o prompt tem uma linha em branco antes
-    /// de `Items:`.
-    private static func inserirLinha(_ linha: String, quebra: Bool) -> String {
-        let insercao = linha.isEmpty
-            ? "var escreveu = true;"
-            : "var escreveu = document.execCommand('insertText', false, \(DeepLWeb.jsLiteral(linha)));"
-        return """
-        (function () {
-          var campo = document.querySelector('[contenteditable="true"]');
-          if (!campo) return "sem-campo";
-          campo.focus();
-          \(insercao)
-          if (!escreveu) return 'recusado:' + (campo.textContent || '').length;
-          \(quebra ? "if (!document.execCommand('insertParagraph', false, null)) return 'sem-quebra';" : "")
-          return "ok";
-        })();
-        """
-    }
-
     /// Clica em "Enviar mensagem" — o rótulo é fixo porque a página é
     /// carregada com `hl=pt-BR` (ver `traduzir`), então o texto do botão não
     /// varia com o idioma do sistema de quem estiver rodando o app.
@@ -651,7 +661,7 @@ final class GeminiDriver {
             tentativa += 1
             if tentativa > 1 { try await Task.sleep(for: .milliseconds(300)) }
             try Task.checkCancellation()
-            let limpou = (try? await view.evaluateJavaScript(Self.limpar)) as? String
+            let limpou = (try? await view.evaluateJavaScript(GeminiWeb.clearFieldScript)) as? String
             guard limpou == "ok" else {
                 Self.debug("limpar devolveu \(limpou ?? "nil")")
                 continue
@@ -660,7 +670,7 @@ final class GeminiDriver {
             for (indice, linha) in linhas.enumerated() {
                 try Task.checkCancellation()
                 let resultado = (try? await view.evaluateJavaScript(
-                    Self.inserirLinha(linha, quebra: indice < linhas.count - 1)
+                    GeminiWeb.insertLineScript(linha, quebra: indice < linhas.count - 1)
                 )) as? String
                 guard resultado == "ok" else {
                     Self.debug("linha \(indice) recusada: \(resultado ?? "nil")")
@@ -756,6 +766,10 @@ final class GeminiDriver {
         let resposta: String
         do {
             resposta = try await esperar(view, apos: antes, label: label)
+        } catch is CancellationError {
+            // Cancelar não é falha do site: sem isto o log de erro ganhava um
+            // dump de página a cada clique em Cancelar.
+            throw CancellationError()
         } catch {
             // A conversa atual pode ter travado; a próxima tentativa começa
             // carregando a página de novo. O que a página mostrava no
